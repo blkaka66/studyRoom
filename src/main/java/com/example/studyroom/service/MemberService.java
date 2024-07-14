@@ -5,7 +5,6 @@ import com.example.studyroom.model.ShopEntity;
 
 import java.util.List;
 
-public interface ShopService extends BaseService<ShopEntity> {
-    boolean existsByEmail(String email);
-    List<MemberEntity> getMemberList(Long shopId);
+public interface MemberService extends BaseService<MemberEntity> {
+    List<MemberEntity> findByShop(ShopEntity shop);
 }
