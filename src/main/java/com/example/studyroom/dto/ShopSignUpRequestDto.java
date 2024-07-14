@@ -5,5 +5,5 @@ public class ShopSignUpRequestDto {
     private String name;
     private String email;
     private String password;
-    private String isVerification;//??인증받는거 있어야하나?
+    private Boolean isVerification;//??인증받는거 있어야하나?
 }
