@@ -1,5 +1,6 @@
 package com.example.studyroom.controller;
 
+import com.example.studyroom.dto.MemberResponseDto;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.service.ShopService;
 import org.springframework.http.ResponseEntity;
@@ -56,6 +57,13 @@ public class ShopController {
         // 이메일 인증 로직 추가
         return ResponseEntity.ok("{\"message\": \"인증이 완료 되었습니다.\", \"statusCode\": 200}");
     }
+
+
+    @GetMapping("/member-list/{shop_id}")
+    public ResponseEntity<List<MemberResponseDto>> memberList(@PathVariable("shop_id") Long shopId) {
+        return ResponseEntity.ok(MemberResponseDto.converter(this.shopService.getMemberList(shopId)));
+    }
+
 
     @GetMapping
     public ResponseEntity<?> getShopInfo() {

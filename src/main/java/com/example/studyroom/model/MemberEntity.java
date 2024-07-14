@@ -9,6 +9,10 @@ import lombok.Setter;
 @Entity
 @Table(name = "member")
 public class MemberEntity extends BaseEntity{
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shop_id", foreignKey = @ForeignKey(name = "FK_SHOP_ID"))
+    private ShopEntity shop;
+
     @Column(nullable = false, unique = true)
     private String phone;
 
@@ -16,12 +20,5 @@ public class MemberEntity extends BaseEntity{
     private String name;
 
     @Column(nullable = false)
-    private String location;
-
-    @Column(nullable = false)
     private String password;
-
-
-
-
 }
