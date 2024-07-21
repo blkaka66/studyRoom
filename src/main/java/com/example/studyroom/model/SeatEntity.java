@@ -10,6 +10,10 @@ import lombok.Setter;
 @Table(name = "seat")
 
 public class SeatEntity extends BaseEntity{
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "roomId", foreignKey = @ForeignKey(name = "roomId"))
+    private RoomEntity room;
+
     @Column(nullable = false, unique = true)
     private String seatCode;
 

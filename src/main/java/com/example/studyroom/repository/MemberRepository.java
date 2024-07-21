@@ -9,4 +9,5 @@ import java.util.List;
 
 public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
     List<MemberEntity> findByShop(ShopEntity shop);
+    MemberEntity findBynameAndpassword(String name, String password);
 }

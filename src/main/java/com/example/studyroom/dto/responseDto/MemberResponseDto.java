@@ -1,5 +1,5 @@
-package com.example.studyroom.dto;
-
+package com.example.studyroom.dto.responseDto;
+//이게 정확히 어떤상황에서의 dto였지?
 import com.example.studyroom.model.MemberEntity;
 import lombok.Builder;
 import lombok.Getter;

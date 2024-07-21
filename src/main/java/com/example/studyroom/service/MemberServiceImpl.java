@@ -22,4 +22,18 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     public List<MemberEntity> findByShop(ShopEntity shop) {
         return repository.findByShop(shop);
     }
+
+    @Override
+    public MemberEntity login(String username, String password) {
+        //레포지토리에있는 함수가져오기
+        MemberEntity member = repository.findBynameAndpassword(username, password);
+
+        if (member != null) {
+            // 회원이 존재하면 로그인 성공
+            return member;
+        } else {
+
+            throw new RuntimeException("로그인 실패: 사용자명 또는 비밀번호가 올바르지 않습니다.");
+        }
+    }
 }

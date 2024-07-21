@@ -7,4 +7,7 @@ import java.util.List;
 
 public interface MemberService extends BaseService<MemberEntity> {
     List<MemberEntity> findByShop(ShopEntity shop);
+    MemberEntity login(String username, String password);
+
+
 }

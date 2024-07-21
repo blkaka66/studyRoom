@@ -1,6 +1,6 @@
 package com.example.studyroom.controller;
 
-import com.example.studyroom.dto.MemberResponseDto;
+import com.example.studyroom.dto.responseDto.MemberResponseDto;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.service.ShopService;
 import org.springframework.http.ResponseEntity;
@@ -21,18 +21,7 @@ public class ShopController {
 
     @PostMapping("/sign-up")
     public ResponseEntity<?> signUp(@RequestBody ShopEntity shop) {
-        // 비밀번호 검증 (특수문자 포함 여부 체크)
-        if (!shop.getPassword().matches(".*[!@#$%^&*()].*")) {
-            return ResponseEntity.badRequest().body("{\"status\":\"400\", \"errorCode\":\"INVALID_PASSWORD\", \"message\":\"비밀번호에 특수문자가 포함되어야 합니다.\"}");
-        }
 
-        // 중복된 이메일 체크
-        if (shopService.existsByEmail(shop.getEmail())) {
-            return ResponseEntity.badRequest().body("{\"status\":\"400\", \"errorCode\":\"DUPLICATE_EMAIL\", \"message\":\"이미 사용 중인 이메일입니다.\"}");
-        }
-
-        shopService.create(shop);
-        return ResponseEntity.ok("{\"message\": \"회원가입이 완료 되었습니다.\", \"statusCode\": \"0000\"}");
     }
 
     @GetMapping("/sign-in/shop-list")
