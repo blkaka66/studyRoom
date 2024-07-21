@@ -11,9 +11,7 @@ public interface ShopService extends BaseService<ShopEntity> {
     boolean existsByEmail(String email);
     List<MemberEntity> getMemberList(Long shopId);
 
-    List<ShopEntity> getShopList(Long shopId);
-
-    List<ShopEntity> findByid(Long shopId);
+    List<ShopEntity> getShopList();
 
     List<ShopListResponseDto> getShopListResponseDto(Long shopId);
 

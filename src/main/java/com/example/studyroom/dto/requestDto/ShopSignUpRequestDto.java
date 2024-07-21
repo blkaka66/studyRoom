@@ -42,6 +42,4 @@ public class ShopSignUpRequestDto {
 //        this.password = password;
 //        this.isVerification = isVerification;
 //    }
-
-
 }

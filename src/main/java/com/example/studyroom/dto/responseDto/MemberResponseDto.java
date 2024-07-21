@@ -20,7 +20,7 @@ public class MemberResponseDto {
         this.name = name;
     }
 
-    public static List<MemberResponseDto> converter(List<MemberEntity> memberEntities) {
+    public static List<MemberResponseDto> of(List<MemberEntity> memberEntities) {
         return memberEntities.stream()
                 .map( x -> MemberResponseDto.builder()
                         .name(x.getName())

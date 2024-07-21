@@ -16,7 +16,7 @@ public class EnterHistroyEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ticketHistoryId", foreignKey = @ForeignKey(name = "fk_ticket_history_id"))
-    private TicketHistoryEntity ticketHistory;
+    private TicketPaymentEntity ticketHistory;
 
     @Column(nullable = false)
     private OffsetDateTime enterTime;

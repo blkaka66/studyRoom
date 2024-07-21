@@ -1,12 +1,16 @@
 package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
+import com.example.studyroom.dto.responseDto.ShopListResponseDto;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.repository.ShopRepository;
+import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,13 +29,20 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         return repository.existsByEmail(email);
     }
 
+    @Override
+    public List<MemberEntity> getMemberList(Long shopId) {
+        Optional<ShopEntity> shop = this.findById(shopId);
+        if(shop.isPresent()) {
+            return this.memberService.findByShop(shop.get());
+        }
+        else {
+            return new ArrayList<>();
+        }
+    }
+
     @Override //지점목록 가져오기
-    public List<ShopEntity> getShopList(Long shopId) {//shopId가 안들어오면 모든 리스트를 보내고 shopid가 들어오면 해당 shop리스트만 보내고
-            if (shopId == null) {
-                throw new RuntimeException("shopid가 없습니다");
-            } else {
-                return ShopService.findByid(shopId); // Assuming memberService has a method to find members by shopId
-            }
+    public List<ShopEntity> getShopList() {//shopId가 안들어오면 모든 리스트를 보내고 shopid가 들어오면 해당 shop리스트만 보내고
+        return this.findAll();
     }
 
     @Override
@@ -40,7 +51,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         List<MemberEntity> members = getMemberList(shopId);
         return members.stream()
                 .map(member -> ShopListResponseDto.builder()
-                        .shopId(member.getShopId())
+                        .shopId(member.getShop().getId())
                         .name(member.getName())
                         .build())
                 .collect(Collectors.toList());
@@ -49,7 +60,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     @Override //로그인
     public ShopEntity login(String email, String password) {
         //레포지토리에있는 함수가져오기
-        ShopEntity Shop = repository.findByemailAndpassword(email, password);
+        ShopEntity Shop = repository.findByEmailAndPassword(email, password);
 
         if (Shop != null) {
             // 점주 존재하면 로그인 성공
@@ -74,13 +85,13 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         if (shopId ==null) {
             throw new RuntimeException("존재하지않는 id");
         }
-        ShopEntity shop = repository.findById(shopId)
+        return repository.findById(shopId)
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 지점입니다."));
 
-        return ShopListResponseDto.builder()
-                .shopId(shop.getId())
-                .name(shop.getName())
-                .build();
+//        return ShopListResponseDto.builder()
+//                .shopId(shop.getId())
+//                .name(shop.getName())
+//                .build();
     }
 
 }

@@ -9,9 +9,9 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "ticketHistory")
+@Table(name = "ticketPayment")
 
-public class TicketHistoryEntity extends BaseEntity{
+public class TicketPaymentEntity extends BaseEntity{
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customerId", foreignKey = @ForeignKey(name = "fk_customer_id"))
@@ -28,5 +28,5 @@ public class TicketHistoryEntity extends BaseEntity{
     private OffsetDateTime endDate;
 
     @Column(nullable = false)
-    private Boolean expired;
+    private Boolean expired = false;
 }

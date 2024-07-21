@@ -1,11 +1,11 @@
 package com.example.studyroom.service;
 
-import com.example.studyroom.model.TicketEntity;
-import com.example.studyroom.model.TicketHistoryEntity;
+import com.example.studyroom.dto.requestDto.TicketPaymentRequestDto;
+import com.example.studyroom.model.TicketPaymentEntity;
 
-public interface TicketPaymentService extends BaseService<TicketHistoryEntity> {
+public interface TicketPaymentService extends BaseService<TicketPaymentEntity> {
 
 
     // 결제 처리 메서드 구현
-    void processPayment(TicketHistoryEntity ticket);
+    TicketPaymentEntity processPayment(TicketPaymentRequestDto paymentRequestDto);
 }
