@@ -36,22 +36,7 @@ public class ShopController {
         return ResponseEntity.ok(ShopListResponseDto.of(shops));
     }
 
-    // 이메일 발송 요청
-    @PostMapping("/email/send")
-    public ResponseEntity<?> sendEmail(@RequestBody Map<String, String> request) {
-        String email = request.get("email");
-        // 이메일 발송 로직 추가
-        return ResponseEntity.ok("{\"message\": \"이메일이 발송 되었습니다. 이메일을 확인해 주세요.\", \"statusCode\": 200}");
-    }
 
-    // 이메일 인증코드 인증
-    @PostMapping("/email/verification")
-    public ResponseEntity<?> verifyEmail(@RequestBody Map<String, String> request) {
-        String email = request.get("email");
-        String code = request.get("code");
-        // 이메일 인증 로직 추가
-        return ResponseEntity.ok("{\"message\": \"인증이 완료 되었습니다.\", \"statusCode\": 200}");
-    }
 
 
     @GetMapping("/member-list/{shop_id}")

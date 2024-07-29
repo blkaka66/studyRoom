@@ -1,10 +1,12 @@
 package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
+import com.example.studyroom.dto.responseDto.RoomAndSeatInfoResponseDto;
+import com.example.studyroom.dto.responseDto.SeatinfoResponseDto;
+import com.example.studyroom.dto.responseDto.ShopInfoResponseDto;
 import com.example.studyroom.dto.responseDto.ShopListResponseDto;
-import com.example.studyroom.model.MemberEntity;
-import com.example.studyroom.model.ShopEntity;
-import com.example.studyroom.repository.ShopRepository;
+import com.example.studyroom.model.*;
+import com.example.studyroom.repository.*;
 import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.stereotype.Service;
 
@@ -17,11 +19,25 @@ import java.util.stream.Collectors;
 public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements ShopService {
     private final ShopRepository repository;
     private final MemberService memberService;
+    private final SeatRepository seatRepository;
+    private final RoomRepository roomRepository;
+    private final MemberServiceImpl memberServiceImpl;
+    private final EnterHistoryRepository enterHistoryRepository;
+    private final MemberRepository memberRepository;
+    private final ShopRepository shopRepository;
+    private final TicketHistoryRepository ticketHistoryRepository;
 
-    public ShopServiceImpl(ShopRepository repository, MemberService memberService) {
+    public ShopServiceImpl(ShopRepository repository, MemberService memberService, SeatRepository seatRepository, RoomRepository roomRepository, MemberServiceImpl memberServiceImpl, EnterHistoryRepository enterHistoryRepository, MemberRepository memberRepository, ShopRepository shopRepository, TicketHistoryRepository ticketHistoryRepository) {
         super(repository);
         this.repository = repository;
         this.memberService = memberService;
+        this.seatRepository = seatRepository;
+        this.roomRepository = roomRepository;
+        this.memberServiceImpl = memberServiceImpl;
+        this.enterHistoryRepository = enterHistoryRepository;
+        this.memberRepository = memberRepository;
+        this.shopRepository = shopRepository;
+        this.ticketHistoryRepository = ticketHistoryRepository;
     }
 
     @Override
@@ -81,17 +97,97 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     }
 
     @Override // 지점정보가져오기
-    public ShopEntity getShopInfo(Long shopId) {
+    public ShopInfoResponseDto getShopInfo(Long shopId) {
         if (shopId ==null) {
             throw new RuntimeException("존재하지않는 id");
         }
-        return repository.findById(shopId)
+        ShopEntity shop = repository.findById(shopId)
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 지점입니다."));
 
-//        return ShopListResponseDto.builder()
-//                .shopId(shop.getId())
-//                .name(shop.getName())
-//                .build();
+        ShopInfoResponseDto shopInfo = ShopInfoResponseDto.builder()
+                .location(shop.getLocation())
+                .name(shop.getName())
+                .build();
+
+
+        return shopInfo;
+    }
+
+    @Override
+    public List<RoomAndSeatInfoResponseDto> getRoomsAndSeatsByShopId(Long shopId, Long customerId) {
+        // EnterHistoryService를 사용하여 현재 사용자의 좌석 ID를 조회
+        Long mySeatId = memberServiceImpl.getSeatIdByCustomerId(customerId);
+
+        // Shop ID로 방 목록을 조회
+        List<RoomEntity> rooms = roomRepository.findByShopId(shopId);
+
+        // 방 목록을 DTO로 변환
+        return rooms.stream().map(room -> {
+            // 각 방에 대한 좌석 목록을 조회
+            List<SeatEntity> seats = seatRepository.findByRoomId(room.getId());
+            // 좌석 목록을 DTO로 변환
+            List<SeatinfoResponseDto> seatDtos = seats.stream().map(seat -> {
+                // 현재 사용자의 좌석 ID와 mySeatId가 같으면 true 아니면 false
+                boolean isMySeat = (mySeatId != null && mySeatId.equals(seat.getId()));
+
+                // SeatinfoResponseDto 객체 생성
+                return SeatinfoResponseDto.builder()
+                        .id(seat.getId())
+                        .available(seat.getAvailable())
+                        .mySeat(isMySeat)  // mySeat 필드 설정
+                        .onService(seat.getOnService())
+                        .seatCode(seat.getSeatCode())
+                        .build();
+            }).collect(Collectors.toList());
+
+            // RoomAndSeatInfoResponseDto 객체 생성
+            return RoomAndSeatInfoResponseDto.builder()
+                    .id(room.getId())
+                    .name(room.getName())
+                    .onService(room.getOnService())
+                    .seats(seatDtos)
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
+    //누가 자리점유요청 메시지창만 띄워도 점유가 되게 하고 다른 자리를 점유하면 그 자리는 점유를 풀기(어떻게하지?)
+
+
+    @Override
+    public boolean occupySeat(Long shopId , String roomName, int seatCode, Long memberId, Long ticketHistoryId) { //tickethistory레포지토리에서 회원id받아서 id받아오는 메서드추가해야함
+        Optional<ShopEntity> shopOpt = shopRepository.findById(shopId);
+        if(shopOpt.isPresent()){
+            Optional<RoomEntity> roomOpt = roomRepository.findByName(roomName);
+            if (roomOpt.isPresent()) {
+                Long roomId = roomOpt.get().getId();
+                Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(seatCode, roomId);
+                if (seatOpt.isPresent()) {
+                    SeatEntity seat = seatOpt.get();
+                    if (seat.getAvailable()) {
+                        seat.setAvailable(false);
+                        seatRepository.save(seat); //점유요청들어오면 seat abilable false로 바꾸기
+
+                        Optional<MemberEntity> memberOpt = memberRepository.findById(memberId);
+                        Optional<TicketHistoryEntity> ticketHistoryOpt = ticketHistoryRepository.findByShopIdAndUserId(shopId,memberId);
+
+                        if (memberOpt.isPresent() && ticketHistoryOpt.isPresent()) {//enterhistory 만들기(closetime뺴고 다채우기)
+                            MemberEntity member = memberOpt.get();
+                            TicketHistoryEntity ticketHistory = ticketHistoryOpt.get();
+                            OffsetDateTime now = OffsetDateTime.now();
+                            OffsetDateTime expiredTime = ticketHistory.getExpiredTime();
+
+                            EnterHistoryEntity enterHistory = new EnterHistoryEntity(member, seat, ticketHistory, now, expiredTime);
+                            enterHistoryRepository.save(enterHistory);
+                        }
+
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        return false;
+
     }
 
 }

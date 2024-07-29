@@ -6,6 +6,6 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-public class EmailSendRequestDto { //근데 이런 한줄짜리도 굳이 따로 만들어야하나?
+public class EmailSendRequestDto {
     private String email;
 }

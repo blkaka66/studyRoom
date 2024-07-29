@@ -15,8 +15,11 @@ public class SeatEntity extends BaseEntity{
     private RoomEntity room;
 
     @Column(nullable = false, unique = true)
-    private String seatCode;
+    private int seatCode;
 
     @Column(nullable = false)
     private Boolean onService;
+
+    @Column(nullable = true)
+    private Boolean available;
 }

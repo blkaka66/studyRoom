@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 
 import java.time.OffsetDateTime;
 
-public class EnterHistroyEntity {
+public class EnterHistoryEntity {
 
     @ManyToOne(fetch = FetchType.LAZY) //lazy가 있어야 EnterHistroyEntity를 조회할떄 MemberEntity를 조회
     @JoinColumn(name = "customerId", foreignKey = @ForeignKey(name = "fk_customer_id"))
@@ -16,7 +16,7 @@ public class EnterHistroyEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ticketHistoryId", foreignKey = @ForeignKey(name = "fk_ticket_history_id"))
-    private TicketPaymentEntity ticketHistory;
+    private TicketHistoryEntity ticketHistoryEntity;
 
     @Column(nullable = false)
     private OffsetDateTime enterTime;
@@ -26,4 +26,8 @@ public class EnterHistroyEntity {
 
     @Column(nullable = false)
     private OffsetDateTime closeTime;
+
+    public Long getSeatId() {
+        return seat.getId();
+    }
 }
