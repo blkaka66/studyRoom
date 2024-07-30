@@ -16,10 +16,13 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     private final MemberRepository repository;
     private final EnterHistoryRepository enterHistoryRepository;
 
-    public MemberServiceImpl(MemberRepository repository, EnterHistoryRepository enterHistoryRepository) {
+    private final TicketHistoryRepository ticketHistoryRepository;
+
+    public MemberServiceImpl(MemberRepository repository, EnterHistoryRepository enterHistoryRepository, TicketHistoryRepository ticketHistoryRepository) {
         super(repository);
         this.repository = repository;
         this.enterHistoryRepository = enterHistoryRepository;
+        this.ticketHistoryRepository = ticketHistoryRepository;
     }
 
 
@@ -49,7 +52,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     @Override
     public RemainTimeResponseDto getRemainTime(Long shopId, Long userId) {
         //id로 티켓히스토리 엔티티 정보 가져오기
-        TicketHistoryEntity ticketHistory = TicketHistoryRepository.findByShopIdAndUserId(shopId, userId);
+        // A -> 만료, A` -> 현재 사용 가능한....
+        // TODO: 만료된것 제외하고 가져오기.
+        TicketHistoryEntity ticketHistory = ticketHistoryRepository.findByShopIdAndUserId(shopId, userId);
 
         if (ticketHistory != null) {//만약 ticketPaymentOpt이 존재한다면(티켓을 산적이 있다면)
             TicketEntity ticket = ticketHistory.getTicket();
@@ -76,6 +81,12 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             // TicketPaymentEntity가 존재하지 않을 경우 예외를 던집니다.
             throw new RuntimeException("Ticket payment not found for shopId: " + shopId + ", userId: " + userId);
         }
+    }
+
+    @Override
+    // TODO: Get Seat ID... 현재 유저가 자리하는 곳 반환
+    public EnterHistoryEntity getSeatId(Long userId) {
+        return null;
     }
 
 

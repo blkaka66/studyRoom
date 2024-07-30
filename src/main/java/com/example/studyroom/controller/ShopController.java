@@ -2,6 +2,7 @@ package com.example.studyroom.controller;
 
 import com.example.studyroom.common.ResultEntity;
 import com.example.studyroom.dto.responseDto.MemberResponseDto;
+import com.example.studyroom.dto.responseDto.ShopInfoResponseDto;
 import com.example.studyroom.dto.responseDto.ShopListResponseDto;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.service.MemberService;
@@ -58,14 +59,14 @@ public class ShopController {
     }
 
     @GetMapping("/{shop_id}")
-    public ResponseEntity<ShopListResponseDto> getShopInfo(@PathVariable("shop_id") Long shopId) {
+    public ResponseEntity<ShopInfoResponseDto> getShopInfo(@PathVariable("shop_id") Long shopId) {
         // 현재 로그인된 사용자의 지점 정보를 반환
         // 임시 데이터로 작성, 실제론 인증 정보를 바탕으로 데이터를 가져옴
 //        return ResponseEntity.ok("{\"name\":\"동백역점\",\"location\":\"경기 용인시~\"}");
 //        return
 
         return ResponseEntity.ok(
-                ShopListResponseDto.of(this.shopService.getShopInfo(shopId))
+                this.shopService.getShopInfo(shopId)
         );
     }
 }

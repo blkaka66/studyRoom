@@ -35,4 +35,6 @@ public class TicketHistoryEntity extends BaseEntity{
 
     @Column(nullable = false)
     private Boolean expired = false;
+
+    // TODO: 얼마?
 }

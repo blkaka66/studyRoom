@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -23,6 +25,9 @@ public class ShopEntity extends BaseEntity {
 
     @Column(nullable = false)
     private String password;
+
+    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "shop")
+    private List<MemberEntity> members = new ArrayList<>();
 
     @Builder
     public ShopEntity(String location, String name,String email,String password) {

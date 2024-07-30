@@ -10,6 +10,7 @@ import com.example.studyroom.repository.*;
 import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -49,7 +50,8 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     public List<MemberEntity> getMemberList(Long shopId) {
         Optional<ShopEntity> shop = this.findById(shopId);
         if(shop.isPresent()) {
-            return this.memberService.findByShop(shop.get());
+//            return this.memberService.findByShop(shop.get());
+            return shop.get().getMembers();
         }
         else {
             return new ArrayList<>();
@@ -61,21 +63,24 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         return this.findAll();
     }
 
-    @Override
-    //위에서 받은 리스트를 ShopListResponseDto로바꾸고싶음
-    public List<ShopListResponseDto> getShopListResponseDto(Long shopId) {
-        List<MemberEntity> members = getMemberList(shopId);
-        return members.stream()
-                .map(member -> ShopListResponseDto.builder()
-                        .shopId(member.getShop().getId())
-                        .name(member.getName())
-                        .build())
-                .collect(Collectors.toList());
-    }
+//    @Override
+//    //위에서 받은 리스트를 ShopListResponseDto로바꾸고싶음
+//    public List<ShopListResponseDto> getShopListResponseDto(Long shopId) {
+//        // Shop Id 기준으로 멤버를 찾는다. (특정 지점의 고객)
+//        List<MemberEntity> members = getMemberList(shopId);
+//        //
+//        return members.stream()
+//                .map(member -> ShopListResponseDto.builder()
+//                        .shopId(member.getShop().getId())
+//                        .name(member.getName())
+//                        .build())
+//                .collect(Collectors.toList());
+//    }
 
     @Override //로그인
     public ShopEntity login(String email, String password) {
         //레포지토리에있는 함수가져오기
+        //
         ShopEntity Shop = repository.findByEmailAndPassword(email, password);
 
         if (Shop != null) {
@@ -104,11 +109,16 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         ShopEntity shop = repository.findById(shopId)
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 지점입니다."));
 
+//        ShopEntity shop = repository.findById(shopId)
+//                .orElse(new ShopEntity());
+
+//        ShopEntity shop = repository.findById(shopId)
+//                .orElse(null);
+
         ShopInfoResponseDto shopInfo = ShopInfoResponseDto.builder()
                 .location(shop.getLocation())
                 .name(shop.getName())
                 .build();
-
 
         return shopInfo;
     }
@@ -124,11 +134,13 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         // 방 목록을 DTO로 변환
         return rooms.stream().map(room -> {
             // 각 방에 대한 좌석 목록을 조회
-            List<SeatEntity> seats = seatRepository.findByRoomId(room.getId());
+//            List<SeatEntity> seats = seatRepository.findByRoomId(room.getId());
             // 좌석 목록을 DTO로 변환
-            List<SeatinfoResponseDto> seatDtos = seats.stream().map(seat -> {
+//            List<SeatinfoResponseDto> seatDtos = seats.stream().map(seat -> {
+            List<SeatinfoResponseDto> seatDtos = room.getSeats().stream().map(seat -> {
                 // 현재 사용자의 좌석 ID와 mySeatId가 같으면 true 아니면 false
-                boolean isMySeat = (mySeatId != null && mySeatId.equals(seat.getId()));
+//                boolean isMySeat = (mySeatId != null && mySeatId.equals(seat.getId()));
+                boolean isMySeat = seat.getId().equals(mySeatId);
 
                 // SeatinfoResponseDto 객체 생성
                 return SeatinfoResponseDto.builder()

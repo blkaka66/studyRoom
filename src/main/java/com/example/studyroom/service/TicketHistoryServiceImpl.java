@@ -23,9 +23,37 @@ public class TicketHistoryServiceImpl extends BaseServiceImpl <TicketHistoryEnti
         this.ticketRepository = ticketRepository;
     }
 
+    @Override
+    public TicketHistoryEntity processPayment(TicketHistoryRequestDto paymentRequestDto) {
+        // member
+        // ㄴ 토큰이용
+        // Optional<MemberEntity> member =
+        // ticket
+//        Optional<TicketEntity> ticket = ticketRepository.findById(paymentRequestDto.getProductId());
+//        if(ticket.isEmpty()) {
+//            return null;
+//        }
+        TicketEntity ticket = ticketRepository.findById(paymentRequestDto.getProductId())
+                .orElseThrow(() -> new RuntimeException("존재하지 않는 상품입니다."));
+        // ㄴ DTO
+        // startDate
+        // endDate
+        // expired = false
+
+        TicketHistoryEntity ticketPayment = new TicketHistoryEntity();
+//        ticketPayment.setTicket(ticket.get());
+        ticketPayment.setTicket(ticket);
+        //ticketPayment.setMember(member.get());
+        ticketPayment.setExpired(false);
+        setStart(ticketPayment);
+
+        this.create(ticketPayment);
+
+        return ticketPayment;
+    }
 
     //    @Override
-    public void setStart(TicketHistoryEntity ticket) {
+    private void setStart(TicketHistoryEntity ticket) {
         // 결제 시점 설정
         ticket.setStartDate(OffsetDateTime.now());//결제는 호출된 당시시간을 저장
         // 종료 시점 설정
@@ -50,33 +78,6 @@ public class TicketHistoryServiceImpl extends BaseServiceImpl <TicketHistoryEnti
         } else {
             throw new IllegalArgumentException("Unknown type: " + ticketPayment.getTicket().getType()); //예외처리
         }
-    }
-
-
-    @Override
-    public TicketHistoryEntity processPayment(TicketHistoryRequestDto paymentRequestDto) {
-        // member
-        // ㄴ 토큰이용
-        // Optional<MemberEntity> member =
-        // ticket
-        Optional<TicketEntity> ticket = ticketRepository.findById(paymentRequestDto.getProductId());
-        if(ticket.isEmpty()) {
-            return null;
-        }
-        // ㄴ DTO
-        // startDate
-        // endDate
-        // expired = false
-
-        TicketHistoryEntity ticketPayment = new TicketHistoryEntity();
-        ticketPayment.setTicket(ticket.get());
-        //ticketPayment.setMember(member.get());
-        ticketPayment.setExpired(false);
-        setStart(ticketPayment);
-
-        this.create(ticketPayment);
-
-        return ticketPayment;
     }
 
 

@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Getter
 @Setter
 @Entity
@@ -19,4 +22,18 @@ public class RoomEntity extends BaseEntity {
 
     @Column(nullable = false)
     private Boolean onService;
+
+    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "room")
+    private List<SeatEntity> seats = new ArrayList<>();
 }
+
+//
+//SELECT * FROM ROOM where shop_id = 10;
+//List<RoomEntity>
+//
+//
+//room.getSeats()
+//
+//
+//
+//SELECT * FROM SEAT WEHRE room_id = 51;
