@@ -1,9 +1,10 @@
 package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
+import com.example.studyroom.dto.responseDto.MessageResponseDto;
+import com.example.studyroom.dto.responseDto.ProductListResponseDto;
 import com.example.studyroom.dto.responseDto.RoomAndSeatInfoResponseDto;
 import com.example.studyroom.dto.responseDto.ShopInfoResponseDto;
-import com.example.studyroom.dto.responseDto.ShopListResponseDto;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
 
@@ -25,5 +26,8 @@ public interface ShopService extends BaseService<ShopEntity> {
 
     List<RoomAndSeatInfoResponseDto> getRoomsAndSeatsByShopId(Long shopId,Long customerId); //shopid,customerId받아서 방이랑 좌석정보 가져오기
 
-    boolean occupySeat(Long shopId , String roomName, int seatCode, Long memberId, Long ticketHistoryId); //자리 점유요청 메서드
+    MessageResponseDto occupySeat(Long shopId , String roomName, int seatCode, Long memberId); //자리 점유요청 메서드
+
+    Object getProductList(Long shopId ,String productType);//티켓 정보가져오기(시간권 기간권나눠서)
+
 }

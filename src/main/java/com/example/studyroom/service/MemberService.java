@@ -1,11 +1,11 @@
 package com.example.studyroom.service;
 
+import com.example.studyroom.dto.responseDto.MessageResponseDto;
 import com.example.studyroom.dto.responseDto.RemainTimeResponseDto;
 import com.example.studyroom.model.EnterHistoryEntity;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
 
-import java.time.Duration;
 import java.util.List;
 
 public interface MemberService extends BaseService<MemberEntity> {
@@ -20,4 +20,8 @@ public interface MemberService extends BaseService<MemberEntity> {
     EnterHistoryEntity getSeatId(Long userId); //회원id받아서 어떤자리에 앉았는지 추출
 
     MemberEntity login(String phone, String password); //로그인 기능
+
+    MessageResponseDto out(Long userId);//퇴장
+
+    MessageResponseDto move(Long userId,Long currentRoomCode,Long movingRoomCode, int currentSeatNumber,int movingSeatNumber);//자리이동
 }

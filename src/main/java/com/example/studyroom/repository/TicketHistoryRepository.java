@@ -4,7 +4,11 @@ import com.example.studyroom.model.TicketHistoryEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface TicketHistoryRepository extends JpaRepository<TicketHistoryEntity, Long> {
-    TicketHistoryEntity findByShopIdAndUserId(Long shopId, Long userId);
+
+    List<TicketHistoryEntity> findByShopIdAndUserIdAndExpiredFalse(Long shopId, Long userId);
+
 }

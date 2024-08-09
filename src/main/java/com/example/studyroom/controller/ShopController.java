@@ -1,9 +1,8 @@
 package com.example.studyroom.controller;
 
 import com.example.studyroom.common.ResultEntity;
-import com.example.studyroom.dto.responseDto.MemberResponseDto;
-import com.example.studyroom.dto.responseDto.ShopInfoResponseDto;
-import com.example.studyroom.dto.responseDto.ShopListResponseDto;
+import com.example.studyroom.dto.requestDto.OccupySeatRequestDto;
+import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.service.MemberService;
 import com.example.studyroom.service.ShopService;
@@ -68,5 +67,28 @@ public class ShopController {
         return ResponseEntity.ok(
                 this.shopService.getShopInfo(shopId)
         );
+    }
+
+    @PostMapping("/memeber/in")
+    public MessageResponseDto occupySeat(@RequestBody OccupySeatRequestDto requestDto) {
+        //TODO: 쿠키에서 shopid와 memberid 추출하는 메서드추가
+        return shopService.occupySeat(
+            requestDto.getRoomName(),
+            requestDto.getSeatCode()
+        );
+    }
+
+    @GetMapping("/shop/{shopId}/room")
+    public RoomAndSeatInfoResponseDto getRoomsAndSeatsByShopId(@PathVariable("shop_id") Long shopId) {
+        //TODO: 쿠키에서 customerId 추출하는 메서드추가
+        return this.shopService.getRoomsAndSeatsByShopId(shopId, customerId);
+
+    }
+
+    @GetMapping("/shop/{productType}")
+    public RoomAndSeatInfoResponseDto getRoomsAndSeatsByShopId(@PathVariable("productType") String type) {
+        //TODO: 쿠키에서 shopId 추출하는 메서드추가
+        return this.shopService.getProductList(shopId,type);
+
     }
 }

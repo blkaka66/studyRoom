@@ -20,8 +20,10 @@ public class TicketHistoryEntity extends BaseEntity{
     private MemberEntity member;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tickeId", foreignKey = @ForeignKey(name = "fk_ticket_id"))
+    @JoinColumn(name = "ticketId", foreignKey = @ForeignKey(name = "fk_ticket_id"))
     private TicketEntity ticket;
+
+
 
     @Column(nullable = false)
     private OffsetDateTime startDate;
@@ -32,6 +34,9 @@ public class TicketHistoryEntity extends BaseEntity{
     @Convert(converter = DurationConverter.class)
     @Column(nullable = true)
     private Duration remainTime;
+
+    @Column(nullable = false)
+    private Boolean isActive = false;
 
     @Column(nullable = false)
     private Boolean expired = false;

@@ -1,15 +1,12 @@
 package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
-import com.example.studyroom.dto.responseDto.RoomAndSeatInfoResponseDto;
-import com.example.studyroom.dto.responseDto.SeatinfoResponseDto;
-import com.example.studyroom.dto.responseDto.ShopInfoResponseDto;
-import com.example.studyroom.dto.responseDto.ShopListResponseDto;
+import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
-import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,8 +24,9 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     private final MemberRepository memberRepository;
     private final ShopRepository shopRepository;
     private final TicketHistoryRepository ticketHistoryRepository;
+    private final TicketRepository ticketRepository
 
-    public ShopServiceImpl(ShopRepository repository, MemberService memberService, SeatRepository seatRepository, RoomRepository roomRepository, MemberServiceImpl memberServiceImpl, EnterHistoryRepository enterHistoryRepository, MemberRepository memberRepository, ShopRepository shopRepository, TicketHistoryRepository ticketHistoryRepository) {
+    public ShopServiceImpl(ShopRepository repository,TicketRepository ticketRepository ,MemberService memberService, SeatRepository seatRepository, RoomRepository roomRepository, MemberServiceImpl memberServiceImpl, EnterHistoryRepository enterHistoryRepository, MemberRepository memberRepository, ShopRepository shopRepository, TicketHistoryRepository ticketHistoryRepository) {
         super(repository);
         this.repository = repository;
         this.memberService = memberService;
@@ -39,6 +37,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         this.memberRepository = memberRepository;
         this.shopRepository = shopRepository;
         this.ticketHistoryRepository = ticketHistoryRepository;
+        this.ticketRepository=ticketRepository;
     }
 
     @Override
@@ -162,44 +161,97 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         }).collect(Collectors.toList());
     }
 
-    //누가 자리점유요청 메시지창만 띄워도 점유가 되게 하고 다른 자리를 점유하면 그 자리는 점유를 풀기(어떻게하지?)
+    //누가 자리점유요청 메시지창만 띄워도 점유가 되게 하고 다른 자리를 점유하면 그 자리는 점유를 풀기(어떻게하지?)->일단 보류
 
 
     @Override
-    public boolean occupySeat(Long shopId , String roomName, int seatCode, Long memberId, Long ticketHistoryId) { //tickethistory레포지토리에서 회원id받아서 id받아오는 메서드추가해야함
-        Optional<ShopEntity> shopOpt = shopRepository.findById(shopId);
+    public MessageResponseDto occupySeat(Long shopId , String roomName, int seatCode, Long memberId) {
+        Optional<ShopEntity> shopOpt = shopRepository.findById(shopId);//shop체크
         if(shopOpt.isPresent()){
-            Optional<RoomEntity> roomOpt = roomRepository.findByName(roomName);
+            Optional<RoomEntity> roomOpt = roomRepository.findByName(roomName);//룸체크
             if (roomOpt.isPresent()) {
                 Long roomId = roomOpt.get().getId();
-                Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(seatCode, roomId);
-                if (seatOpt.isPresent()) {
+                Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(seatCode, roomId);//자리체크
+                if (seatOpt.isPresent() ) {
                     SeatEntity seat = seatOpt.get();
-                    if (seat.getAvailable()) {
+                    if (seat.getAvailable()) {//자리가 비어있으면
                         seat.setAvailable(false);
                         seatRepository.save(seat); //점유요청들어오면 seat abilable false로 바꾸기
 
-                        Optional<MemberEntity> memberOpt = memberRepository.findById(memberId);
-                        Optional<TicketHistoryEntity> ticketHistoryOpt = ticketHistoryRepository.findByShopIdAndUserId(shopId,memberId);
+                            Optional<MemberEntity> memberOpt = memberRepository.findById(memberId);
+                        Optional<TicketHistoryEntity> ticketHistoryOpt = Optional.ofNullable(ticketHistoryRepository.findByShopIdAndUserId(shopId, memberId));//티켓히스토리아이디 받아오기
 
                         if (memberOpt.isPresent() && ticketHistoryOpt.isPresent()) {//enterhistory 만들기(closetime뺴고 다채우기)
                             MemberEntity member = memberOpt.get();
+
                             TicketHistoryEntity ticketHistory = ticketHistoryOpt.get();
                             OffsetDateTime now = OffsetDateTime.now();
-                            OffsetDateTime expiredTime = ticketHistory.getExpiredTime();
+                            OffsetDateTime expiredTime=null;
+                            if(ticketHistory.getEndDate()!=null){//티켓이 기간권이면
+                                expiredTime = ticketHistory.getEndDate();
+                            }else if(ticketHistory.getRemainTime()!=null){//티켓이 시간권이면
+                                Duration remainTime = ticketHistory.getRemainTime();
+                                expiredTime = now.plus(remainTime);
+                            }
 
-                            EnterHistoryEntity enterHistory = new EnterHistoryEntity(member, seat, ticketHistory, now, expiredTime);
-                            enterHistoryRepository.save(enterHistory);
+                            if(expiredTime != null){
+                                EnterHistoryEntity enterHistory = new EnterHistoryEntity(memberId, seat, ticketHistory, now, expiredTime);
+                                enterHistoryRepository.save(enterHistory);
+                                return MessageResponseDto.builder()
+                                        .message("입장완료 되었습니다.")
+                                        .statusCode(0000)
+                                        .build();
+                            }
+
                         }
+                        return MessageResponseDto.builder()
+                                .message("회원정보가 없거나 티켓이없음")
+                                .statusCode(3000)
+                                .build();
 
-                        return true;
                     }
+                    return MessageResponseDto.builder()
+                            .message("주인있는 자리")
+                            .statusCode(3000)
+                            .build();
                 }
             }
-            return false;
+            return MessageResponseDto.builder()
+                    .message("잘못된 방정보")
+                    .statusCode(3000)
+                    .build();
         }
-        return false;
+        return MessageResponseDto.builder()
+                .message("잘못된 샵정보")
+                .statusCode(3000)
+                .build();
 
     }
+
+    @Override
+    public Object getProductList(Long shopId ,String productType){
+        List<TicketEntity> tickets = ticketRepository.findByShopIdAndType(shopId,productType);
+        if(!tickets.isEmpty() ){
+            List<ProductResponseDto> productResponseDto = tickets.stream()
+                    .map(ticket -> ProductResponseDto.builder()
+                            .productId(ticket.getId())
+                            .name(ticket.getName())
+                            .amount(ticket.getAmount())
+                            .period(ticket.getPeriod())
+                            .type(ticket.getType())
+                            .build())
+                    .collect(Collectors.toList());
+
+            return ProductListResponseDto.builder()
+                    .productInfo(productResponseDto)
+                    .build();
+        }
+        return MessageResponseDto.builder()
+                .message("잘못된 샵정보")
+                .statusCode(3000)
+                .build();
+
+    }
+
 
 }
