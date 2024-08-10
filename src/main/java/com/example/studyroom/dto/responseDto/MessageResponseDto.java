@@ -9,5 +9,5 @@ import lombok.Setter;
 @Builder
 public class MessageResponseDto {
     private String message;
-    private int statusCode;
+    private String statusCode;
 }

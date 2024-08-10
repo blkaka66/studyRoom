@@ -1,6 +1,7 @@
 package com.example.studyroom.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 import lombok.Setter;
 
 import java.time.OffsetDateTime;
@@ -13,6 +14,7 @@ public class EnterHistoryEntity extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @Setter
+    @Getter
     @JoinColumn(name = "seatId", foreignKey = @ForeignKey(name = "fk_seat_id"))
     private SeatEntity seat;
 

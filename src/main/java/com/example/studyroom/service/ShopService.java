@@ -26,8 +26,6 @@ public interface ShopService extends BaseService<ShopEntity> {
 
     List<RoomAndSeatInfoResponseDto> getRoomsAndSeatsByShopId(Long shopId,Long customerId); //shopid,customerId받아서 방이랑 좌석정보 가져오기
 
-    MessageResponseDto occupySeat(Long shopId , String roomName, int seatCode, Long memberId); //자리 점유요청 메서드
-
     Object getProductList(Long shopId ,String productType);//티켓 정보가져오기(시간권 기간권나눠서)
 
 }

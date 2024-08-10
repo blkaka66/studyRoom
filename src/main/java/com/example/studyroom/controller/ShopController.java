@@ -69,24 +69,16 @@ public class ShopController {
         );
     }
 
-    @PostMapping("/memeber/in")
-    public MessageResponseDto occupySeat(@RequestBody OccupySeatRequestDto requestDto) {
-        //TODO: 쿠키에서 shopid와 memberid 추출하는 메서드추가
-        return shopService.occupySeat(
-            requestDto.getRoomName(),
-            requestDto.getSeatCode()
-        );
-    }
-
-    @GetMapping("/shop/{shopId}/room")
+    @GetMapping("/{shopId}/room")
     public RoomAndSeatInfoResponseDto getRoomsAndSeatsByShopId(@PathVariable("shop_id") Long shopId) {
         //TODO: 쿠키에서 customerId 추출하는 메서드추가
         return this.shopService.getRoomsAndSeatsByShopId(shopId, customerId);
 
     }
 
-    @GetMapping("/shop/{productType}")
-    public RoomAndSeatInfoResponseDto getRoomsAndSeatsByShopId(@PathVariable("productType") String type) {
+    @GetMapping("/{productType}")
+    // TODO: Response Class 수정 필요
+    public Object getRoomsAndSeatsByShopId(@PathVariable("productType") String type) {
         //TODO: 쿠키에서 shopId 추출하는 메서드추가
         return this.shopService.getProductList(shopId,type);
 

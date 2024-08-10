@@ -26,6 +26,16 @@ public class MemberController {
         return this.memberService.getRemainTime( shopId, userId);
 
     }
+
+    @PostMapping("/memeber/in")
+    public MessageResponseDto occupySeat(@RequestBody OccupySeatRequestDto requestDto) {
+        //TODO: 쿠키에서 shopid와 memberid 추출하는 메서드추가
+        return shopService.occupySeat(
+                requestDto.getRoomName(),
+                requestDto.getSeatCode()
+        );
+    }
+
     @PatchMapping("/memeber/out")
     public MessageResponseDto out() {
         //TODO: 쿠키에서 userid, customerId 추출하는 메서드추가
@@ -36,7 +46,12 @@ public class MemberController {
     @PostMapping("/memeber/move")
     public MessageResponseDto move(@RequestBody MemberMoveRequestDto requestDto) {
         //TODO: 쿠키에서 userid, customerId 추출하는 메서드추가
-        return this.memberService.out(userId,requestDto.getCurrentRoomCode(),requestDto.getMovingRoomCode(),requestDto.getCurrentSeatNumber(),requestDto.getMovingSeatNumber());
+        return this.memberService.move(
+                userId,
+                requestDto.getMovingRoomCode(),
+                requestDto.getMovingSeatNumber()
+        );
     }
 }
+// TODO: 자리 점유 요청
 //회원 회원가입 , 로그인,회원정보 가져오기 , 회원탈퇴요청,로그아웃

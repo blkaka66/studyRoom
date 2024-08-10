@@ -42,4 +42,9 @@ public class TicketHistoryEntity extends BaseEntity{
     private Boolean expired = false;
 
     // TODO: 얼마?
+
+    // A 기간권 첫번째 구입
+    // -> 2024.07.10 00:00:00 ~ 2024.08.09 23:59:59
+    // A 기간권 두번째 구입 --- 2024.08.07 22:30:00
+    // -> 2024.08.10 00:00:00 ~
 }

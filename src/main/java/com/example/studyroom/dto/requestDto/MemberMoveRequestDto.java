@@ -8,8 +8,6 @@ import lombok.Setter;
 @Builder
 
 public class MemberMoveRequestDto {
-    private int currentRoomCode;
     private int movingRoomCode;
-    private int currentSeatNumber;
     private int movingSeatNumber;
 }

@@ -21,7 +21,9 @@ public interface MemberService extends BaseService<MemberEntity> {
 
     MemberEntity login(String phone, String password); //로그인 기능
 
+    MessageResponseDto occupySeat(Long shopId , String roomName, int seatCode, Long memberId); //자리 점유요청 메서드
+
     MessageResponseDto out(Long userId);//퇴장
 
-    MessageResponseDto move(Long userId,Long currentRoomCode,Long movingRoomCode, int currentSeatNumber,int movingSeatNumber);//자리이동
+    MessageResponseDto move(Long userId, Long movingRoomCode, int movingSeatNumber);//자리이동
 }

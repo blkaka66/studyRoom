@@ -3,12 +3,10 @@ package com.example.studyroom.service;
 import com.example.studyroom.dto.responseDto.MessageResponseDto;
 import com.example.studyroom.dto.responseDto.RemainTimeResponseDto;
 import com.example.studyroom.model.*;
-import com.example.studyroom.repository.EnterHistoryRepository;
-import com.example.studyroom.repository.MemberRepository;
-import com.example.studyroom.repository.SeatRepository;
-import com.example.studyroom.repository.TicketHistoryRepository;
+import com.example.studyroom.repository.*;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -24,12 +22,23 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     private final TicketHistoryRepository ticketHistoryRepository;
     private final SeatRepository seatRepository;
-    public MemberServiceImpl(MemberRepository repository, EnterHistoryRepository enterHistoryRepository, SeatRepository seatRepository, TicketHistoryRepository ticketHistoryRepository) {
+
+    private final ShopRepository shopRepository;
+    private final RoomRepository roomRepository;
+    public MemberServiceImpl(MemberRepository repository,
+                             EnterHistoryRepository enterHistoryRepository,
+                             SeatRepository seatRepository,
+                             TicketHistoryRepository ticketHistoryRepository,
+                             ShopRepository shopRepository,
+                             RoomRepository roomRepository) {
         super(repository);
         this.repository = repository;
         this.enterHistoryRepository = enterHistoryRepository;
         this.ticketHistoryRepository = ticketHistoryRepository;
         this.seatRepository = seatRepository;
+        this.shopRepository = shopRepository;
+
+        this.roomRepository = roomRepository;
     }
 
 
@@ -155,6 +164,73 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         return null;  // 조건에 맞는 기록이 없으면 null 반환
     }
 
+
+    // TODO: Transactional 사용법 찾아보기!
+    @Override
+    public MessageResponseDto occupySeat(Long shopId , String roomName, int seatCode, Long memberId) {
+        Optional<ShopEntity> shopOpt = shopRepository.findById(shopId);//shop체크
+        if(shopOpt.isEmpty()) {
+            return MessageResponseDto.builder()
+                    .message("잘못된 샵정보")
+                    .statusCode("3000")
+                    .build();
+        }
+
+        Optional<RoomEntity> roomOpt = roomRepository.findByName(roomName);//룸체크
+        if(roomOpt.isEmpty()) {
+            return MessageResponseDto.builder()
+                    .message("잘못된 방정보")
+                    .statusCode("3000")
+                    .build();
+        }
+
+        Long roomId = roomOpt.get().getId();
+        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(seatCode, roomId);//자리체크
+        if(seatOpt.isEmpty()) {
+            return MessageResponseDto.builder()
+                    .message("주인있는 자리")
+                    .statusCode("3000")
+                    .build();
+        }
+
+        SeatEntity seat = seatOpt.get();
+        if(!seat.getAvailable()) {
+            return MessageResponseDto.builder()
+                    .message("자리가 차있음")
+                    .statusCode("3000")
+                    .build();
+        }
+        seat.setAvailable(false);
+        seatRepository.save(seat); //점유요청들어오면 seat abilable false로 바꾸기
+
+        Optional<MemberEntity> memberOpt = repository.findById(memberId);
+        Optional<TicketHistoryEntity> ticketHistoryOpt = Optional.ofNullable(ticketHistoryRepository.findByShopIdAndUserId(shopId, memberId));//티켓히스토리아이디 받아오기
+
+        if(memberOpt.isEmpty() || ticketHistoryOpt.isEmpty()) {
+            return MessageResponseDto.builder()
+                    .message("회원정보가 없거나 티켓이없음")
+                    .statusCode("3000")
+                    .build();
+        }
+
+//        MemberEntity member = memberOpt.get();
+        TicketHistoryEntity ticketHistory = ticketHistoryOpt.get();
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime expiredTime=null;
+        if (ticketHistory.getEndDate() != null) {//티켓이 기간권이면
+            expiredTime = ticketHistory.getEndDate();
+        } else if (ticketHistory.getRemainTime() != null) {//티켓이 시간권이면
+            Duration remainTime = ticketHistory.getRemainTime();
+            expiredTime = now.plus(remainTime);
+        }
+        EnterHistoryEntity enterHistory = new EnterHistoryEntity(memberId, seat, ticketHistory, now, expiredTime);
+        enterHistoryRepository.save(enterHistory);
+        return MessageResponseDto.builder()
+                .message("입장완료 되었습니다.")
+                .statusCode("0000")
+                .build();
+    }
+
     @Override
     public MessageResponseDto out(Long userId){
         EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId); //현재 어디앉았는지
@@ -163,33 +239,39 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             enterHistory.setCloseTime(now);
             enterHistoryRepository.save(enterHistory);
 
+            // TODO: 현재 티켓이 시간권인 경우. -> remainTime을 업데이트 한다.
+            // 자리점유 시 시간권인 경우 expiredTime 세팅!
+            // redis에서 expiredTime 관련 이벤트 생성. expired 됐을 때.. 자동 퇴장 시키는 로직도 만들어야 함.
+                // ㄴ 티켓 만료 시켜야 함.
+
             return MessageResponseDto.builder()
                     .message("퇴장이 완료 되었습니다.")
-                    .statusCode(0000)
+                    .statusCode("0000")
                     .build();
         }
         return MessageResponseDto.builder()
                 .message("자리정보가 없습니다")
-                .statusCode(1006)
+                .statusCode("1006")
                 .build();
 
 
     }
 
     @Override
-    public MessageResponseDto move(Long userId,Long currentRoomCode,Long movingRoomCode, int currentSeatNumber,int movingSeatNumber){
+    public MessageResponseDto move(Long userId, Long movingRoomCode, int movingSeatNumber){
         EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
         if (enterHistory == null) {
             return MessageResponseDto.builder()
-                    .message("자리정보가 없습니다")
-                    .statusCode(1006)
+                    .message("입장정보가 없습니다")
+                    .statusCode("1006")
                     .build();
         }
-        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(currentSeatNumber, currentRoomCode);//자리체크
+        SeatEntity currentSeat = enterHistory.getSeat();
+        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(currentSeat.getSeatCode(), currentSeat.getRoom().getId()); //자리체크
         if (seatOpt.isEmpty()) {
             return MessageResponseDto.builder()
                     .message("자리정보가 없습니다")
-                    .statusCode(1006)
+                    .statusCode("1006")
                     .build();
         }
         Optional<SeatEntity> newSeatOpt = seatRepository.findBySeatCodeAndRoom_Id(movingSeatNumber, movingRoomCode);
@@ -198,9 +280,10 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             if (!newSeat.getAvailable()) {//자리가 이미 차있으면
                 return MessageResponseDto.builder()
                         .message("자리가 이미차있습니다")
-                        .statusCode(1006)
+                        .statusCode("1006")
                         .build();
             }
+            // TODO: 기존 Seat에 대해서도 업데이트 필요
             newSeat.setAvailable(false);
             seatRepository.save(newSeat);
             enterHistory.setSeat(newSeat);
@@ -209,9 +292,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
         return MessageResponseDto.builder()
                 .message("자리 이동이 성공적으로 완료되었습니다")
-                .statusCode(0000)
+                .statusCode("0000")
                 .build();
-
     }
 
 }
