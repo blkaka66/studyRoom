@@ -47,20 +47,35 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     }
 
     @Override
-    public List<MemberEntity> getMemberList(Long shopId) {
+    public FinalResponseDto getMemberList(Long shopId) {
         Optional<ShopEntity> shop = this.findById(shopId);
         if(shop.isPresent()) {
-//            return this.memberService.findByShop(shop.get());
-            return shop.get().getMembers();
+//
+            return FinalResponseDto.builder()
+                    .message("정보가 성공적으로 반환되었습니다")
+                    .statusCode("0000")
+                    .data(shop.get().getMembers())
+                    .build();
+            //return shop.get().getMembers();
         }
         else {
-            return new ArrayList<>();
+            return FinalResponseDto.builder()
+                    .message("정보가 업습니다")
+                    .statusCode("3000")
+                    .data( new ArrayList<>())
+                    .build();
+            //return new ArrayList<>();
         }
     }
 
     @Override //지점목록 가져오기
-    public List<ShopEntity> getShopList() {//shopId가 안들어오면 모든 리스트를 보내고 shopid가 들어오면 해당 shop리스트만 보내고
-        return this.findAll();
+    public FinalResponseDto getShopList() {//shopId가 안들어오면 모든 리스트를 보내고 shopid가 들어오면 해당 shop리스트만 보내고
+        return FinalResponseDto.builder()
+                .message("정보가 성공적으로 반환되었습니다")
+                .statusCode("0000")
+                .data(this.findAll())
+                .build();
+
     }
 
 //    @Override
@@ -78,36 +93,61 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 //    }
 
     @Override //로그인
-    public ShopEntity login(String email, String password) {
+    public FinalResponseDto login(String email, String password) {
         //레포지토리에있는 함수가져오기
         //
         ShopEntity Shop = repository.findByEmailAndPassword(email, password);
 
         if (Shop != null) {
             // 점주 존재하면 로그인 성공
-            return Shop;
+            return FinalResponseDto.builder()
+                    .message("정보가 성공적으로 반환되었습니다")
+                    .statusCode("0000")
+                    .data(Shop)
+                    .build();
+
+           // return Shop;
         } else {
-            throw new RuntimeException("로그인 실패: 사용자명 또는 비밀번호가 올바르지 않습니다.");
+            return FinalResponseDto.builder()
+                    .message("로그인 실패: 사용자명 또는 비밀번호가 올바르지 않습니다.")
+                    .statusCode("3000")
+                    .build();
+            //throw new RuntimeException("로그인 실패: 사용자명 또는 비밀번호가 올바르지 않습니다.");
         }
     }
 
 
     @Override //회원가입
-    public ShopEntity signUp(ShopSignUpRequestDto dto) {
+    public FinalResponseDto signUp(ShopSignUpRequestDto dto) {
         if (repository.existsByEmail(dto.getEmail())) {
-            throw new RuntimeException("이미 존재하는 이메일입니다.");
+            return FinalResponseDto.builder()
+                    .message("이미 존재하는 이메일입니다.")
+                    .statusCode("3000")
+                    .build();
+            //throw new RuntimeException("이미 존재하는 이메일입니다.");
         }
         ShopEntity shop = dto.toEntity();
-        return repository.save(shop);
+        return FinalResponseDto.builder()
+                .message("이미 존재하는 이메일입니다.")
+                .statusCode("3000")
+                .data(repository.save(shop))
+                .build();
+       // return repository.save(shop);
     }
 
     @Override // 지점정보가져오기
-    public ShopInfoResponseDto getShopInfo(Long shopId) {
+    public FinalResponseDto getShopInfo(Long shopId) {
         if (shopId ==null) {
             throw new RuntimeException("존재하지않는 id");
         }
-        ShopEntity shop = repository.findById(shopId)
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 지점입니다."));
+        Optional<ShopEntity> shop = repository.findById(shopId);
+        if(shop.isEmpty()){
+            return FinalResponseDto.builder()
+                    .message("존재하지 않는 지점입니다.")
+                    .statusCode("3000")
+                    .build();
+        }
+
 
 //        ShopEntity shop = repository.findById(shopId)
 //                .orElse(new ShopEntity());
@@ -115,16 +155,23 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 //        ShopEntity shop = repository.findById(shopId)
 //                .orElse(null);
 
+
         ShopInfoResponseDto shopInfo = ShopInfoResponseDto.builder()
-                .location(shop.getLocation())
+                .location(shop.getLocation()) //TODO:이거에러 어떻게없애지 질문?
                 .name(shop.getName())
                 .build();
 
-        return shopInfo;
+        return FinalResponseDto.builder()
+                .message("정보가 성공적으로 반환되었습니다")
+                .statusCode("0000")
+                .data(shopInfo)
+                .build();
+
+
     }
 
     @Override
-    public List<RoomAndSeatInfoResponseDto> getRoomsAndSeatsByShopId(Long shopId, Long customerId) {
+    public FinalResponseDto getRoomsAndSeatsByShopId(Long shopId, Long customerId) {
         // EnterHistoryService를 사용하여 현재 사용자의 좌석 ID를 조회
         Long mySeatId = memberServiceImpl.getSeatIdByCustomerId(customerId);
 
@@ -132,14 +179,10 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         List<RoomEntity> rooms = roomRepository.findByShopId(shopId);
 
         // 방 목록을 DTO로 변환
-        return rooms.stream().map(room -> {
-            // 각 방에 대한 좌석 목록을 조회
-//            List<SeatEntity> seats = seatRepository.findByRoomId(room.getId());
-            // 좌석 목록을 DTO로 변환
-//            List<SeatinfoResponseDto> seatDtos = seats.stream().map(seat -> {
+        List<RoomAndSeatInfoResponseDto> roomAndSeatInfoDtos = rooms.stream().map(room -> {
+            // 각 방에 대한 좌석 목록을 DTO로 변환
             List<SeatinfoResponseDto> seatDtos = room.getSeats().stream().map(seat -> {
                 // 현재 사용자의 좌석 ID와 mySeatId가 같으면 true 아니면 false
-//                boolean isMySeat = (mySeatId != null && mySeatId.equals(seat.getId()));
                 boolean isMySeat = seat.getId().equals(mySeatId);
 
                 // SeatinfoResponseDto 객체 생성
@@ -160,12 +203,19 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
                     .seats(seatDtos)
                     .build();
         }).collect(Collectors.toList());
+
+        // FinalResponseDto 객체 생성 및 반환
+        return FinalResponseDto.builder()
+                .message("정보가 성공적으로 반환되었습니다.")
+                .statusCode("0000")
+                .data(roomAndSeatInfoDtos)
+                .build();
     }
 
     //누가 자리점유요청 메시지창만 띄워도 점유가 되게 하고 다른 자리를 점유하면 그 자리는 점유를 풀기(어떻게하지?)->일단 보류
 
     @Override
-    public Object getProductList(Long shopId ,String productType){
+    public FinalResponseDto getProductList(Long shopId ,String productType){
         List<TicketEntity> tickets = ticketRepository.findByShopIdAndType(shopId,productType);
 //        if(!ObjectUtils.isEmpty(tickets)) {
 ////        if(!tickets.isEmpty() ){
@@ -198,8 +248,11 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
                         .build())
                 .collect(Collectors.toList());
 
-        return ProductListResponseDto.builder()
-                .productInfo(productResponseDto)
+
+        return FinalResponseDto.builder()
+                .message("정보가 성공적으로 반환되었습니다.")
+                .statusCode("0000")
+                .data(productResponseDto)
                 .build();
     }
 

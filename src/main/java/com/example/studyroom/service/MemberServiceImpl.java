@@ -1,19 +1,21 @@
 package com.example.studyroom.service;
 
-import com.example.studyroom.dto.responseDto.MessageResponseDto;
+import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.RemainTimeResponseDto;
 import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.reflect.Member;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 @Service
 public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements MemberService {
@@ -102,7 +104,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 //        }
 //    }
     @Override
-    public RemainTimeResponseDto getRemainTime(Long shopId, Long userId) {
+    public FinalResponseDto getRemainTime(Long shopId, Long userId) {
         // 만료되지 않은 티켓 히스토리 엔티티 정보 가져오기
         List<TicketHistoryEntity> ticketHistories = ticketHistoryRepository.findByShopIdAndUserIdAndExpiredFalse(shopId, userId);
 
@@ -127,7 +129,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             }
 
             // 시간권의 경우 총 남은 시간을 문자열로 변환
-            String ticketExpireTime;
+            String ticketExpireTime = "";
             if (totalRemainTime.toHours() > 0) {
                 ticketExpireTime = totalRemainTime.toHours() + "시간";
             } else if (latestEndDate != null) {
@@ -138,13 +140,26 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             }
 
             // DTO로 변환하여 반환
-            return RemainTimeResponseDto.builder()
+            RemainTimeResponseDto remainTimeResponseDto= RemainTimeResponseDto.builder()
                     .ticketCategory(ticketHistories.get(0).getTicket().getType()) // Assuming the ticket category is the same for all
                     .ticketExpireTime(ticketExpireTime)
                     .build();
+
+            return FinalResponseDto.builder()
+                    .message("정보가 성공적으로 반환되었습니다")
+                    .statusCode("0000")
+                    .data(remainTimeResponseDto)
+                    .build();
+
+
         } else {
             // 만료되지 않은 티켓이 존재하지 않을 경우 예외를 던집니다.
-            throw new RuntimeException("Active ticket not found for shopId: " + shopId + ", userId: " + userId);
+            return FinalResponseDto.builder()
+                    .message("만료되지않은티켓존재")
+                    .statusCode("3000")
+                    .build();
+
+
         }
     }
     @Override
@@ -167,10 +182,10 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     // TODO: Transactional 사용법 찾아보기!
     @Override
-    public MessageResponseDto occupySeat(Long shopId , String roomName, int seatCode, Long memberId) {
+    public FinalResponseDto occupySeat(Long shopId , String roomName, int seatCode, Long memberId) {
         Optional<ShopEntity> shopOpt = shopRepository.findById(shopId);//shop체크
         if(shopOpt.isEmpty()) {
-            return MessageResponseDto.builder()
+            return FinalResponseDto.builder()
                     .message("잘못된 샵정보")
                     .statusCode("3000")
                     .build();
@@ -178,7 +193,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
         Optional<RoomEntity> roomOpt = roomRepository.findByName(roomName);//룸체크
         if(roomOpt.isEmpty()) {
-            return MessageResponseDto.builder()
+            return FinalResponseDto.builder()
                     .message("잘못된 방정보")
                     .statusCode("3000")
                     .build();
@@ -187,7 +202,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         Long roomId = roomOpt.get().getId();
         Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(seatCode, roomId);//자리체크
         if(seatOpt.isEmpty()) {
-            return MessageResponseDto.builder()
+            return FinalResponseDto.builder()
                     .message("주인있는 자리")
                     .statusCode("3000")
                     .build();
@@ -195,7 +210,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
         SeatEntity seat = seatOpt.get();
         if(!seat.getAvailable()) {
-            return MessageResponseDto.builder()
+            return FinalResponseDto.builder()
                     .message("자리가 차있음")
                     .statusCode("3000")
                     .build();
@@ -207,7 +222,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         Optional<TicketHistoryEntity> ticketHistoryOpt = Optional.ofNullable(ticketHistoryRepository.findByShopIdAndUserId(shopId, memberId));//티켓히스토리아이디 받아오기
 
         if(memberOpt.isEmpty() || ticketHistoryOpt.isEmpty()) {
-            return MessageResponseDto.builder()
+            return FinalResponseDto.builder()
                     .message("회원정보가 없거나 티켓이없음")
                     .statusCode("3000")
                     .build();
@@ -225,14 +240,15 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         }
         EnterHistoryEntity enterHistory = new EnterHistoryEntity(memberId, seat, ticketHistory, now, expiredTime);
         enterHistoryRepository.save(enterHistory);
-        return MessageResponseDto.builder()
+        return FinalResponseDto.builder()
                 .message("입장완료 되었습니다.")
                 .statusCode("0000")
                 .build();
     }
 
     @Override
-    public MessageResponseDto out(Long userId){
+    public FinalResponseDto out(Long userId){
+        //object가 any같은거면 쓰기가싫은데 <object>를안쓰는 방법은없나?
         EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId); //현재 어디앉았는지
         if(enterHistory != null) {
             OffsetDateTime now = OffsetDateTime.now();
@@ -244,12 +260,12 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             // redis에서 expiredTime 관련 이벤트 생성. expired 됐을 때.. 자동 퇴장 시키는 로직도 만들어야 함.
                 // ㄴ 티켓 만료 시켜야 함.
 
-            return MessageResponseDto.builder()
+            return FinalResponseDto.builder()
                     .message("퇴장이 완료 되었습니다.")
                     .statusCode("0000")
                     .build();
         }
-        return MessageResponseDto.builder()
+        return FinalResponseDto.builder()
                 .message("자리정보가 없습니다")
                 .statusCode("1006")
                 .build();
@@ -258,10 +274,10 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
     @Override
-    public MessageResponseDto move(Long userId, Long movingRoomCode, int movingSeatNumber){
+    public FinalResponseDto move(Long userId, Long movingRoomCode, int movingSeatNumber){
         EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
         if (enterHistory == null) {
-            return MessageResponseDto.builder()
+            return FinalResponseDto.builder()
                     .message("입장정보가 없습니다")
                     .statusCode("1006")
                     .build();
@@ -269,7 +285,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         SeatEntity currentSeat = enterHistory.getSeat();
         Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(currentSeat.getSeatCode(), currentSeat.getRoom().getId()); //자리체크
         if (seatOpt.isEmpty()) {
-            return MessageResponseDto.builder()
+            return FinalResponseDto.builder()
                     .message("자리정보가 없습니다")
                     .statusCode("1006")
                     .build();
@@ -278,7 +294,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         if(newSeatOpt.isPresent()){
             SeatEntity newSeat = newSeatOpt.get();
             if (!newSeat.getAvailable()) {//자리가 이미 차있으면
-                return MessageResponseDto.builder()
+                return FinalResponseDto.builder()
                         .message("자리가 이미차있습니다")
                         .statusCode("1006")
                         .build();
@@ -290,10 +306,55 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             enterHistoryRepository.save(enterHistory);
         }
 
-        return MessageResponseDto.builder()
+        return FinalResponseDto.builder()
                 .message("자리 이동이 성공적으로 완료되었습니다")
                 .statusCode("0000")
                 .build();
+    }
+
+
+    ///
+    public void sendCodeToEmail(String toEmail) {//이 함수는 뭘뜻하는지 잘모르겠다..
+        this.checkDuplicatedEmail(toEmail);
+        String title = " 이메일 인증 번호";
+        String authCode = this.createCode();
+        MailService.sendEmail(toEmail, title, authCode);
+        // 이메일 인증 요청 시 인증 번호 Redis에 저장 ( key = "AuthCode " + Email / value = AuthCode )
+        RedisServiceImpl.setValues(AUTH_CODE_PREFIX + toEmail,
+                authCode, Duration.ofMillis(this.authCodeExpirationMillis));
+    }
+
+    private FinalResponseDto checkDuplicatedEmail(String email) {
+        boolean isMemberExist = shopRepository.existsByEmail(email);
+        if (isMemberExist) {
+            return FinalResponseDto.builder()
+                    .message("해당 점주가 이미 존재합니다.")
+                    .statusCode("0000")
+                    .build();
+        }
+    }
+
+    private String createCode() {
+        int lenth = 6;
+        try {
+            Random random = SecureRandom.getInstanceStrong();
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < lenth; i++) {
+                builder.append(random.nextInt(10));
+            }
+            return builder.toString();
+        } catch (NoSuchAlgorithmException e) {
+            log.debug("MemberService.createCode() exception occur");
+            throw new BusinessLogicException(ExceptionCode.NO_SUCH_ALGORITHM);
+        }
+    }
+
+    public EmailVerificationResult verifiedCode(String email, String authCode) {
+        this.checkDuplicatedEmail(email);
+        String redisAuthCode = redisService.getValues(AUTH_CODE_PREFIX + email);
+        boolean authResult = redisService.checkExistsValue(redisAuthCode) && redisAuthCode.equals(authCode);
+
+        return EmailVerificationResult.of(authResult);
     }
 
 }

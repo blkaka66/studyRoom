@@ -74,6 +74,8 @@ public class TicketHistoryServiceImpl extends BaseServiceImpl <TicketHistoryEnti
 
             // remainTime 업데이트
             ticketPayment.setRemainTime(newRemainTime);
+
+
             return null; //시간권은 remaintime만 업데이트 하고 enddate는 기간권에서만 필요한 필드라 null을 리턴
         } else {
             throw new IllegalArgumentException("Unknown type: " + ticketPayment.getTicket().getType()); //예외처리

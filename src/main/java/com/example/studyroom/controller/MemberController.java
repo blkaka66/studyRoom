@@ -2,12 +2,12 @@ package com.example.studyroom.controller;
 
 import com.example.studyroom.dto.requestDto.MemberMoveRequestDto;
 import com.example.studyroom.dto.requestDto.OccupySeatRequestDto;
-import com.example.studyroom.dto.responseDto.MessageResponseDto;
-import com.example.studyroom.dto.responseDto.RoomAndSeatInfoResponseDto;
+import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.service.MemberService;
-import com.example.studyroom.service.ShopService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+@RestController
+@RequestMapping("/member")
 public class MemberController {
 
 
@@ -19,16 +19,31 @@ public class MemberController {
         this.memberService = memberService;
     }
 
+    @PostMapping("/emails/verification-requests")
+    public ResponseEntity sendMessage(@RequestParam("email") @Valid @CustomEmail String email) {
+        memberService.sendCodeToEmail(email);
 
-    @GetMapping("/member/{userId}/ticket")
-    public MessageResponseDto getMemberRemainTime(@PathVariable("userId") Long userId) {
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @GetMapping("/emails/verifications")
+    public ResponseEntity verificationEmail(@RequestParam("email") @CustomEmail String email,
+                                            @RequestParam("code") String authCode) {
+        EmailVerificationResult response = memberService.verifiedCode(email, authCode);
+
+        return new ResponseEntity<>(new SingleResponseDto<>(response), HttpStatus.OK);
+    }
+
+
+    @GetMapping("/{userId}/ticket")
+    public FinalResponseDto getMemberRemainTime(@PathVariable("userId") Long userId) {
         //TODO: 쿠키에서 shopId추출하는 메서드추가
         return this.memberService.getRemainTime( shopId, userId);
 
     }
 
-    @PostMapping("/memeber/in")
-    public MessageResponseDto occupySeat(@RequestBody OccupySeatRequestDto requestDto) {
+    @PostMapping("/in")
+    public FinalResponseDto occupySeat(@RequestBody OccupySeatRequestDto requestDto) {
         //TODO: 쿠키에서 shopid와 memberid 추출하는 메서드추가
         return shopService.occupySeat(
                 requestDto.getRoomName(),
@@ -36,15 +51,15 @@ public class MemberController {
         );
     }
 
-    @PatchMapping("/memeber/out")
-    public MessageResponseDto out() {
+    @PatchMapping("/out")
+    public FinalResponseDto out() {
         //TODO: 쿠키에서 userid, customerId 추출하는 메서드추가
         return this.memberService.out(userId);
 
     }
 
-    @PostMapping("/memeber/move")
-    public MessageResponseDto move(@RequestBody MemberMoveRequestDto requestDto) {
+    @PostMapping("/move")
+    public FinalResponseDto move(@RequestBody MemberMoveRequestDto requestDto) {
         //TODO: 쿠키에서 userid, customerId 추출하는 메서드추가
         return this.memberService.move(
                 userId,
