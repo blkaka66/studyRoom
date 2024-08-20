@@ -1,6 +1,6 @@
 package com.example.studyroom.email;
 
-import io.lettuce.core.dynamic.annotation.Value;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -40,6 +40,9 @@ public class EmailConfig {
 
     @Value("${spring.mail.properties.mail.smtp.writetimeout}")
     private int writeTimeout;
+
+    public EmailConfig() {
+    }
 
     @Bean
     public JavaMailSender javaMailSender() {
