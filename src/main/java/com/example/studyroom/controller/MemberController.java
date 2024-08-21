@@ -4,6 +4,7 @@ import com.example.studyroom.dto.requestDto.MemberMoveRequestDto;
 import com.example.studyroom.dto.requestDto.OccupySeatRequestDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.service.MemberService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 @RestController
