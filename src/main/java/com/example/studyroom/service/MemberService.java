@@ -21,7 +21,7 @@ public interface MemberService extends BaseService<MemberEntity> {
 
     FinalResponseDto<MemberEntity> login(String phone, String password); //로그인 기능
 
-    FinalResponseDto occupySeat(Long shopId , String roomName, int seatCode, Long memberId); //자리 점유요청 메서드
+//    FinalResponseDto occupySeat(Long shopId , String roomName, int seatCode, Long memberId); //자리 점유요청 메서드
 
     FinalResponseDto out(Long userId);//퇴장
 

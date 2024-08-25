@@ -1,10 +1,14 @@
 package com.example.studyroom.service;
 
+import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
+import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
+import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.type.ApiResult;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
@@ -27,8 +31,9 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     private final ShopRepository shopRepository;
     private final TicketHistoryRepository ticketHistoryRepository;
     private final TicketRepository ticketRepository;
+    private final JwtUtil jwtUtil;
 
-    public ShopServiceImpl(ShopRepository repository,TicketRepository ticketRepository ,MemberService memberService, SeatRepository seatRepository, RoomRepository roomRepository, MemberServiceImpl memberServiceImpl, EnterHistoryRepository enterHistoryRepository, MemberRepository memberRepository, ShopRepository shopRepository, TicketHistoryRepository ticketHistoryRepository) {
+    public ShopServiceImpl(ShopRepository repository,TicketRepository ticketRepository ,MemberService memberService, SeatRepository seatRepository, RoomRepository roomRepository, MemberServiceImpl memberServiceImpl, EnterHistoryRepository enterHistoryRepository, MemberRepository memberRepository, ShopRepository shopRepository, TicketHistoryRepository ticketHistoryRepository, JwtUtil jwtUtil) {
         super(repository);
         this.repository = repository;
         this.memberService = memberService;
@@ -40,6 +45,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         this.shopRepository = shopRepository;
         this.ticketHistoryRepository = ticketHistoryRepository;
         this.ticketRepository=ticketRepository;
+        this.jwtUtil = jwtUtil;
     }
 
     @Override
@@ -87,14 +93,21 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 //    }
 
     @Override //로그인
-    public FinalResponseDto<ShopEntity> login(String email, String password) {
+    public FinalResponseDto<String> login(ShopSignInRequestDto dto) {
         //레포지토리에있는 함수가져오기
         //
-        ShopEntity Shop = repository.findByEmailAndPassword(email, password);
+        ShopEntity Shop = repository.findByEmailAndPassword(dto.getEmail(), dto.getPassword());
+
+        // TODO: Email 기준으로 Shop을 가져온 후
+        //      - Shop이 존재하지 않는다면, 회원 존재하지 않는다는 오류 Response
+        //      - Shop이 존재한다면, 암호화된 Password 를 비교
 
         if (Shop != null) {
+            String token = this.jwtUtil.createAccessToken(dto);
+
+            String token2 = this.jwtUtil.createAccessToken(MemberSignInRequestDto.builder().phoneNumber("123123").build());
             // 점주 존재하면 로그인 성공
-            return FinalResponseDto.successWithData(Shop);
+            return FinalResponseDto.successWithData(token2);
 //            return FinalResponseDto.builder()
 //                    .message("정보가 성공적으로 반환되었습니다")
 //                    .statusCode("0000")
@@ -113,7 +126,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     }
 
 
-    @Override //회원가입
+    @Override //회원가입 // TODO - 암호화 필요
     public FinalResponseDto<ShopEntity> signUp(ShopSignUpRequestDto dto) {
         // TODO: of, success 사용
         // TODO: ApiResult 정의 후 사용

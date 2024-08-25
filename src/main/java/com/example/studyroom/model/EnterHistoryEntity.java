@@ -6,6 +6,10 @@ import lombok.Setter;
 
 import java.time.OffsetDateTime;
 
+@Getter
+@Setter
+@Entity
+@Table(name = "enterHistory")
 public class EnterHistoryEntity extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY) //lazy가 있어야 EnterHistroyEntity를 조회할떄 MemberEntity를 조회

@@ -1,5 +1,6 @@
 package com.example.studyroom.service;
 
+import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.MemberEntity;
@@ -16,7 +17,7 @@ public interface ShopService extends BaseService<ShopEntity> {
 //    List<ShopListResponseDto> getShopListResponseDto(Long shopId);
 
     //ShopEntity login(String username, String password);
-    FinalResponseDto login(String username, String password);
+    FinalResponseDto<String> login(ShopSignInRequestDto dto);
 
     //ShopEntity signUp(ShopSignUpRequestDto dto); //회원가입
     FinalResponseDto<ShopEntity> signUp(ShopSignUpRequestDto dto); //회원가입

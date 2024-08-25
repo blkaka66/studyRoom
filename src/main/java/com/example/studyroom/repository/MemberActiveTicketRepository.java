@@ -8,6 +8,6 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface MemberActiveTicketRepository extends JpaRepository<MemberActiveTicketEntity, Long> {
-    @Query("SELECT m FROM MemberActiveTicketEntity m WHERE m.member.id = :customerId AND m.ticketHistory.expired = false ORDER BY m.ticketHistory. DESC")
+    @Query("SELECT m FROM MemberActiveTicketEntity m WHERE m.member.id = :customerId AND m.ticketHistory.expired = false ORDER BY m.ticketHistory.id DESC")
     List<MemberActiveTicketEntity> findActiveTicketsByCustomerId(@Param("customerId") Long customerId);
 }

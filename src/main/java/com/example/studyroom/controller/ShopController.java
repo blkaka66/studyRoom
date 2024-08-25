@@ -1,5 +1,6 @@
 package com.example.studyroom.controller;
 
+import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.ShopEntity;
@@ -15,11 +16,13 @@ import java.util.List;
 public class ShopController {
 
     private final ShopService shopService;
-    private final MemberService memberService;
+//    private final MemberService memberService;
 
-    public ShopController(ShopService shopService, MemberService memberService) {
+    public ShopController(ShopService shopService
+//                          MemberService memberService
+    ) {
         this.shopService = shopService;
-        this.memberService = memberService;
+//        this.memberService = memberService;
     }
 
     @PostMapping("/sign-up")
@@ -37,18 +40,25 @@ public class ShopController {
 //        );
     }
 
-    @GetMapping()
-    public ResponseEntity<FinalResponseDto<List<ShopListResponseDto>>> getShopList() {
-        List<ShopEntity> shops = shopService.getShopList();
-        List<ShopListResponseDto> shopDtos = ShopListResponseDto.of(shops);
-        return ResponseEntity.ok(
-                FinalResponseDto.<List<ShopListResponseDto>>builder()
-                        .message("상점 목록을 성공적으로 가져왔습니다.")
-                        .statusCode("0000")
-                        .data(shopDtos)
-                        .build()
-        );
+    @PostMapping("/login")
+    public ResponseEntity<FinalResponseDto<String>> login(@RequestBody ShopSignInRequestDto shop) {
+        FinalResponseDto<String> token = shopService.login(shop);
+        return ResponseEntity.ok(token);
     }
+
+
+//    @GetMapping()
+//    public ResponseEntity<FinalResponseDto<List<ShopListResponseDto>>> getShopList() {
+//        List<ShopEntity> shops = shopService.getShopList();
+//        List<ShopListResponseDto> shopDtos = ShopListResponseDto.of(shops);
+//        return ResponseEntity.ok(
+//                FinalResponseDto.<List<ShopListResponseDto>>builder()
+//                        .message("상점 목록을 성공적으로 가져왔습니다.")
+//                        .statusCode("0000")
+//                        .data(shopDtos)
+//                        .build()
+//        );
+//    }
 
     @GetMapping("/member-list/{shop_id}")
     public ResponseEntity<FinalResponseDto<List<MemberResponseDto>>> memberList(@PathVariable("shop_id") Long shopId) {
@@ -61,20 +71,20 @@ public class ShopController {
         return ResponseEntity.ok(this.shopService.getMemberList(shopId));
     }
 
-    @GetMapping("/member-list")
-    public ResponseEntity<FinalResponseDto<List<MemberResponseDto>>> memberList() {
-        List<MemberResponseDto> memberDtos = MemberResponseDto.of(
-                this.memberService.findAll()
-        );
-        // TODO: of 사용
-        return ResponseEntity.ok(
-                FinalResponseDto.<List<MemberResponseDto>>builder()
-                        .message("모든 회원 목록을 성공적으로 가져왔습니다.")
-                        .statusCode("0000")
-                        .data(memberDtos)
-                        .build()
-        );
-    }
+//    @GetMapping("/member-list")
+//    public ResponseEntity<FinalResponseDto<List<MemberResponseDto>>> memberList() {
+//        List<MemberResponseDto> memberDtos = MemberResponseDto.of(
+//                this.memberService.findAll()
+//        );
+//        // TODO: of 사용
+//        return ResponseEntity.ok(
+//                FinalResponseDto.<List<MemberResponseDto>>builder()
+//                        .message("모든 회원 목록을 성공적으로 가져왔습니다.")
+//                        .statusCode("0000")
+//                        .data(memberDtos)
+//                        .build()
+//        );
+//    }
 
     @GetMapping("/{shop_id}")
     public ResponseEntity<FinalResponseDto<ShopInfoResponseDto>> getShopInfo(@PathVariable("shop_id") Long shopId) {
@@ -91,20 +101,20 @@ public class ShopController {
         return ResponseEntity.ok(shopInfo);
     }
 
-    @GetMapping("/{shopId}/room")
-    public ResponseEntity<FinalResponseDto<List<RoomAndSeatInfoResponseDto>>> getRoomsAndSeatsByShopId(@PathVariable("shopId") Long shopId) {
-        // TODO: 쿠키에서 customerId 추출하는 메서드 추가 (토큰에서..)
-        List<RoomAndSeatInfoResponseDto> roomAndSeatInfo = this.shopService.getRoomsAndSeatsByShopId(shopId, customerId);
-
-        // TODO: 수정 필요
-        return ResponseEntity.ok(
-                FinalResponseDto.<List<RoomAndSeatInfoResponseDto>>builder()
-                        .message("방과 좌석 정보를 성공적으로 가져왔습니다.")
-                        .statusCode("0000")
-                        .data(roomAndSeatInfo)
-                        .build()
-        );
-    }
+//    @GetMapping("/{shopId}/room")
+//    public ResponseEntity<FinalResponseDto<List<RoomAndSeatInfoResponseDto>>> getRoomsAndSeatsByShopId(@PathVariable("shopId") Long shopId) {
+//        // TODO: 쿠키에서 customerId 추출하는 메서드 추가 (토큰에서..)
+//        List<RoomAndSeatInfoResponseDto> roomAndSeatInfo = this.shopService.getRoomsAndSeatsByShopId(shopId, customerId);
+//
+//        // TODO: 수정 필요
+//        return ResponseEntity.ok(
+//                FinalResponseDto.<List<RoomAndSeatInfoResponseDto>>builder()
+//                        .message("방과 좌석 정보를 성공적으로 가져왔습니다.")
+//                        .statusCode("0000")
+//                        .data(roomAndSeatInfo)
+//                        .build()
+//        );
+//    }
 
     @GetMapping("/{shopId}/{productType}")
     public ResponseEntity<FinalResponseDto<List<ProductResponseDto>>> getProductListByShopId(@PathVariable("shopId") Long shopId, @PathVariable("productType") String type) {
