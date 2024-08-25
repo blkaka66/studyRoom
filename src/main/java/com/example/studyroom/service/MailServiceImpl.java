@@ -17,6 +17,7 @@ public class MailServiceImpl implements MailService {
 
     @Override
     public void sendEmail(String toEmail, String title, String text) {
+        System.out.println("toEmail:" + toEmail );
         SimpleMailMessage emailForm = createEmailForm(toEmail, title, text);
         try {
             emailSender.send(emailForm);

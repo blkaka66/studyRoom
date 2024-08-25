@@ -1,10 +1,12 @@
 package com.example.studyroom.service;
 
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
+import com.example.studyroom.dto.responseDto.MemberResponseDto;
 import com.example.studyroom.dto.responseDto.RemainTimeResponseDto;
 import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
 
+import com.example.studyroom.type.ApiResult;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Member;
@@ -52,16 +54,17 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     //자리선택시 enterhistory enterTime까지 생성하는 메서드 만들어야함
     @Override //로그인
-    public MemberEntity login(String phone, String password) {
+    public FinalResponseDto<MemberEntity> login(String phone, String password) {
         //레포지토리에있는 함수가져오기
         MemberEntity Member = repository.findByPhoneAndPassword(phone, password);
 
         if (Member != null) {
             // 회원 존재하면 로그인 성공
-
-            return Member;
+            return FinalResponseDto.successWithData(Member);
+            //return Member;
         } else {
-            throw new RuntimeException("로그인 실패: 사용자명 또는 비밀번호가 올바르지 않습니다.");
+            return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);
+            //throw new RuntimeException("로그인 실패: 사용자명 또는 비밀번호가 올바르지 않습니다.");
         }
     }
 
@@ -104,7 +107,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 //        }
 //    }
     @Override
-    public FinalResponseDto getRemainTime(Long shopId, Long userId) {
+    public FinalResponseDto<RemainTimeResponseDto> getRemainTime(Long shopId, Long userId) {
         // 만료되지 않은 티켓 히스토리 엔티티 정보 가져오기
         List<TicketHistoryEntity> ticketHistories = ticketHistoryRepository.findByShopIdAndUserIdAndExpiredFalse(shopId, userId);
 
@@ -124,7 +127,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                     //Todo:기간권 남은시간을 어떻게 가져올지 모르겠다. 현재 endtime은 현재시간+기간으로만 endtime을 지정하고있는데
                     // 저장된 기간권의 tickethistory가 2개이상일 경우엔 어떡하지? 시간권처럼 남은기간을 현재에 더하고싶은데 방법이있나?
                 } else {
-                    throw new IllegalArgumentException("Unknown ticket category: " + ticketCategory);
+                    return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+                    //throw new IllegalArgumentException("Unknown ticket category: " + ticketCategory);
                 }
             }
 
@@ -132,8 +136,6 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             String ticketExpireTime = "";
             if (totalRemainTime.toHours() > 0) {
                 ticketExpireTime = totalRemainTime.toHours() + "시간";
-            } else if (latestEndDate != null) {
-
             } else {
                 // 만료 시간이 없는 경우 기본 메시지
                 ticketExpireTime = "No active ticket";
@@ -145,19 +147,23 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                     .ticketExpireTime(ticketExpireTime)
                     .build();
 
-            return FinalResponseDto.builder()
-                    .message("정보가 성공적으로 반환되었습니다")
-                    .statusCode("0000")
-                    .data(remainTimeResponseDto)
-                    .build();
+            return FinalResponseDto.successWithData(remainTimeResponseDto);
+//            return FinalResponseDto.builder()
+//                    .message("정보가 성공적으로 반환되었습니다")
+//                    .statusCode("0000")
+//                    .data(remainTimeResponseDto)
+//                    .build();
 
 
         } else {
             // 만료되지 않은 티켓이 존재하지 않을 경우 예외를 던집니다.
-            return FinalResponseDto.builder()
-                    .message("만료되지않은티켓존재")
-                    .statusCode("3000")
-                    .build();
+
+            return FinalResponseDto.failure(ApiResult.TICKET_NOT_EXPIRED);
+
+//            return FinalResponseDto.builder()
+//                    .message("만료되지않은티켓존재")
+//                    .statusCode("3000")
+//                    .build();
 
 
         }
@@ -183,37 +189,42 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     // TODO: Transactional 사용법 찾아보기!
     @Override
     public FinalResponseDto occupySeat(Long shopId , String roomName, int seatCode, Long memberId) {
+        //FIXME:성공해도 데이터를 반환하지않을땐 제네릭뭐로해야하지?
         Optional<ShopEntity> shopOpt = shopRepository.findById(shopId);//shop체크
         if(shopOpt.isEmpty()) {
-            return FinalResponseDto.builder()
-                    .message("잘못된 샵정보")
-                    .statusCode("3000")
-                    .build();
+            return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
+//            return FinalResponseDto.builder()
+//                    .message("잘못된 샵정보")
+//                    .statusCode("3000")
+//                    .build();
         }
 
         Optional<RoomEntity> roomOpt = roomRepository.findByName(roomName);//룸체크
         if(roomOpt.isEmpty()) {
-            return FinalResponseDto.builder()
-                    .message("잘못된 방정보")
-                    .statusCode("3000")
-                    .build();
+            return FinalResponseDto.failure(ApiResult.ROOM_NOT_FOUND);
+//            return FinalResponseDto.builder()
+//                    .message("잘못된 방정보")
+//                    .statusCode("3000")
+//                    .build();
         }
 
         Long roomId = roomOpt.get().getId();
         Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(seatCode, roomId);//자리체크
         if(seatOpt.isEmpty()) {
-            return FinalResponseDto.builder()
-                    .message("주인있는 자리")
-                    .statusCode("3000")
-                    .build();
+            return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
+//            return FinalResponseDto.builder()
+//                    .message("주인있는 자리")
+//                    .statusCode("3000")
+//                    .build();
         }
 
         SeatEntity seat = seatOpt.get();
         if(!seat.getAvailable()) {
-            return FinalResponseDto.builder()
-                    .message("자리가 차있음")
-                    .statusCode("3000")
-                    .build();
+            return FinalResponseDto.failure(ApiResult.SEAT_ALREADY_OCCUPIED);
+//            return FinalResponseDto.builder()
+//                    .message("자리가 차있음")
+//                    .statusCode("3000")
+//                    .build();
         }
         seat.setAvailable(false);
         seatRepository.save(seat); //점유요청들어오면 seat abilable false로 바꾸기
@@ -222,10 +233,11 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         Optional<TicketHistoryEntity> ticketHistoryOpt = Optional.ofNullable(ticketHistoryRepository.findByShopIdAndUserId(shopId, memberId));//티켓히스토리아이디 받아오기
 
         if(memberOpt.isEmpty() || ticketHistoryOpt.isEmpty()) {
-            return FinalResponseDto.builder()
-                    .message("회원정보가 없거나 티켓이없음")
-                    .statusCode("3000")
-                    .build();
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+//            return FinalResponseDto.builder()
+//                    .message("회원정보가 없거나 티켓이없음")
+//                    .statusCode("3000")
+//                    .build();
         }
 
 //        MemberEntity member = memberOpt.get();
@@ -240,15 +252,16 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         }
         EnterHistoryEntity enterHistory = new EnterHistoryEntity(memberId, seat, ticketHistory, now, expiredTime);
         enterHistoryRepository.save(enterHistory);
-        return FinalResponseDto.builder()
-                .message("입장완료 되었습니다.")
-                .statusCode("0000")
-                .build();
+        return FinalResponseDto.success();
+//        return FinalResponseDto.builder()
+//                .message("입장완료 되었습니다.")
+//                .statusCode("0000")
+//                .build();
     }
 
     @Override
     public FinalResponseDto out(Long userId){
-        //object가 any같은거면 쓰기가싫은데 <object>를안쓰는 방법은없나?
+
         EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId); //현재 어디앉았는지
         if(enterHistory != null) {
             OffsetDateTime now = OffsetDateTime.now();
@@ -259,16 +272,17 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             // 자리점유 시 시간권인 경우 expiredTime 세팅!
             // redis에서 expiredTime 관련 이벤트 생성. expired 됐을 때.. 자동 퇴장 시키는 로직도 만들어야 함.
                 // ㄴ 티켓 만료 시켜야 함.
-
-            return FinalResponseDto.builder()
-                    .message("퇴장이 완료 되었습니다.")
-                    .statusCode("0000")
-                    .build();
+            return FinalResponseDto.success();
+//            return FinalResponseDto.builder()
+//                    .message("퇴장이 완료 되었습니다.")
+//                    .statusCode("0000")
+//                    .build();
         }
-        return FinalResponseDto.builder()
-                .message("자리정보가 없습니다")
-                .statusCode("1006")
-                .build();
+        return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+//        return FinalResponseDto.builder()
+//                .message("자리정보가 없습니다")
+//                .statusCode("1006")
+//                .build();
 
 
     }
@@ -277,27 +291,30 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     public FinalResponseDto move(Long userId, Long movingRoomCode, int movingSeatNumber){
         EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
         if (enterHistory == null) {
-            return FinalResponseDto.builder()
-                    .message("입장정보가 없습니다")
-                    .statusCode("1006")
-                    .build();
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+//            return FinalResponseDto.builder()
+//                    .message("입장정보가 없습니다")
+//                    .statusCode("1006")
+//                    .build();
         }
         SeatEntity currentSeat = enterHistory.getSeat();
         Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(currentSeat.getSeatCode(), currentSeat.getRoom().getId()); //자리체크
         if (seatOpt.isEmpty()) {
-            return FinalResponseDto.builder()
-                    .message("자리정보가 없습니다")
-                    .statusCode("1006")
-                    .build();
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+//            return FinalResponseDto.builder()
+//                    .message("자리정보가 없습니다")
+//                    .statusCode("1006")
+//                    .build();
         }
         Optional<SeatEntity> newSeatOpt = seatRepository.findBySeatCodeAndRoom_Id(movingSeatNumber, movingRoomCode);
         if(newSeatOpt.isPresent()){
             SeatEntity newSeat = newSeatOpt.get();
             if (!newSeat.getAvailable()) {//자리가 이미 차있으면
-                return FinalResponseDto.builder()
-                        .message("자리가 이미차있습니다")
-                        .statusCode("1006")
-                        .build();
+                return FinalResponseDto.failure(ApiResult.SEAT_ALREADY_OCCUPIED);
+//                return FinalResponseDto.builder()
+//                        .message("자리가 이미차있습니다")
+//                        .statusCode("1006")
+//                        .build();
             }
             // TODO: 기존 Seat에 대해서도 업데이트 필요
             newSeat.setAvailable(false);
@@ -305,15 +322,16 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             enterHistory.setSeat(newSeat);
             enterHistoryRepository.save(enterHistory);
         }
-
-        return FinalResponseDto.builder()
-                .message("자리 이동이 성공적으로 완료되었습니다")
-                .statusCode("0000")
-                .build();
+        return FinalResponseDto.success();
+//        return FinalResponseDto.builder()
+//                .message("자리 이동이 성공적으로 완료되었습니다")
+//                .statusCode("0000")
+//                .build();
     }
 
 
     ///
+    //fixme:이메일기능에서 이 밑에함수들이 필요한가?
     public void sendCodeToEmail(String toEmail) {//이 함수는 뭘뜻하는지 잘모르겠다..
         this.checkDuplicatedEmail(toEmail);
         String title = " 이메일 인증 번호";

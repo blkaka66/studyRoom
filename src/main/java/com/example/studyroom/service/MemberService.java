@@ -19,7 +19,7 @@ public interface MemberService extends BaseService<MemberEntity> {
 
     EnterHistoryEntity getSeatId(Long userId); //회원id받아서 어떤자리에 앉았는지 추출
 
-    MemberEntity login(String phone, String password); //로그인 기능
+    FinalResponseDto<MemberEntity> login(String phone, String password); //로그인 기능
 
     FinalResponseDto occupySeat(Long shopId , String roomName, int seatCode, Long memberId); //자리 점유요청 메서드
 
