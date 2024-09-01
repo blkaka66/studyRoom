@@ -25,7 +25,10 @@ public interface MemberService extends BaseService<MemberEntity> {
 
     FinalResponseDto out(Long userId);//퇴장
 
-    FinalResponseDto move(Long userId, Long movingRoomCode, int movingSeatNumber);//자리이동
+    FinalResponseDto<String> move(Long userId, Long movingRoomCode, int movingSeatNumber);//자리이동
 
+    FinalResponseDto getMemberInfo(Long userId);//회원 정보가져오기
+
+    FinalResponseDto<String> deleteMember(Long userId);//회원탈퇴
 
 }

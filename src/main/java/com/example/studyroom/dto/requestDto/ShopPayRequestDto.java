@@ -9,6 +9,6 @@ import lombok.Setter;
 @Builder
 
 public class ShopPayRequestDto {
-    private int productId;
+    private Long productId;
 
 }

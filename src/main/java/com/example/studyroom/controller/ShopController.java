@@ -1,5 +1,6 @@
 package com.example.studyroom.controller;
 
+import com.example.studyroom.dto.requestDto.ShopPayRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.*;
@@ -123,6 +124,12 @@ public class ShopController {
         return ResponseEntity.ok(this.shopService.getProductList(shopId, type));
     }
 
+    @PostMapping("/pay")
+    public FinalResponseDto<String> processPayment(@RequestBody ShopPayRequestDto product) {
+//        FinalResponseDto<List<ProductResponseDto>> productList = this.shopService.getProductList(shopId, type);
+        // TODO: 수정 완료
+        return ResponseEntity.ok(this.shopService.getProductList(shopId, type));
+    }
 
 }
 

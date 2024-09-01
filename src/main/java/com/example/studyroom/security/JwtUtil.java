@@ -2,49 +2,52 @@ package com.example.studyroom.security;
 import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
+import com.example.studyroom.dto.responseDto.FinalResponseDto;
+import com.example.studyroom.model.ShopEntity;
+import com.example.studyroom.repository.MemberRepository;
+import com.example.studyroom.repository.ShopRepository;
+import com.example.studyroom.type.ApiResult;
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.lang.reflect.Member;
 import java.security.Key;
 import java.time.ZonedDateTime;
+import java.util.Base64;
 import java.util.Date;
 
+import com.example.studyroom.repository.MemberRepository;
+import com.example.studyroom.model.MemberEntity;
 @Slf4j
 @Component
 public class JwtUtil {
-//    private static final String SECRET_KEY = "mySecretKey";
-//
-//    public static String generateToken(String username) {
-//        return Jwts.builder()
-//                .setSubject(username)
-//                .setIssuedAt(new Date())
-//                .setExpiration(new Date(System.currentTimeMillis() + 86400000))
-//                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
-//                .compact();
-//    }
-//
-//    public static String validateToken(String token) {
-//        return Jwts.parser()
-//                .setSigningKey(SECRET_KEY)
-//                .parseClaimsJws(token)
-//                .getBody()
-//                .getSubject();
-//    }
 
 
     private final Key key;
     private final long accessTokenExpTime;
 
+    private final MemberRepository memberRepository;
+    private final ShopRepository shopRepository;
+
+
     public JwtUtil(
+
             @Value("${jwt.secret}") String secretKey,
-            @Value("${jwt.expiration_time}") long accessTokenExpTime
+            @Value("${jwt.expiration_time}") long accessTokenExpTime,
+            ShopRepository shopRepository,
+            MemberRepository memberRepository
     ) {
-//        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-//        this.key = Keys.hmacShaKeyFor(keyBytes);
-        this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
+
+        this.shopRepository = shopRepository;
+        this.memberRepository = memberRepository;
+
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        this.key = Keys.hmacShaKeyFor(keyBytes);
+
         this.accessTokenExpTime = accessTokenExpTime;
     }
 
@@ -74,20 +77,27 @@ public class JwtUtil {
      * @return JWT String
      */
     private String createToken(ShopSignInRequestDto shop, long expireTime) {
-        Claims claims = Jwts.claims();
-        claims.put("email", shop.getEmail());
-        claims.put("role", "SHOP");
+        ShopEntity existingShop = shopRepository.findByEmailAndPassword(shop.getEmail(),shop.getPassword());
+        if(existingShop != null) {
+            Claims claims = Jwts.claims();
+            claims.put("email", shop.getEmail());
+            claims.put("role", "SHOP");
+            claims.put("shopId", existingShop.getId());
 
-        ZonedDateTime now = ZonedDateTime.now();
-        ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
+            ZonedDateTime now = ZonedDateTime.now();
+            ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
 
 
-        return Jwts.builder()
-                .setClaims(claims)
-                .setIssuedAt(Date.from(now.toInstant()))
-                .setExpiration(Date.from(tokenValidity.toInstant()))
-                .signWith(key, SignatureAlgorithm.HS256)
-                .compact();
+            return Jwts.builder()
+                    .setClaims(claims)
+                    .setIssuedAt(Date.from(now.toInstant()))
+                    .setExpiration(Date.from(tokenValidity.toInstant()))
+                    .signWith(key, SignatureAlgorithm.HS256)
+                    .compact();
+        }else{
+            return null;//여기선 굳이 FinalResponseDto할필요 없겠지?
+        }
+
     }
 
     /**
@@ -97,20 +107,29 @@ public class JwtUtil {
      * @return JWT String
      */
     private String createToken(MemberSignInRequestDto member, long expireTime) {
-        Claims claims = Jwts.claims();
-        claims.put("phoneNumber", member.getPhoneNumber());
-        claims.put("role", "CUSTOMER");
+        MemberEntity existingMember = memberRepository.findByPhoneAndPassword(member.getPhoneNumber(),member.getPassword());
+        if(existingMember != null) {
+            Claims claims = Jwts.claims();
+            //claims.put("phoneNumber", member.getPhoneNumber());전화번호는 개인정보니까 안넣어야하는거 아닌가?
+            claims.put("role", "CUSTOMER");
+            claims.put("userId",existingMember.getId());
+            claims.put("shopId",existingMember.getShop().getId());
 
-        ZonedDateTime now = ZonedDateTime.now();
-        ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
+            ZonedDateTime now = ZonedDateTime.now();
+            ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
 
 
-        return Jwts.builder()
-                .setClaims(claims)
-                .setIssuedAt(Date.from(now.toInstant()))
-                .setExpiration(Date.from(tokenValidity.toInstant()))
-                .signWith(key, SignatureAlgorithm.HS256)
-                .compact();
+            return Jwts.builder()
+                    .setClaims(claims)
+                    .setIssuedAt(Date.from(now.toInstant()))
+                    .setExpiration(Date.from(tokenValidity.toInstant()))
+                    .signWith(key, SignatureAlgorithm.HS256)
+                    .compact();
+        }else{
+            return null;//여기선 굳이 FinalResponseDto할필요 없겠지?
+        }
+
+
     }
 
     /**

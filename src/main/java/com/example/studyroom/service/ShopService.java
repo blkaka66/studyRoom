@@ -1,7 +1,9 @@
 package com.example.studyroom.service;
 
+import com.example.studyroom.dto.requestDto.ShopPayRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
+import com.example.studyroom.dto.requestDto.TicketHistoryRequestDto;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
@@ -31,4 +33,6 @@ public interface ShopService extends BaseService<ShopEntity> {
 
     FinalResponseDto<List<ProductResponseDto>> getProductList(Long shopId , String productType);//티켓 정보가져오기(시간권 기간권나눠서)
 
+    // 결제 처리 메서드 구현
+    FinalResponseDto<String> processPayment(ShopPayRequestDto product , Long customerId);
 }

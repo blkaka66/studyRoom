@@ -29,12 +29,14 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     private final ShopRepository shopRepository;
     private final RoomRepository roomRepository;
+    private final MemberRepository memberRepository;
+
     public MemberServiceImpl(MemberRepository repository,
 //                             EnterHistoryRepository enterHistoryRepository,
                              SeatRepository seatRepository,
                              TicketHistoryRepository ticketHistoryRepository,
                              ShopRepository shopRepository,
-                             RoomRepository roomRepository) {
+                             RoomRepository roomRepository, MemberRepository memberRepository) {
         super(repository);
         this.repository = repository;
 //        this.enterHistoryRepository = enterHistoryRepository;
@@ -43,6 +45,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         this.shopRepository = shopRepository;
 
         this.roomRepository = roomRepository;
+        this.memberRepository = memberRepository;
     }
 
 
@@ -288,7 +291,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
     @Override
-    public FinalResponseDto move(Long userId, Long movingRoomCode, int movingSeatNumber){
+    public FinalResponseDto<String> move(Long userId, Long movingRoomCode, int movingSeatNumber){
 //        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
 //        if (enterHistory == null) {
 //            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
@@ -374,5 +377,25 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 //
 //        return EmailVerificationResult.of(authResult);
 //    }
+    public FinalResponseDto<MemberResponseDto> getMemberInfo(Long userId){
+        Optional<MemberEntity> member = memberRepository.findById(userId);
+        if(member.isEmpty()){
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+        MemberResponseDto responseDto = MemberResponseDto.builder()
+                .name(member.get().getName())
+                .phone(member.get().getPhone())
+                .build();
+        return FinalResponseDto.successWithData(responseDto);
+    }
+
+    public FinalResponseDto<String> deleteMember(Long userId){
+        Optional<MemberEntity> member = memberRepository.findById(userId);
+        if(member.isEmpty()){
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+        memberRepository.deleteById(member.get().getId());
+        return FinalResponseDto.success();
+    }
 
 }
