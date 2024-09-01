@@ -5,9 +5,11 @@ import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.ShopEntity;
+import com.example.studyroom.security.SecurityUtil;
 import com.example.studyroom.service.MemberService;
 import com.example.studyroom.service.ShopService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -91,14 +93,6 @@ public class ShopController {
     public ResponseEntity<FinalResponseDto<ShopInfoResponseDto>> getShopInfo(@PathVariable("shop_id") Long shopId) {
         FinalResponseDto<ShopInfoResponseDto> shopInfo = this.shopService.getShopInfo(shopId);
 
-//        // TODO: 아래 내용 수정 필요
-//        return ResponseEntity.ok(
-//                FinalResponseDto.<ShopInfoResponseDto>builder()
-//                        .message("상점 정보를 성공적으로 가져왔습니다.")
-//                        .statusCode("0000")
-//                        .data(shopInfo)
-//                        .build()
-//        );
         return ResponseEntity.ok(shopInfo);
     }
 
@@ -120,15 +114,18 @@ public class ShopController {
     @GetMapping("/{shopId}/{productType}")
     public ResponseEntity<FinalResponseDto<List<ProductResponseDto>>> getProductListByShopId(@PathVariable("shopId") Long shopId, @PathVariable("productType") String type) {
 //        FinalResponseDto<List<ProductResponseDto>> productList = this.shopService.getProductList(shopId, type);
-        // TODO: 수정 완료
         return ResponseEntity.ok(this.shopService.getProductList(shopId, type));
     }
 
     @PostMapping("/pay")
     public FinalResponseDto<String> processPayment(@RequestBody ShopPayRequestDto product) {
 //        FinalResponseDto<List<ProductResponseDto>> productList = this.shopService.getProductList(shopId, type);
-        // TODO: 수정 완료
-        return ResponseEntity.ok(this.shopService.getProductList(shopId, type));
+        // TODO: Pay Service 호출 필요
+//        return ResponseEntity.ok(this.shopService.getProductList(SecurityUtil.getShopInfo().getId(), type));
+
+//        ShopEntity shop = SecurityUtil.getShopInfo();
+//        System.out.println(shop);
+        return FinalResponseDto.success();
     }
 
 }

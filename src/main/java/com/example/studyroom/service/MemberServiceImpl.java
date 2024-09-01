@@ -21,6 +21,7 @@ import java.util.Random;
 
 @Service
 public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements MemberService {
+
     private final MemberRepository repository;
 //    private final EnterHistoryRepository enterHistoryRepository;
 
@@ -31,12 +32,19 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     private final RoomRepository roomRepository;
     private final MemberRepository memberRepository;
 
+    private final MailService mailService;
+    private final RedisService redisService;
+
+    private static final String AUTH_CODE_PREFIX = "EMAIL_VERIFICATION_KEY:";
+    private static final long authCodeExpirationMillis = 60*60*1000;
+
     public MemberServiceImpl(MemberRepository repository,
 //                             EnterHistoryRepository enterHistoryRepository,
                              SeatRepository seatRepository,
                              TicketHistoryRepository ticketHistoryRepository,
                              ShopRepository shopRepository,
-                             RoomRepository roomRepository, MemberRepository memberRepository) {
+                             RoomRepository roomRepository, MemberRepository memberRepository,
+                             MailService mailService, RedisService redisService) {
         super(repository);
         this.repository = repository;
 //        this.enterHistoryRepository = enterHistoryRepository;
@@ -46,6 +54,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
         this.roomRepository = roomRepository;
         this.memberRepository = memberRepository;
+
+        this.mailService = mailService;
+        this.redisService = redisService;
     }
 
 
@@ -332,51 +343,53 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 //                .build();
     }
 
-//
-//    ///
-//    //fixme:이메일기능에서 이 밑에함수들이 필요한가?
-//    public void sendCodeToEmail(String toEmail) {//이 함수는 뭘뜻하는지 잘모르겠다..
-//        this.checkDuplicatedEmail(toEmail);
-//        String title = " 이메일 인증 번호";
-//        String authCode = this.createCode();
-//        MailService.sendEmail(toEmail, title, authCode);
-//        // 이메일 인증 요청 시 인증 번호 Redis에 저장 ( key = "AuthCode " + Email / value = AuthCode )
-//        RedisServiceImpl.setValues(AUTH_CODE_PREFIX + toEmail,
-//                authCode, Duration.ofMillis(this.authCodeExpirationMillis));
-//    }
-//
-//    private FinalResponseDto checkDuplicatedEmail(String email) {
-//        boolean isMemberExist = shopRepository.existsByEmail(email);
-//        if (isMemberExist) {
-//            return FinalResponseDto.builder()
-//                    .message("해당 점주가 이미 존재합니다.")
-//                    .statusCode("0000")
-//                    .build();
-//        }
-//    }
-//
-//    private String createCode() {
-//        int lenth = 6;
-//        try {
-//            Random random = SecureRandom.getInstanceStrong();
-//            StringBuilder builder = new StringBuilder();
-//            for (int i = 0; i < lenth; i++) {
-//                builder.append(random.nextInt(10));
-//            }
-//            return builder.toString();
-//        } catch (NoSuchAlgorithmException e) {
-//            log.debug("MemberService.createCode() exception occur");
-//            throw new BusinessLogicException(ExceptionCode.NO_SUCH_ALGORITHM);
-//        }
-//    }
-//
-//    public EmailVerificationResult verifiedCode(String email, String authCode) {
-//        this.checkDuplicatedEmail(email);
-//        String redisAuthCode = redisService.getValues(AUTH_CODE_PREFIX + email);
-//        boolean authResult = redisService.checkExistsValue(redisAuthCode) && redisAuthCode.equals(authCode);
-//
-//        return EmailVerificationResult.of(authResult);
-//    }
+    ///
+    //fixme:이메일기능에서 이 밑에함수들이 필요한가?
+    public void sendCodeToEmail(String toEmail) {//이 함수는 뭘뜻하는지 잘모르겠다..
+        this.checkDuplicatedEmail(toEmail); // 중복여부 체크
+
+        String title = " 이메일 인증 번호";
+        String authCode = this.createCode();
+        // 이메일 인증 요청 시 인증 번호 Redis에 저장 ( key = "AuthCode " + Email / value = AuthCode )
+        redisService.setValues(AUTH_CODE_PREFIX + toEmail, authCode, Duration.ofMillis(authCodeExpirationMillis));
+        mailService.sendEmail(toEmail, title, authCode);
+    }
+
+    private FinalResponseDto checkDuplicatedEmail(String email) {
+        boolean isMemberExist = shopRepository.existsByEmail(email);
+        if (isMemberExist) {
+            return FinalResponseDto.builder()
+                    .message("해당 점주가 이미 존재합니다.")
+                    .statusCode("0000")
+                    .build();
+        }
+    }
+
+    private String createCode() {
+        int lenth = 6;
+        try {
+            Random random = SecureRandom.getInstanceStrong();
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < lenth; i++) {
+                builder.append(random.nextInt(10));
+            }
+            return builder.toString();
+        } catch (NoSuchAlgorithmException e) {
+            log.debug("MemberService.createCode() exception occur");
+            throw new BusinessLogicException(ExceptionCode.NO_SUCH_ALGORITHM);
+        }
+    }
+
+    public EmailVerificationResult verifiedCode(String email, String authCode) {
+        this.checkDuplicatedEmail(email);
+        String redisAuthCode = redisService.getValues(AUTH_CODE_PREFIX + email);
+        if(redisAuthCode == null) {
+            //return 유효시간 초과 에러 -->
+        }
+        boolean authResult = authCode.equals(redisAuthCode) ? true : false;
+
+        return EmailVerificationResult.of(authResult);
+    }
     public FinalResponseDto<MemberResponseDto> getMemberInfo(Long userId){
         Optional<MemberEntity> member = memberRepository.findById(userId);
         if(member.isEmpty()){

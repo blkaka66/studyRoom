@@ -106,9 +106,9 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         if (Shop != null) {
             String token = this.jwtUtil.createAccessToken(dto);
 
-            String token2 = this.jwtUtil.createAccessToken(MemberSignInRequestDto.builder().phoneNumber("123123").build());
+//            String token2 = this.jwtUtil.createAccessToken(MemberSignInRequestDto.builder().phoneNumber("123123").build());
             // 점주 존재하면 로그인 성공
-            return FinalResponseDto.successWithData(token2);
+            return FinalResponseDto.successWithData(token);
 //            return FinalResponseDto.builder()
 //                    .message("정보가 성공적으로 반환되었습니다")
 //                    .statusCode("0000")

@@ -1,3 +1,6 @@
+package com.example.studyroom.security;
+
+import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,8 +13,10 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.nio.file.AccessDeniedException;
+import org.springframework.security.access.AccessDeniedException;
 import java.time.LocalDateTime;
+
+import static com.example.studyroom.type.ApiResult.AUTHENTICATION_FAILED;
 
 @Slf4j(topic = "FORBIDDEN_EXCEPTION_HANDLER")
 @AllArgsConstructor
@@ -20,13 +25,13 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
 
     private final ObjectMapper objectMapper;
 
-    //@Override
+    @Override
     public void handle(HttpServletRequest request,
                        HttpServletResponse response,
                        AccessDeniedException accessDeniedException) throws IOException, ServletException {
         log.error("No Authorities", accessDeniedException);
 
-        ErrorResponseDto errorResponseDto = new ErrorResponseDto(HttpStatus.FORBIDDEN.value(), accessDeniedException.getMessage(), LocalDateTime.now());
+        FinalResponseDto<String> errorResponseDto = FinalResponseDto.failureWithData(AUTHENTICATION_FAILED, accessDeniedException.getMessage());
 
         String responseBody = objectMapper.writeValueAsString(errorResponseDto);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -34,4 +39,5 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write(responseBody);
     }
+
 }

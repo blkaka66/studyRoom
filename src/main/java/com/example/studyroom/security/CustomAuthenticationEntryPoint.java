@@ -1,5 +1,6 @@
 package com.example.studyroom.security;
 
+import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,12 +9,13 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
-import javax.naming.AuthenticationException;
 import java.io.IOException;
-import java.time.LocalDateTime;
+
+import static com.example.studyroom.type.ApiResult.AUTHENTICATION_FAILED;
 
 @Slf4j(topic = "UNAUTHORIZATION_EXCEPTION_HANDLER")
 @AllArgsConstructor
@@ -21,13 +23,13 @@ import java.time.LocalDateTime;
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private final ObjectMapper objectMapper;
 
-    //@Override
+    @Override
     public void commence(HttpServletRequest request,
                          HttpServletResponse response,
                          AuthenticationException authException) throws IOException, ServletException {
         log.error("Not Authenticated Request", authException);
 
-        ErrorResponseDto errorResponseDto = new ErrorResponseDto(HttpStatus.UNAUTHORIZED.value(), authException.getMessage(), LocalDateTime.now());
+        FinalResponseDto<String> errorResponseDto = FinalResponseDto.failureWithData(AUTHENTICATION_FAILED, authException.getMessage());
 
         String responseBody = objectMapper.writeValueAsString(errorResponseDto);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
