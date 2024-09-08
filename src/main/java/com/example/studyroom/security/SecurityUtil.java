@@ -26,4 +26,9 @@ public class SecurityUtil {
         final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return (ShopEntity) authentication.getPrincipal();
     }
+
+    public static MemberEntity getMemberInfo() {
+        final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return (MemberEntity) authentication.getPrincipal();
+    }
 }

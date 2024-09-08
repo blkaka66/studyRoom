@@ -26,7 +26,7 @@ public class SecurityConfig  {
 
     private final JwtUtil jwtUtil;
     private final CustomAccessDeniedHandler accessDeniedHandler;
-    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+//    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
     private final MemberRepository memberRepository;
     private final ShopRepository shopRepository;
@@ -54,7 +54,7 @@ public class SecurityConfig  {
         http.addFilterBefore(new JwtAuthFilter(jwtUtil, memberRepository, shopRepository), UsernamePasswordAuthenticationFilter.class);
 
         http.exceptionHandling((exceptionHandling) -> exceptionHandling
-                .authenticationEntryPoint(authenticationEntryPoint)
+//                .authenticationEntryPoint(authenticationEntryPoint)
                 .accessDeniedHandler(accessDeniedHandler)
         );
 

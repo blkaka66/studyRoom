@@ -28,7 +28,7 @@ public class EnterHistoryEntity extends BaseEntity {
     private OffsetDateTime enterTime;
 
     @Setter
-    @Column(nullable = false)
+    @Column(nullable = true)
     private OffsetDateTime exitTime;
 
 //    public EnterHistoryEntity() {
