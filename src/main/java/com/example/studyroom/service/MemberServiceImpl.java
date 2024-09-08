@@ -1,5 +1,6 @@
 package com.example.studyroom.service;
 
+import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.MemberResponseDto;
 import com.example.studyroom.dto.responseDto.MySeatInfoResponseDto;
@@ -7,6 +8,7 @@ import com.example.studyroom.dto.responseDto.RemainTimeResponseDto;
 import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
 
+import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.type.ApiResult;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -27,7 +29,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     private final MemberRepository repository;
     private final EnterHistoryRepository enterHistoryRepository;
-
+    private final JwtUtil jwtUtil;
 
     private final SeatRepository seatRepository;
 
@@ -51,11 +53,11 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                              RoomRepository roomRepository, MemberRepository memberRepository,
                              MailService mailService, RedisService redisService,
                              RemainPeriodTicketRepository remainPeriodTicketRepository,
-                             RemainTimeTicketRepository remainTimeTicketRepository) {
+                             RemainTimeTicketRepository remainTimeTicketRepository, JwtUtil jwtUtil) {
         super(repository);
         this.repository = repository;
         this.enterHistoryRepository = enterHistoryRepository;
-
+        this.jwtUtil = jwtUtil;
         this.seatRepository = seatRepository;
         this.shopRepository = shopRepository;
 
@@ -78,13 +80,14 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     //자리선택시 enterhistory enterTime까지 생성하는 메서드 만들어야함
     @Override //로그인
-    public FinalResponseDto<MemberEntity> login(String phone, String password) {
+    public FinalResponseDto<String> login(MemberSignInRequestDto dto) {
         //레포지토리에있는 함수가져오기
-        MemberEntity Member = repository.findByPhoneAndPassword(phone, password);
+        MemberEntity Member = repository.findByPhoneAndPassword(dto.getPhoneNumber(), dto.getPassword());
 
         if (Member != null) {
-            // 회원 존재하면 로그인 성공
-            return FinalResponseDto.successWithData(Member);
+
+            String token = this.jwtUtil.createAccessToken(dto);
+            return FinalResponseDto.successWithData(token);
             //return Member;
         } else {
             return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);

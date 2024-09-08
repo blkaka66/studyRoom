@@ -1,7 +1,10 @@
 package com.example.studyroom.controller;
 
+import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
+import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.MemberResponseDto;
+import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.service.MailService;
 import com.example.studyroom.service.MemberService;
 
@@ -30,6 +33,12 @@ public class MemberController {
         System.out.println("ddddddddd");
         mailService.sendEmail(email, "안녕하세요", "반갑습니다");
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<FinalResponseDto<String>> login(@RequestBody MemberSignInRequestDto member) {
+        FinalResponseDto<String> token = memberService.login(MemberSignInRequestDto member);
+        return ResponseEntity.ok(token);
     }
 
 //    @GetMapping("/emails/verifications")

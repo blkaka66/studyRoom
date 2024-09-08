@@ -1,5 +1,6 @@
 package com.example.studyroom.service;
 
+import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.MySeatInfoResponseDto;
 import com.example.studyroom.dto.responseDto.RemainTimeResponseDto;
@@ -20,7 +21,7 @@ public interface MemberService extends BaseService<MemberEntity> {
 
     FinalResponseDto<MySeatInfoResponseDto> getSeatId(Long userId); //회원id받아서 어떤자리에 앉았는지 추출
 
-    FinalResponseDto<MemberEntity> login(String phone, String password); //로그인 기능
+    FinalResponseDto<String> login(MemberSignInRequestDto dto); //로그인 기능
 
 
 
