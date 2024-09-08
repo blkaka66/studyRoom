@@ -1,9 +1,7 @@
 package com.example.studyroom.model;
 
 import jakarta.persistence.*;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.OffsetDateTime;
 
@@ -11,6 +9,8 @@ import java.time.OffsetDateTime;
 @Setter
 @Builder
 @Entity
+@AllArgsConstructor
+@NoArgsConstructor
 @Table(name = "enterHistory")
 public class EnterHistoryEntity extends BaseEntity {
 
@@ -31,13 +31,14 @@ public class EnterHistoryEntity extends BaseEntity {
     @Column(nullable = false)
     private OffsetDateTime exitTime;
 
-    public EnterHistoryEntity() {
+//    public EnterHistoryEntity() {
+//
+//    }
 
-    }
-
-    public EnterHistoryEntity(Long memberId, SeatEntity seat, OffsetDateTime now, OffsetDateTime exitTime) {
-        super();
-    }
+//    // TODO: Long memberId -> MemberEntity member;
+//    public EnterHistoryEntity(MemberEntity member, SeatEntity seat, OffsetDateTime now, OffsetDateTime exitTime) {
+//        super();
+//    }
 
 
     public Long getSeatId() {

@@ -194,8 +194,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                                 }
 
 
-                                EnterHistoryEntity enterHistory =
-                                        new EnterHistoryEntity(userId, seat,  now, null);
+//                                EnterHistoryEntity enterHistory =
+//                                        new EnterHistoryEntity(member, seat,  now, null);
+                                EnterHistoryEntity enterHistory = EnterHistoryEntity.builder().member(member).seat(seat).enterTime(now).build();
                                 enterHistoryRepository.save(enterHistory);
                                 return FinalResponseDto.success();
 
@@ -207,8 +208,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                                 redisService.setValues(redisKey, "occupied", Duration.ofMillis(millis));
 
                                 OffsetDateTime now = OffsetDateTime.now();
-                                EnterHistoryEntity enterHistory =
-                                        new EnterHistoryEntity(userId, seat,  now, null);
+//                                EnterHistoryEntity enterHistory =
+//                                        new EnterHistoryEntity(member, seat,  now, null);
+                                EnterHistoryEntity enterHistory = EnterHistoryEntity.builder().member(member).seat(seat).enterTime(now).build();
 
                                 enterHistoryRepository.save(enterHistory);
                                 return FinalResponseDto.success();
