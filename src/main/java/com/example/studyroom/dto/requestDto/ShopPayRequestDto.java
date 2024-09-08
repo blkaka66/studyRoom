@@ -9,5 +9,5 @@ import lombok.*;
 @AllArgsConstructor
 public class ShopPayRequestDto {
     private Long productId;
-
+    private String category;
 }

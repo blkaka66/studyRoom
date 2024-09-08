@@ -2,17 +2,20 @@ package com.example.studyroom.service;
 
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.MemberResponseDto;
+import com.example.studyroom.dto.responseDto.MySeatInfoResponseDto;
 import com.example.studyroom.dto.responseDto.RemainTimeResponseDto;
 import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
 
 import com.example.studyroom.type.ApiResult;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Member;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -23,9 +26,9 @@ import java.util.Random;
 public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements MemberService {
 
     private final MemberRepository repository;
-//    private final EnterHistoryRepository enterHistoryRepository;
+    private final EnterHistoryRepository enterHistoryRepository;
 
-    private final TicketHistoryRepository ticketHistoryRepository;
+
     private final SeatRepository seatRepository;
 
     private final ShopRepository shopRepository;
@@ -37,18 +40,22 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     private static final String AUTH_CODE_PREFIX = "EMAIL_VERIFICATION_KEY:";
     private static final long authCodeExpirationMillis = 60*60*1000;
+    private final RemainPeriodTicketRepository remainPeriodTicketRepository;
+    private final RemainTimeTicketRepository remainTimeTicketRepository;
 
     public MemberServiceImpl(MemberRepository repository,
-//                             EnterHistoryRepository enterHistoryRepository,
+                            EnterHistoryRepository enterHistoryRepository,
                              SeatRepository seatRepository,
-                             TicketHistoryRepository ticketHistoryRepository,
+
                              ShopRepository shopRepository,
                              RoomRepository roomRepository, MemberRepository memberRepository,
-                             MailService mailService, RedisService redisService) {
+                             MailService mailService, RedisService redisService,
+                             RemainPeriodTicketRepository remainPeriodTicketRepository,
+                             RemainTimeTicketRepository remainTimeTicketRepository) {
         super(repository);
         this.repository = repository;
-//        this.enterHistoryRepository = enterHistoryRepository;
-        this.ticketHistoryRepository = ticketHistoryRepository;
+        this.enterHistoryRepository = enterHistoryRepository;
+
         this.seatRepository = seatRepository;
         this.shopRepository = shopRepository;
 
@@ -57,6 +64,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
         this.mailService = mailService;
         this.redisService = redisService;
+        //this.remainTicketRepository = remainTicketRepository;
+        this.remainPeriodTicketRepository = remainPeriodTicketRepository;
+        this.remainTimeTicketRepository = remainTimeTicketRepository;
     }
 
 
@@ -84,108 +94,54 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
 
 
-//
-//    @Override
-//    public RemainTimeResponseDto getRemainTime(Long shopId, Long userId) {
-//        //id로 티켓히스토리 엔티티 정보 가져오기
-//        // A -> 만료, A` -> 현재 사용 가능한....
-//        // TODO: 만료된것 제외하고 가져오기.
-//        //expired가 false것만 가져오
-//        List<TicketHistoryEntity> ticketHistory = ticketHistoryRepository.findByShopIdAndUserIdAndExpiredFalse(shopId, userId); //만료안된것들만 가져오기(expired가 false)
-//
-//        if (ticketHistory != null) {//만약 ticketPaymentOpt이 존재한다면(티켓을 산적이 있다면)
-//            TicketEntity ticket = ticketHistory.getTicket();
-//            String ticketCategory = ticket.getType();
-//            String ticketExpireTime;
-//
-//            if ("시간권".equals(ticketCategory)) {//그 티켓이 시간권이면
-//                // 시간권인 경우 remainTime을 Duration 형식으로 가져와 문자열로 변환.
-//                Duration remainTime = ticketHistory.getRemainTime();
-//                totalRemainTime = totalRemainTime.plus(remainTime);
-//            } else if ("기간권".equals(ticketCategory)) {//그 티켓이 기간권이면
-//                // 기간권인 경우 endDate를 LocalDateTime 형식으로 가져와 포맷팅.
-//                //Todo:기간권 남은시간을 어떻게 가져올지 모르겠다
-//                ticketExpireTime = ticketHistory.getEndDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-//            } else {
-//                throw new IllegalArgumentException("Unknown ticket category: " + ticketCategory);
-//            }
-//
-//            // DTO로 바꿔서 반환.
-//            return RemainTimeResponseDto.builder()
-//                    .ticketCategory(ticketCategory)
-//                    .ticketExpireTime(ticketExpireTime)
-//                    .build();
-//        } else {
-//            // TicketPaymentEntity가 존재하지 않을 경우 예외를 던집니다.
-//            throw new RuntimeException("Ticket payment not found for shopId: " + shopId + ", userId: " + userId);
-//        }
-//    }
     @Override
     public FinalResponseDto<RemainTimeResponseDto> getRemainTime(Long shopId, Long userId) {
         // 만료되지 않은 티켓 히스토리 엔티티 정보 가져오기
-        List<TicketHistoryEntity> ticketHistories = ticketHistoryRepository.findByShopIdAndUserIdAndExpiredFalse(shopId, userId);
 
-        if (!ticketHistories.isEmpty()) {
-            Duration totalRemainTime = Duration.ZERO;
-            LocalDateTime latestEndDate = null;
+        String ticketExpireTime = "";
+        LocalDate endDate = null;
 
-            for (TicketHistoryEntity ticketHistory : ticketHistories) {
-                TicketEntity ticket = ticketHistory.getTicket();
-                String ticketCategory = ticket.getType();
-
-                if ("시간권".equals(ticketCategory)) {
-                    // 시간권인 경우 remainTime을 Duration 형식으로 가져와 누적
-                    Duration remainTime = ticketHistory.getRemainTime();
-                    totalRemainTime = totalRemainTime.plus(remainTime);
-                } else if ("기간권".equals(ticketCategory)) {
-                    //Todo:기간권 남은시간을 어떻게 가져올지 모르겠다. 현재 endtime은 현재시간+기간으로만 endtime을 지정하고있는데
-                    // 저장된 기간권의 tickethistory가 2개이상일 경우엔 어떡하지? 시간권처럼 남은기간을 현재에 더하고싶은데 방법이있나?
-                } else {
-                    return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
-                    //throw new IllegalArgumentException("Unknown ticket category: " + ticketCategory);
-                }
-            }
-
-            // 시간권의 경우 총 남은 시간을 문자열로 변환
-            String ticketExpireTime = "";
-            if (totalRemainTime.toHours() > 0) {
-                ticketExpireTime = totalRemainTime.toHours() + "시간";
-            } else {
-                // 만료 시간이 없는 경우 기본 메시지
-                ticketExpireTime = "No active ticket";
-            }
-
-            // DTO로 변환하여 반환
-            RemainTimeResponseDto remainTimeResponseDto= RemainTimeResponseDto.builder()
-                    .ticketCategory(ticketHistories.get(0).getTicket().getType()) // Assuming the ticket category is the same for all
-                    .ticketExpireTime(ticketExpireTime)
-                    .build();
-
-            return FinalResponseDto.successWithData(remainTimeResponseDto);
-//            return FinalResponseDto.builder()
-//                    .message("정보가 성공적으로 반환되었습니다")
-//                    .statusCode("0000")
-//                    .data(remainTimeResponseDto)
-//                    .build();
-
-
-        } else {
-            // 만료되지 않은 티켓이 존재하지 않을 경우 예외를 던집니다.
-
-            return FinalResponseDto.failure(ApiResult.TICKET_NOT_EXPIRED);
-
-//            return FinalResponseDto.builder()
-//                    .message("만료되지않은티켓존재")
-//                    .statusCode("3000")
-//                    .build();
-
+        Optional<RemainPeriodTicketEntity> remainPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberId(shopId, userId);
+        if(remainPeriodTicket.isPresent()){ //기간권
+            OffsetDateTime TimeTicketEndDate = remainPeriodTicket.get().getEndDate();
+            endDate = TimeTicketEndDate.toLocalDate();
 
         }
+        Optional<RemainTimeTicketEntity> remainTimeTicket = remainTimeTicketRepository.findByShopIdAndMemberId(shopId, userId);
+        if(remainTimeTicket.isPresent()){//시간권
+            Duration totalRemainTime = Duration.ZERO;
+            Duration remainTime = remainTimeTicket.get().getRemainTime();
+            if (totalRemainTime.toHours() > 0) {
+                ticketExpireTime = totalRemainTime.toHours() + "시간";
+            }
+        }
+
+        if(remainPeriodTicket.isEmpty() && remainTimeTicket.isEmpty()){
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+
+        // DTO로 변환하여 반환
+        RemainTimeResponseDto remainTimeResponseDto= RemainTimeResponseDto.builder()
+                .periodRemainTime(ticketExpireTime)
+                .timeTicketEndDate(endDate)
+                .build();
+
+        return FinalResponseDto.successWithData(remainTimeResponseDto);
+
+
+
+
     }
+
     @Override
     // TODO: Get Seat ID... 현재 유저가 자리하는 곳 반환
-    public EnterHistoryEntity getSeatId(Long userId) {
-        return null;
+    public FinalResponseDto<MySeatInfoResponseDto> getSeatId(Long userId) {
+        EnterHistoryEntity enterHistory= enterHistoryRepository.findActiveByCustomerId(userId);
+        Long id = enterHistory.getSeatId();
+        MySeatInfoResponseDto responseDto = MySeatInfoResponseDto.builder()
+                .seatId(id)
+                .build();
+        return FinalResponseDto.successWithData(responseDto);
     }
 
 
@@ -200,147 +156,137 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
 
-//    // TODO: Transactional 사용법 찾아보기!
-//    @Override
-//    public FinalResponseDto occupySeat(Long shopId , String roomName, int seatCode, Long memberId) {
-//        //FIXME:성공해도 데이터를 반환하지않을땐 제네릭뭐로해야하지?
-//        Optional<ShopEntity> shopOpt = shopRepository.findById(shopId);//shop체크
-//        if(shopOpt.isEmpty()) {
-//            return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
-////            return FinalResponseDto.builder()
-////                    .message("잘못된 샵정보")
-////                    .statusCode("3000")
-////                    .build();
-//        }
-//
-//        Optional<RoomEntity> roomOpt = roomRepository.findByName(roomName);//룸체크
-//        if(roomOpt.isEmpty()) {
-//            return FinalResponseDto.failure(ApiResult.ROOM_NOT_FOUND);
-////            return FinalResponseDto.builder()
-////                    .message("잘못된 방정보")
-////                    .statusCode("3000")
-////                    .build();
-//        }
-//
-//        Long roomId = roomOpt.get().getId();
-//        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(seatCode, roomId);//자리체크
-//        if(seatOpt.isEmpty()) {
-//            return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
-////            return FinalResponseDto.builder()
-////                    .message("주인있는 자리")
-////                    .statusCode("3000")
-////                    .build();
-//        }
-//
-//        SeatEntity seat = seatOpt.get();
-//        if(!seat.getAvailable()) {
-//            return FinalResponseDto.failure(ApiResult.SEAT_ALREADY_OCCUPIED);
-////            return FinalResponseDto.builder()
-////                    .message("자리가 차있음")
-////                    .statusCode("3000")
-////                    .build();
-//        }
-//        seat.setAvailable(false);
-//        seatRepository.save(seat); //점유요청들어오면 seat abilable false로 바꾸기
-//
-//        Optional<MemberEntity> memberOpt = repository.findById(memberId);
-//        Optional<TicketHistoryEntity> ticketHistoryOpt = Optional.ofNullable(ticketHistoryRepository.findByShopIdAndUserId(shopId, memberId));//티켓히스토리아이디 받아오기
-//
-//        if(memberOpt.isEmpty() || ticketHistoryOpt.isEmpty()) {
-//            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
-////            return FinalResponseDto.builder()
-////                    .message("회원정보가 없거나 티켓이없음")
-////                    .statusCode("3000")
-////                    .build();
-//        }
-//
-////        MemberEntity member = memberOpt.get();
-//        TicketHistoryEntity ticketHistory = ticketHistoryOpt.get();
-//        OffsetDateTime now = OffsetDateTime.now();
-//        OffsetDateTime expiredTime=null;
-//        if (ticketHistory.getEndDate() != null) {//티켓이 기간권이면
-//            expiredTime = ticketHistory.getEndDate();
-//        } else if (ticketHistory.getRemainTime() != null) {//티켓이 시간권이면
-//            Duration remainTime = ticketHistory.getRemainTime();
-//            expiredTime = now.plus(remainTime);
-//        }
-//        EnterHistoryEntity enterHistory = new EnterHistoryEntity(memberId, seat, ticketHistory, now, expiredTime);
-//        enterHistoryRepository.save(enterHistory);
-//        return FinalResponseDto.success();
-////        return FinalResponseDto.builder()
-////                .message("입장완료 되었습니다.")
-////                .statusCode("0000")
-////                .build();
-//    }
 
     @Override
-    public FinalResponseDto out(Long userId){
+    @Transactional
+    public FinalResponseDto<String> occupySeat(Long shopId , String roomName, int seatCode, Long userId) {
+        Optional<ShopEntity> shopOpt = shopRepository.findById(shopId);
+        if(shopOpt.isPresent()){
+            Optional<RoomEntity> roomOpt = roomRepository.findByName(roomName);//룸체크
+            if(roomOpt.isPresent()){
+                Long roomId = roomOpt.get().getId();
+                Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(seatCode, roomId);//자리체크
+                if(seatOpt.isPresent()){
+                    SeatEntity seat = seatOpt.get();
+                    if(seat.getAvailable()) {
+                        seat.setAvailable(false);
+                        seatRepository.save(seat);//윗줄 false저장
 
-//        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId); //현재 어디앉았는지
-//        if(enterHistory != null) {
-//            OffsetDateTime now = OffsetDateTime.now();
-//            enterHistory.setCloseTime(now);
-//            enterHistoryRepository.save(enterHistory);
-//
-//            // TODO: 현재 티켓이 시간권인 경우. -> remainTime을 업데이트 한다.
-//            // 자리점유 시 시간권인 경우 expiredTime 세팅!
-//            // redis에서 expiredTime 관련 이벤트 생성. expired 됐을 때.. 자동 퇴장 시키는 로직도 만들어야 함.
-//                // ㄴ 티켓 만료 시켜야 함.
-//            return FinalResponseDto.success();
-////            return FinalResponseDto.builder()
-////                    .message("퇴장이 완료 되었습니다.")
-////                    .statusCode("0000")
-////                    .build();
-//        }
+                        Optional<MemberEntity> memberOpt = repository.findById(userId);
+                        if(memberOpt.isPresent()){
+                            MemberEntity member = memberOpt.get();
+
+                            Optional<RemainPeriodTicketEntity> optionalRemainPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberId(shopId, userId);
+                            Optional<RemainTimeTicketEntity> optionalRemainTimeTicket = remainTimeTicketRepository.findByShopIdAndMemberId(shopId, userId);
+                            if(optionalRemainPeriodTicket.isPresent()){
+                                RemainPeriodTicketEntity remainPeriodTicket = optionalRemainPeriodTicket.get();
+
+                                OffsetDateTime endDate = remainPeriodTicket.getEndDate();
+                                OffsetDateTime now = OffsetDateTime.now();
+                                long ttlSeconds = Duration.between(now, endDate).getSeconds();
+
+                                if (ttlSeconds > 0) {
+                                    String redisKey = "periodSeat:" + seat.getId() + ":user:" + userId;
+                                    redisService.setValuesWithTTL(redisKey, "occupied", ttlSeconds);
+                                    remainPeriodTicketRepository.delete(remainPeriodTicket);
+                                } else {
+                                    return FinalResponseDto.failure(ApiResult.EXPIRED_TICKET);
+                                }
+
+
+                                EnterHistoryEntity enterHistory =
+                                        new EnterHistoryEntity(userId, seat,  now, null);
+                                enterHistoryRepository.save(enterHistory);
+                                return FinalResponseDto.success();
+
+                            }else if(optionalRemainTimeTicket.isPresent()){
+                                RemainTimeTicketEntity remainTimeTicket = optionalRemainTimeTicket.get();
+                                Duration remainTime = remainTimeTicket.getRemainTime();
+                                long millis = remainTime.toMillis();//남은시간을 밀리초로 변환
+                                String redisKey = "timeSeat:" + seatCode + ":user:" + userId;
+                                redisService.setValues(redisKey, "occupied", Duration.ofMillis(millis));
+
+                                OffsetDateTime now = OffsetDateTime.now();
+                                EnterHistoryEntity enterHistory =
+                                        new EnterHistoryEntity(userId, seat,  now, null);
+
+                                enterHistoryRepository.save(enterHistory);
+                                return FinalResponseDto.success();
+                            }
+
+                            else{//티켓남은시간없는경우
+                                return FinalResponseDto.failure(ApiResult.TICKET_NOT_FOUND);
+                            }
+                        }else{
+                            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+                        }
+
+                    }else{
+                        return FinalResponseDto.failure(ApiResult.SEAT_ALREADY_OCCUPIED);
+                    }
+                }
+                else{
+                    return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
+                }
+            }
+            else{
+                return FinalResponseDto.failure(ApiResult.ROOM_NOT_FOUND);
+            }
+        }
+        else{
+            return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
+        }
+
+    }
+
+    @Override
+    public FinalResponseDto<String> out(Long userId){
+
+        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId); //현재 어디앉았는지
+        if(enterHistory != null) {
+            OffsetDateTime now = OffsetDateTime.now();
+            enterHistory.setExitTime(now);
+            enterHistoryRepository.save(enterHistory);
+
+
+            return FinalResponseDto.success();
+
+        }
         return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
-//        return FinalResponseDto.builder()
-//                .message("자리정보가 없습니다")
-//                .statusCode("1006")
-//                .build();
+
 
 
     }
 
     @Override
     public FinalResponseDto<String> move(Long userId, Long movingRoomCode, int movingSeatNumber){
-//        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
-//        if (enterHistory == null) {
-//            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
-////            return FinalResponseDto.builder()
-////                    .message("입장정보가 없습니다")
-////                    .statusCode("1006")
-////                    .build();
-//        }
-//        SeatEntity currentSeat = enterHistory.getSeat();
-//        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(currentSeat.getSeatCode(), currentSeat.getRoom().getId()); //자리체크
-//        if (seatOpt.isEmpty()) {
-//            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
-////            return FinalResponseDto.builder()
-////                    .message("자리정보가 없습니다")
-////                    .statusCode("1006")
-////                    .build();
-//        }
-//        Optional<SeatEntity> newSeatOpt = seatRepository.findBySeatCodeAndRoom_Id(movingSeatNumber, movingRoomCode);
-//        if(newSeatOpt.isPresent()){
-//            SeatEntity newSeat = newSeatOpt.get();
-//            if (!newSeat.getAvailable()) {//자리가 이미 차있으면
-//                return FinalResponseDto.failure(ApiResult.SEAT_ALREADY_OCCUPIED);
-////                return FinalResponseDto.builder()
-////                        .message("자리가 이미차있습니다")
-////                        .statusCode("1006")
-////                        .build();
-//            }
-//            // TODO: 기존 Seat에 대해서도 업데이트 필요
-//            newSeat.setAvailable(false);
-//            seatRepository.save(newSeat);
-//            enterHistory.setSeat(newSeat);
-//            enterHistoryRepository.save(enterHistory);
-//        }
-        return FinalResponseDto.success();
-//        return FinalResponseDto.builder()
-//                .message("자리 이동이 성공적으로 완료되었습니다")
-//                .statusCode("0000")
-//                .build();
+        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
+        if(enterHistory!=null){
+            SeatEntity currentSeat = enterHistory.getSeat();
+            Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(currentSeat.getSeatCode(), currentSeat.getRoom().getId()); //자리체크
+            Optional<SeatEntity> newSeatOpt = seatRepository.findBySeatCodeAndRoom_Id(movingSeatNumber, movingRoomCode);
+            if(newSeatOpt.isPresent() && seatOpt.isPresent()){
+                SeatEntity newSeat = newSeatOpt.get();
+                SeatEntity previousSeat = seatOpt.get();
+                if(newSeat.getAvailable()){
+                    newSeat.setAvailable(false);
+                    previousSeat.setAvailable(true);
+                    seatRepository.save(newSeat);
+                    seatRepository.save(previousSeat);
+                    enterHistory.setSeat(newSeat);
+                    enterHistoryRepository.save(enterHistory);
+                    return FinalResponseDto.success();
+                }else{
+                    return FinalResponseDto.failure(ApiResult.SEAT_ALREADY_OCCUPIED);
+                }
+            }else{
+                return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
+            }
+        }else{
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+
+
     }
 
     ///
@@ -351,17 +297,21 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         String title = " 이메일 인증 번호";
         String authCode = this.createCode();
         // 이메일 인증 요청 시 인증 번호 Redis에 저장 ( key = "AuthCode " + Email / value = AuthCode )
-        redisService.setValues(AUTH_CODE_PREFIX + toEmail, authCode, Duration.ofMillis(authCodeExpirationMillis));
-        mailService.sendEmail(toEmail, title, authCode);
+        if(authCode != null){
+            redisService.setValues(AUTH_CODE_PREFIX + toEmail, authCode, Duration.ofMillis(authCodeExpirationMillis));
+            mailService.sendEmail(toEmail, title, authCode);
+        }else{
+
+        }
+
     }
 
-    private FinalResponseDto checkDuplicatedEmail(String email) {
+    private FinalResponseDto<String> checkDuplicatedEmail(String email) {
         boolean isMemberExist = shopRepository.existsByEmail(email);
         if (isMemberExist) {
-            return FinalResponseDto.builder()
-                    .message("해당 점주가 이미 존재합니다.")
-                    .statusCode("0000")
-                    .build();
+            return FinalResponseDto.failure(ApiResult.ALREADY_EXIST_EMAIL);
+        }else{
+            return FinalResponseDto.success();
         }
     }
 
@@ -375,21 +325,22 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             }
             return builder.toString();
         } catch (NoSuchAlgorithmException e) {
-            log.debug("MemberService.createCode() exception occur");
-            throw new BusinessLogicException(ExceptionCode.NO_SUCH_ALGORITHM);
+            return null;
         }
     }
 
-    public EmailVerificationResult verifiedCode(String email, String authCode) {
+    public FinalResponseDto<Object> verifiedCode(String email, String authCode) {
         this.checkDuplicatedEmail(email);
         String redisAuthCode = redisService.getValues(AUTH_CODE_PREFIX + email);
         if(redisAuthCode == null) {
             //return 유효시간 초과 에러 -->
+            return FinalResponseDto.failure(ApiResult.TIMEOUT_EXCEEDED);
         }
-        boolean authResult = authCode.equals(redisAuthCode) ? true : false;
+        boolean authResult = authCode.equals(redisAuthCode);
 
-        return EmailVerificationResult.of(authResult);
+        return FinalResponseDto.successWithData(authResult);
     }
+
     public FinalResponseDto<MemberResponseDto> getMemberInfo(Long userId){
         Optional<MemberEntity> member = memberRepository.findById(userId);
         if(member.isEmpty()){
@@ -410,5 +361,6 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         memberRepository.deleteById(member.get().getId());
         return FinalResponseDto.success();
     }
-
 }
+
+

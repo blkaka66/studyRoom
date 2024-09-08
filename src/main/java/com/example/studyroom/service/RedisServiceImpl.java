@@ -4,6 +4,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class RedisServiceImpl implements RedisService {
@@ -24,5 +25,11 @@ public class RedisServiceImpl implements RedisService {
     public String getValues(String key) {
         return redisTemplate.opsForValue().get(key);
     }
+
+    @Override
+    public void setValuesWithTTL(String key, String value, long ttlSeconds) {
+        redisTemplate.opsForValue().set(key, value, ttlSeconds, TimeUnit.SECONDS);
+    }
+
 }
 

@@ -1,6 +1,7 @@
 package com.example.studyroom.model;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,6 +9,7 @@ import java.time.OffsetDateTime;
 
 @Getter
 @Setter
+@Builder
 @Entity
 @Table(name = "enterHistory")
 public class EnterHistoryEntity extends BaseEntity {
@@ -22,22 +24,21 @@ public class EnterHistoryEntity extends BaseEntity {
     @JoinColumn(name = "seatId", foreignKey = @ForeignKey(name = "fk_seat_id"))
     private SeatEntity seat;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ticketHistoryId", foreignKey = @ForeignKey(name = "fk_ticket_history_id"))
-    private TicketHistoryEntity ticketHistoryEntity;
-
     @Column(nullable = false)
     private OffsetDateTime enterTime;
 
-    @Column(nullable = false)
-    private OffsetDateTime expiredTime;
-
     @Setter
     @Column(nullable = false)
-    private OffsetDateTime closeTime;
+    private OffsetDateTime exitTime;
 
-    public EnterHistoryEntity(Long member, SeatEntity seat, TicketHistoryEntity ticketHistory, OffsetDateTime now, OffsetDateTime expiredTime) {
+    public EnterHistoryEntity() {
+
     }
+
+    public EnterHistoryEntity(Long memberId, SeatEntity seat, OffsetDateTime now, OffsetDateTime exitTime) {
+        super();
+    }
+
 
     public Long getSeatId() {
         return seat.getId();

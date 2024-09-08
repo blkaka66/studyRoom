@@ -4,11 +4,12 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Duration;
+
 @Getter
 @Setter
 @Entity
-@Table(name = "periodTicket")
-
+@Table(name = "periodTicket") //기간권
 public class PeriodTicketEntity extends BaseEntity{
     //referencedColumnName(참조할 외래 column명) 가없으면 코드가 알아서 id를 참조한다.
     @ManyToOne(fetch = FetchType.LAZY)
@@ -22,5 +23,6 @@ public class PeriodTicketEntity extends BaseEntity{
     private int amount;
 
     @Column(nullable = false)
-    private int period;
+    private Duration period;
+    //ex)Duration duration = Duration.ofDays(21);21일치 기간권
 }

@@ -30,11 +30,15 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     private final EnterHistoryRepository enterHistoryRepository;
     private final MemberRepository memberRepository;
     private final ShopRepository shopRepository;
-    private final TicketHistoryRepository ticketHistoryRepository;
-    private final TicketRepository ticketRepository;
-    private final JwtUtil jwtUtil;
 
-    public ShopServiceImpl(ShopRepository repository,TicketRepository ticketRepository ,MemberService memberService, SeatRepository seatRepository, RoomRepository roomRepository, MemberServiceImpl memberServiceImpl, EnterHistoryRepository enterHistoryRepository, MemberRepository memberRepository, ShopRepository shopRepository, TicketHistoryRepository ticketHistoryRepository, JwtUtil jwtUtil) {
+    private final JwtUtil jwtUtil;
+    private final PeriodTicketRepository periodTicketRepository;
+    private final TimeTicketRepository timeTicketRepository;
+
+    public ShopServiceImpl(ShopRepository repository,  MemberService memberService, SeatRepository seatRepository,
+                           RoomRepository roomRepository, MemberServiceImpl memberServiceImpl,
+                           EnterHistoryRepository enterHistoryRepository, MemberRepository memberRepository,
+                           ShopRepository shopRepository, JwtUtil jwtUtil, PeriodTicketRepository periodTicketRepository, TimeTicketRepository timeTicketRepository) {
         super(repository);
         this.repository = repository;
         this.memberService = memberService;
@@ -44,9 +48,10 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         this.enterHistoryRepository = enterHistoryRepository;
         this.memberRepository = memberRepository;
         this.shopRepository = shopRepository;
-        this.ticketHistoryRepository = ticketHistoryRepository;
-        this.ticketRepository=ticketRepository;
+
         this.jwtUtil = jwtUtil;
+        this.periodTicketRepository = periodTicketRepository;
+        this.timeTicketRepository = timeTicketRepository;
     }
 
     @Override
@@ -79,19 +84,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
     }
 
-//    @Override
-//    //위에서 받은 리스트를 ShopListResponseDto로바꾸고싶음
-//    public List<ShopListResponseDto> getShopListResponseDto(Long shopId) {
-//        // Shop Id 기준으로 멤버를 찾는다. (특정 지점의 고객)
-//        List<MemberEntity> members = getMemberList(shopId);
-//        //
-//        return members.stream()
-//                .map(member -> ShopListResponseDto.builder()
-//                        .shopId(member.getShop().getId())
-//                        .name(member.getName())
-//                        .build())
-//                .collect(Collectors.toList());
-//    }
+
 
     @Override //로그인
     public FinalResponseDto<String> login(ShopSignInRequestDto dto) {
@@ -106,23 +99,12 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         if (Shop != null) {
             String token = this.jwtUtil.createAccessToken(dto);
 
-//            String token2 = this.jwtUtil.createAccessToken(MemberSignInRequestDto.builder().phoneNumber("123123").build());
-            // 점주 존재하면 로그인 성공
-            return FinalResponseDto.successWithData(token);
-//            return FinalResponseDto.builder()
-//                    .message("정보가 성공적으로 반환되었습니다")
-//                    .statusCode("0000")
-//                    .data(Shop)
-//                    .build();
 
-           // return Shop;
+            return FinalResponseDto.successWithData(token);
+
         } else {
             return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);
-//            return FinalResponseDto.builder()
-//                    .message("로그인 실패: 사용자명 또는 비밀번호가 올바르지 않습니다.")
-//                    .statusCode("3000")
-//                    .build();
-            //throw new RuntimeException("로그인 실패: 사용자명 또는 비밀번호가 올바르지 않습니다.");
+
         }
     }
 
@@ -156,11 +138,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         }
 
 
-//        ShopEntity shop = repository.findById(shopId)
-//                .orElse(new ShopEntity());
 
-//        ShopEntity shop = repository.findById(shopId)
-//                .orElse(null);
 
 
         ShopInfoResponseDto shopInfo = ShopInfoResponseDto.builder()
@@ -170,14 +148,10 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
         return FinalResponseDto.successWithData(shopInfo);
 
-//        return FinalResponseDto.<ShopInfoResponseDto>builder()
-//                .message("정보가 성공적으로 반환되었습니다")
-//                .statusCode("0000")
-//                .data(shopInfo)
-//                .build();
 
 
     }
+
 
     @Override
     public FinalResponseDto<List<RoomAndSeatInfoResponseDto>> getRoomsAndSeatsByShopId(Long shopId, Long customerId) {
@@ -225,108 +199,28 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     //누가 자리점유요청 메시지창만 띄워도 점유가 되게 하고 다른 자리를 점유하면 그 자리는 점유를 풀기(어떻게하지?)->일단 보류
 
     @Override
-    public FinalResponseDto<List<ProductResponseDto>> getProductList(Long shopId ,String productType){
-        List<TicketEntity> tickets = ticketRepository.findByShopIdAndType(shopId,productType);
-//        if(!ObjectUtils.isEmpty(tickets)) {
-////        if(!tickets.isEmpty() ){
-//            List<ProductResponseDto> productResponseDto = tickets.stream()
-//                    .map(ticket -> ProductResponseDto.builder()
-//                            .productId(ticket.getId())
-//                            .name(ticket.getName())
-//                            .amount(ticket.getAmount())
-//                            .period(ticket.getPeriod())
-//                            .type(ticket.getType())
-//                            .build())
-//                    .collect(Collectors.toList());
-//
-//            return ProductListResponseDto.builder()
-//                    .productInfo(productResponseDto)
-//                    .build();
-//        }
-//        return MessageResponseDto.builder()
-//                .message("잘못된 샵정보")
-//                .statusCode("3000")
-//                .build();
+    public FinalResponseDto <ProductResponseDto> getProductList(Long shopId){
 
-        List<ProductResponseDto> productResponseDto = tickets.stream()
-                .map(ticket -> ProductResponseDto.builder()
-                        .productId(ticket.getId())
-                        .name(ticket.getName())
-                        .amount(ticket.getAmount())
-                        .period(ticket.getPeriod())
-                        .type(ticket.getType())
-                        .build())
-                .collect(Collectors.toList());
+        List<PeriodTicketEntity> periodTicketEntities = periodTicketRepository.findByShopId(shopId);
+        List<TimeTicketEntity> timeTicketEntities = timeTicketRepository.findByShopId(shopId);
+
+        ProductResponseDto productResponseDto = ProductResponseDto.builder()
+                .periodTicketEntities(periodTicketEntities)
+                .timeTicketEntities(timeTicketEntities)
+                .build();
+
 
 
         return FinalResponseDto.successWithData(productResponseDto);
-//        return FinalResponseDto.<List<ProductResponseDto>>builder()
-//                .message("정보가 성공적으로 반환되었습니다.")
-//                .statusCode("0000")
-//                .data(productResponseDto)
-//                .build();
-    }
 
-    @Override
-    public FinalResponseDto<String> processPayment(ShopPayRequestDto product,Long customerId) {
-        // member
-        // ㄴ 토큰이용
-        // Optional<MemberEntity> member =
-        // ticket
-//        Optional<TicketEntity> ticket = ticketRepository.findById(paymentRequestDto.getProductId());
-//        if(ticket.isEmpty()) {
-//            return null;
-//        }
-        TicketEntity ticket = ticketRepository.findById(product.getProductId())
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 상품입니다."));
-        // ㄴ DTO
-        // startDate
-        // endDate
-        // expired = false
-        MemberEntity member = memberRepository.findById(customerId)
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 회원입니다."));
-
-        TicketHistoryEntity ticketPayment = new TicketHistoryEntity();
-//        ticketPayment.setTicket(ticket.get());
-        ticketPayment.setTicket(ticket);
-        //ticketPayment.setMember(member.get());
-        ticketPayment.setExpired(false);
-        ticketPayment.setMember(member);
-        setStart(ticketPayment);
-
-        ticketHistoryRepository.save(ticketPayment);
-
-        return FinalResponseDto.success();
-    }
-
-
-    private void setStart(TicketHistoryEntity ticket) {
-        // 결제 시점 설정
-        ticket.setStartDate(OffsetDateTime.now());//결제는 호출된 당시시간을 저장
-        // 종료 시점 설정
-        ticket.setEndDate(calculateEndDate(ticket)); //현재시간+period 근데 여기선 ticketentity가필요한데 어쩌지?
     }
 
 
 
-    // 종료 시점을 계산하는 메서드
-    private OffsetDateTime calculateEndDate(TicketHistoryEntity ticketPayment) {
-        int period = ticketPayment.getTicket().getPeriod();
-        if ("기간권".equals(ticketPayment.getTicket().getType())) {
-            return ticketPayment.getStartDate().plusDays(period);//기간권이면 plusDays라는 내장함수를 이용
-        } else if ("시간권".equals(ticketPayment.getTicket().getType())) {
-            Duration newRemainTime = ticketPayment.getRemainTime() != null
-                    ? ticketPayment.getRemainTime().plusHours(period) // 기존 remainTime이 있으면(기존 시간권에서 연장을한다면) period만큼 더하기
-                    : Duration.ofHours(period); // remainTime이 없으면(새로 시간권을 끊는경우라면) 새로 Duration 덮어쓰기
-
-            // remainTime 업데이트
-            ticketPayment.setRemainTime(newRemainTime);
 
 
-            return null; //시간권은 remaintime만 업데이트 하고 enddate는 기간권에서만 필요한 필드라 null을 리턴
-        } else {
-            throw new IllegalArgumentException("Unknown type: " + ticketPayment.getTicket().getType()); //예외처리
-        }
-    }
+
+
+
 
 }

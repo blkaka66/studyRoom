@@ -31,8 +31,7 @@ public interface ShopService extends BaseService<ShopEntity> {
     //List<RoomAndSeatInfoResponseDto> getRoomsAndSeatsByShopId(Long shopId,Long customerId); //shopid,customerId받아서 방이랑 좌석정보 가져오기
     FinalResponseDto getRoomsAndSeatsByShopId(Long shopId,Long customerId); //shopid,customerId받아서 방이랑 좌석정보 가져오기
 
-    FinalResponseDto<List<ProductResponseDto>> getProductList(Long shopId , String productType);//티켓 정보가져오기(시간권 기간권나눠서)
+    FinalResponseDto <ProductResponseDto> getProductList(Long shopId );//티켓 정보가져오기(시간권 기간권나눠서)
 
-    // 결제 처리 메서드 구현
-    FinalResponseDto<String> processPayment(ShopPayRequestDto product , Long customerId);
+
 }

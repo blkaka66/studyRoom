@@ -1,6 +1,7 @@
 package com.example.studyroom.service;
 
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
+import com.example.studyroom.dto.responseDto.MySeatInfoResponseDto;
 import com.example.studyroom.dto.responseDto.RemainTimeResponseDto;
 import com.example.studyroom.model.EnterHistoryEntity;
 import com.example.studyroom.model.MemberEntity;
@@ -17,11 +18,13 @@ public interface MemberService extends BaseService<MemberEntity> {
 //    Duration getRemainTime(Long shopId, Long userId);
     FinalResponseDto getRemainTime(Long shopId, Long userId);
 
-    EnterHistoryEntity getSeatId(Long userId); //회원id받아서 어떤자리에 앉았는지 추출
+    FinalResponseDto<MySeatInfoResponseDto> getSeatId(Long userId); //회원id받아서 어떤자리에 앉았는지 추출
 
     FinalResponseDto<MemberEntity> login(String phone, String password); //로그인 기능
 
-//    FinalResponseDto occupySeat(Long shopId , String roomName, int seatCode, Long memberId); //자리 점유요청 메서드
+
+
+    FinalResponseDto<String> occupySeat(Long shopId , String roomName, int seatCode, Long memberId); //자리 점유요청 메서드
 
     FinalResponseDto out(Long userId);//퇴장
 
@@ -30,5 +33,7 @@ public interface MemberService extends BaseService<MemberEntity> {
     FinalResponseDto getMemberInfo(Long userId);//회원 정보가져오기
 
     FinalResponseDto<String> deleteMember(Long userId);//회원탈퇴
+
+
 
 }

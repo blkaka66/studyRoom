@@ -1,15 +1,17 @@
 package com.example.studyroom.model;
+import com.example.studyroom.common.DurationConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
-//기간권 티켓을 산 기록
+
 @Getter
 @Setter
 @Entity
-@Table(name = "periodTicketHistory")
-public class PeriodTicketHistoryEntity extends BaseEntity{
+@Table(name = "remainTimeTicket")
+public class RemainTimeTicketEntity extends BaseEntity{
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customerId", foreignKey = @ForeignKey(name = "fk_customer_id"))
     private MemberEntity member;
@@ -18,10 +20,7 @@ public class PeriodTicketHistoryEntity extends BaseEntity{
     @JoinColumn(name = "shopId", foreignKey = @ForeignKey(name = "fk_shop_id"))
     private ShopEntity shop;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ticketId", foreignKey = @ForeignKey(name = "fk_ticket_id"))
-    private PeriodTicketEntity ticket;
-
+    @Convert(converter = DurationConverter.class)
     @Column(nullable = false)
-    private OffsetDateTime paymentDate;//결제일
+    private Duration remainTime;
 }
