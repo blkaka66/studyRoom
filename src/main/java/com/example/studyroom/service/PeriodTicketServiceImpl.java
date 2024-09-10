@@ -7,12 +7,14 @@ import com.example.studyroom.repository.*;
 import com.example.studyroom.type.ApiResult;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
+@Service
 public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity> implements PeriodTicketService {
     private final PeriodTicketRepository periodTicketRepository;
     private final PeriodTicketHistoryRepository periodTicketHistoryRepository;

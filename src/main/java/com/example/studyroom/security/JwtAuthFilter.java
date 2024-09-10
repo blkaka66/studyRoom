@@ -52,13 +52,17 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
                 UsernamePasswordAuthenticationToken authenticationToken = null;
                 UserDetails userDetails ;
                 if(role.equals("SHOP")){
-                    String Email=jwtUtil.getShopEmail(token);
-                    ShopEntity shop =   shopRepository.findByEmail(Email);
+                    String email = jwtUtil.getShopEmail(token);
+                    ShopEntity shop =   shopRepository.findByEmail(email);
                     authenticationToken = new UsernamePasswordAuthenticationToken(shop, "", getAuthorities(role));
                 }else if(role.equals("CUSTOMER") ){
-                    String phoneNumber=jwtUtil.getCustomerPhoneNumber(token);
-                    MemberEntity member =   memberRepository.findByPhone(phoneNumber);
-                    authenticationToken = new UsernamePasswordAuthenticationToken(member, "", getAuthorities(role));
+                    Long userId = jwtUtil.getCustomerUserId(token);
+                    MemberEntity member = memberRepository.findById(userId).orElse(null);
+//                    String phoneNumber=jwtUtil.getCustomerPhoneNumber(token);
+//                    MemberEntity member =   memberRepository.findByPhone(phoneNumber);
+                    if(member != null) {
+                        authenticationToken = new UsernamePasswordAuthenticationToken(member, "", getAuthorities(role));
+                    }
                 }else{
                     return;
                 }

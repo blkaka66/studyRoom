@@ -7,12 +7,15 @@ import com.example.studyroom.repository.*;
 import com.example.studyroom.type.ApiResult;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
 //시간권(ex)3시간)
+
+@Service
 public class TimeTicketServiceImpl extends BaseServiceImpl<TimeTicketEntity> implements TimeTicketService{
     private final ShopRepository shopRepository;
     private final MemberRepository memberRepository;
@@ -46,7 +49,7 @@ public class TimeTicketServiceImpl extends BaseServiceImpl<TimeTicketEntity> imp
             addRemainTime(ticket , shopId, customerId,shop,member);
 
         }else{
-            FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
         return FinalResponseDto.success();
     }

@@ -1,10 +1,12 @@
 package com.example.studyroom.controller;
 
 import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
+import com.example.studyroom.dto.requestDto.OccupySeatRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.MemberResponseDto;
 import com.example.studyroom.model.MemberEntity;
+import com.example.studyroom.security.SecurityUtil;
 import com.example.studyroom.service.MailService;
 import com.example.studyroom.service.MemberService;
 
@@ -37,8 +39,14 @@ public class MemberController {
 
     @PostMapping("/login")
     public ResponseEntity<FinalResponseDto<String>> login(@RequestBody MemberSignInRequestDto member) {
-        FinalResponseDto<String> token = memberService.login( member);
+        FinalResponseDto<String> token = memberService.login(member);
         return ResponseEntity.ok(token);
+    }
+
+    @PostMapping("/in")
+    public ResponseEntity<FinalResponseDto<String>> in(@RequestBody OccupySeatRequestDto occupySeatRequestDto) {
+        MemberEntity member = SecurityUtil.getMemberInfo();
+        return ResponseEntity.ok(memberService.occupySeat(member.getShop().getId(), occupySeatRequestDto.getRoomName(), occupySeatRequestDto.getSeatCode(), member.getId()));
     }
 
 //    @GetMapping("/emails/verifications")

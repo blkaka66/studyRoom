@@ -164,81 +164,72 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     @Transactional
     public FinalResponseDto<String> occupySeat(Long shopId , String roomName, int seatCode, Long userId) {
         Optional<ShopEntity> shopOpt = shopRepository.findById(shopId);
-        if(shopOpt.isPresent()){
-            Optional<RoomEntity> roomOpt = roomRepository.findByName(roomName);//룸체크
-            if(roomOpt.isPresent()){
-                Long roomId = roomOpt.get().getId();
-                Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(seatCode, roomId);//자리체크
-                if(seatOpt.isPresent()){
-                    SeatEntity seat = seatOpt.get();
-                    if(seat.getAvailable()) {
-                        seat.setAvailable(false);
-                        seatRepository.save(seat);//윗줄 false저장
+        if(shopOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
 
-                        Optional<MemberEntity> memberOpt = repository.findById(userId);
-                        if(memberOpt.isPresent()){
-                            MemberEntity member = memberOpt.get();
+        Optional<RoomEntity> roomOpt = roomRepository.findByName(roomName);//룸체크
+        if(roomOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.ROOM_NOT_FOUND);
 
-                            Optional<RemainPeriodTicketEntity> optionalRemainPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberId(shopId, userId);
-                            Optional<RemainTimeTicketEntity> optionalRemainTimeTicket = remainTimeTicketRepository.findByShopIdAndMemberId(shopId, userId);
-                            if(optionalRemainPeriodTicket.isPresent()){
-                                RemainPeriodTicketEntity remainPeriodTicket = optionalRemainPeriodTicket.get();
+        Long roomId = roomOpt.get().getId();
+        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(seatCode, roomId);//자리체크
+        if(seatOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
 
-                                OffsetDateTime endDate = remainPeriodTicket.getEndDate();
-                                OffsetDateTime now = OffsetDateTime.now();
-                                long ttlSeconds = Duration.between(now, endDate).getSeconds();
+        SeatEntity seat = seatOpt.get();
+        if(!seat.getAvailable()) return FinalResponseDto.failure(ApiResult.SEAT_ALREADY_OCCUPIED);
 
-                                if (ttlSeconds > 0) {
-                                    String redisKey = "periodSeat:" + seat.getId() + ":user:" + userId;
-                                    redisService.setValuesWithTTL(redisKey, "occupied", ttlSeconds);
-                                    remainPeriodTicketRepository.delete(remainPeriodTicket);
-                                } else {
-                                    return FinalResponseDto.failure(ApiResult.EXPIRED_TICKET);
-                                }
+        seat.setAvailable(false);
+        seatRepository.save(seat);//윗줄 false저장
 
+        Optional<MemberEntity> memberOpt = repository.findById(userId);
+        if(memberOpt.isPresent()){
+            MemberEntity member = memberOpt.get();
 
-                                EnterHistoryEntity enterHistory =
-                                        new EnterHistoryEntity(userId, seat,  now, null);
-                                enterHistoryRepository.save(enterHistory);
-                                return FinalResponseDto.success();
+            Optional<RemainPeriodTicketEntity> optionalRemainPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberId(shopId, userId);
+            Optional<RemainTimeTicketEntity> optionalRemainTimeTicket = remainTimeTicketRepository.findByShopIdAndMemberId(shopId, userId);
+            if(optionalRemainPeriodTicket.isPresent()){
+                RemainPeriodTicketEntity remainPeriodTicket = optionalRemainPeriodTicket.get();
 
-                            }else if(optionalRemainTimeTicket.isPresent()){
-                                RemainTimeTicketEntity remainTimeTicket = optionalRemainTimeTicket.get();
-                                Duration remainTime = remainTimeTicket.getRemainTime();
-                                long millis = remainTime.toMillis();//남은시간을 밀리초로 변환
-                                String redisKey = "timeSeat:" + seatCode + ":user:" + userId;
-                                redisService.setValues(redisKey, "occupied", Duration.ofMillis(millis));
+                OffsetDateTime endDate = remainPeriodTicket.getEndDate();
+                OffsetDateTime now = OffsetDateTime.now();
+                long ttlSeconds = Duration.between(now, endDate).getSeconds();
 
-                                OffsetDateTime now = OffsetDateTime.now();
-                                EnterHistoryEntity enterHistory =
-                                        new EnterHistoryEntity(userId, seat,  now, null);
-
-                                enterHistoryRepository.save(enterHistory);
-                                return FinalResponseDto.success();
-                            }
-
-                            else{//티켓남은시간없는경우
-                                return FinalResponseDto.failure(ApiResult.TICKET_NOT_FOUND);
-                            }
-                        }else{
-                            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
-                        }
-
-                    }else{
-                        return FinalResponseDto.failure(ApiResult.SEAT_ALREADY_OCCUPIED);
-                    }
+                if (ttlSeconds > 0) {
+                    String redisKey = "periodSeat:" + seat.getId() + ":user:" + userId;
+                    redisService.setValuesWithTTL(redisKey, "occupied", ttlSeconds);
+                    remainPeriodTicketRepository.delete(remainPeriodTicket);
+                } else {
+                    return FinalResponseDto.failure(ApiResult.EXPIRED_TICKET);
                 }
-                else{
-                    return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
-                }
+
+
+//                                EnterHistoryEntity enterHistory =
+//                                        new EnterHistoryEntity(member, seat,  now, null);
+                EnterHistoryEntity enterHistory = EnterHistoryEntity.builder().member(member).seat(seat).enterTime(now).build();
+                enterHistoryRepository.save(enterHistory);
+                return FinalResponseDto.success();
+
+            }else if(optionalRemainTimeTicket.isPresent()){
+                RemainTimeTicketEntity remainTimeTicket = optionalRemainTimeTicket.get();
+                Duration remainTime = remainTimeTicket.getRemainTime();
+                long millis = remainTime.toMillis();//남은시간을 밀리초로 변환
+                String redisKey = "timeSeat:" + seatCode + ":user:" + userId + ":shop:" + shopId;
+                redisService.setValues(redisKey, "occupied", Duration.ofMillis(millis));
+
+                OffsetDateTime now = OffsetDateTime.now();
+//                                EnterHistoryEntity enterHistory =
+//                                        new EnterHistoryEntity(member, seat,  now, null);
+                EnterHistoryEntity enterHistory = EnterHistoryEntity.builder().member(member).seat(seat).enterTime(now).build();
+
+                enterHistoryRepository.save(enterHistory);
+                return FinalResponseDto.success();
             }
-            else{
-                return FinalResponseDto.failure(ApiResult.ROOM_NOT_FOUND);
+
+            else{//티켓남은시간없는경우
+                return FinalResponseDto.failure(ApiResult.TICKET_NOT_FOUND);
             }
+        }else{
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
-        else{
-            return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
-        }
+
 
     }
 

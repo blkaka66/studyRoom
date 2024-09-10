@@ -183,6 +183,10 @@ public class JwtUtil {
         return parseClaims(token).get("phoneNumber", String.class);
     }
 
+    public Long getCustomerUserId(String token) {
+        return parseClaims(token).get("userId", Long.class);
+    }
+
     /**
      * JWT Claims 추출
      * @param accessToken
