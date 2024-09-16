@@ -1,4 +1,5 @@
 package com.example.studyroom.service;
+import com.example.studyroom.model.RemainPeriodTicketEntity;
 import com.example.studyroom.model.RemainTimeTicketEntity;
 import com.example.studyroom.model.SeatEntity;
 import com.example.studyroom.repository.RemainPeriodTicketRepository;
@@ -29,21 +30,25 @@ public class RedisExpirationListener implements MessageListener {
     @Override
     public void onMessage(Message message, byte[] pattern) { //ttl만료이벤트가 발생하면 호출됨
         String expiredKey = message.toString();
+        Long seatId = extractSeatIdFromKey(expiredKey);
+        Long userId = extractUserIdFromKey(expiredKey);
+        Long shopId = extractShopIdFromKey(expiredKey);
+        SeatEntity seat = seatRepository.findById(seatId).orElseThrow();
         if (expiredKey.startsWith("periodSeat:")) {//만약 ttl이 만료됐으면
-            Long seatId = extractSeatIdFromKey(expiredKey);
-            Long userId = extractUserIdFromKey(expiredKey);
-            remainPeriodTicketRepository.deleteByShopIdAndMemberId(seatId, userId);
+            remainPeriodTicketRepository.deleteByShopIdAndMemberId(shopId, userId);
+            RemainPeriodTicketEntity remainPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberId(shopId, userId).orElseThrow();
+            remainPeriodTicketRepository.delete(remainPeriodTicket);
         }else if(expiredKey.startsWith("timeSeat:")){
-            Long seatId = extractSeatIdFromKey(expiredKey);
-            Long userId = extractUserIdFromKey(expiredKey);
-            Long shopId = extractShopIdFromKey(expiredKey);
-//            remainTimeTicketRepository.deleteByShopIdAndMemberId(seatId, userId);
-            SeatEntity seat = seatRepository.findById(seatId).orElseThrow();
+            remainTimeTicketRepository.deleteByShopIdAndMemberId(shopId, userId);
             RemainTimeTicketEntity remainTimeTicketEntity = remainTimeTicketRepository.findByShopIdAndMemberId(shopId, userId).orElseThrow();
-            seat.setAvailable(true);
-            seatRepository.save(seat);
-            remainTimeTicketService.delete(remainTimeTicketEntity);
+            remainTimeTicketRepository.delete(remainTimeTicketEntity);
+        }else{
+            throw new IllegalArgumentException("존재하지 않는 티켓종류(redis ttl 만료시 이벤트): " + expiredKey);
         }
+        seat.setAvailable(true);
+        seatRepository.save(seat);
+
+        
     }
 
     private Long extractSeatIdFromKey(String key) {

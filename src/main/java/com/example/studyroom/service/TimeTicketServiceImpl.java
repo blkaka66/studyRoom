@@ -60,12 +60,12 @@ public class TimeTicketServiceImpl extends BaseServiceImpl<TimeTicketEntity> imp
        Optional<RemainTimeTicketEntity> optionalTimeTicket= remainTimeTicketRepository.findByShopIdAndMemberId(shopId,customerId);
        if(optionalTimeTicket.isPresent()){
            RemainTimeTicketEntity timeTicket = optionalTimeTicket.get();
-           timeTicket.setRemainTime(timeTicket.getRemainTime().plus(ticket.getPeriod()));
+           timeTicket.setRemainTime(timeTicket.getRemainTime().plus(Duration.ofDays(ticket.getHours())));
        }else{
            RemainTimeTicketEntity timeTicket = new RemainTimeTicketEntity();
            timeTicket.setMember(member);
            timeTicket.setShop(shop);
-           timeTicket.setRemainTime(ticket.getPeriod());
+           timeTicket.setRemainTime(Duration.ofDays(ticket.getHours()));
            remainTimeTicketRepository.save(timeTicket);
        }
     }

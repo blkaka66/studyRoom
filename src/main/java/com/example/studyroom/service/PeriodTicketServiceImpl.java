@@ -23,7 +23,8 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
     private final RemainPeriodTicketRepository remainPeriodTicketRepository;
     public PeriodTicketServiceImpl(JpaRepository<PeriodTicketEntity, Long> repository , PeriodTicketRepository periodTicketRepository,
                                    PeriodTicketHistoryRepository periodTicketHistoryRepository, ShopRepository shopRepository
-                                    , MemberRepository memberRepository, RemainPeriodTicketRepository remainPeriodTicketRepository) {
+                                    , MemberRepository memberRepository,
+                                   RemainPeriodTicketRepository remainPeriodTicketRepository) {
         super(repository);
         this.periodTicketRepository = periodTicketRepository;
         this.periodTicketHistoryRepository = periodTicketHistoryRepository;
@@ -54,15 +55,15 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
 
     private void addEndDate (PeriodTicketEntity ticket, Long shopId , Long customerId , ShopEntity shop,MemberEntity member){ //기존 시간권이 있는경우 시간을더해줌
         Optional<RemainPeriodTicketEntity> optionalPeriodTicket= remainPeriodTicketRepository.findByShopIdAndMemberId(shopId,customerId);
-        if(optionalPeriodTicket.isPresent()){
+        if(optionalPeriodTicket.isPresent()){//기존 기간권이 있다면
             RemainPeriodTicketEntity timeTicket = optionalPeriodTicket.get();
-            timeTicket.setEndDate(timeTicket.getEndDate().plus(ticket.getPeriod()));
-        }else{
+            timeTicket.setEndDate(timeTicket.getEndDate().plusDays(ticket.getDays()));
+        }else{ //기존 기간권이없다면
             RemainPeriodTicketEntity periodTicket = new RemainPeriodTicketEntity();
             periodTicket.setMember(member);
             periodTicket.setShop(shop);
             OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-            Duration period = ticket.getPeriod(); //현재시간 + 기간 ex3일)
+            Duration period = Duration.ofDays(ticket.getDays());//현재시간 + 기간 ex3일)
             OffsetDateTime endDate = now.plus(period);
             periodTicket.setEndDate(endDate);
             remainPeriodTicketRepository.save(periodTicket);
