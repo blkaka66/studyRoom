@@ -38,6 +38,9 @@ public class RedisExpirationListener implements MessageListener {
             remainPeriodTicketRepository.deleteByShopIdAndMemberId(shopId, userId);
             RemainPeriodTicketEntity remainPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberId(shopId, userId).orElseThrow();
             remainPeriodTicketRepository.delete(remainPeriodTicket);
+
+            //
+
         }else if(expiredKey.startsWith("timeSeat:")){
             remainTimeTicketRepository.deleteByShopIdAndMemberId(shopId, userId);
             RemainTimeTicketEntity remainTimeTicketEntity = remainTimeTicketRepository.findByShopIdAndMemberId(shopId, userId).orElseThrow();
