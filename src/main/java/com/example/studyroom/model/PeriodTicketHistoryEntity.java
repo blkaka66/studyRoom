@@ -8,7 +8,7 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "periodTicketHistory")
+@DiscriminatorValue("PERIOD_HISTORY")
 public class PeriodTicketHistoryEntity extends TicketHistoryEntity<PeriodTicketEntity>{
 
 }

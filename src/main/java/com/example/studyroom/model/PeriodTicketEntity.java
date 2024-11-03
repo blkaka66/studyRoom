@@ -9,7 +9,7 @@ import java.time.Duration;
 @Getter
 @Setter
 @Entity
-@Table(name = "periodTicket")
+@DiscriminatorValue("PERIOD")
 //기간권
 public class PeriodTicketEntity extends TicketEntity{
     @Column(nullable = false)

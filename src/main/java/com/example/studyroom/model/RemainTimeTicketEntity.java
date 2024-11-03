@@ -10,7 +10,7 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "remainTimeTicket")
+@DiscriminatorValue("REMAIN_TIME")
 public class RemainTimeTicketEntity extends RemainTicketEntity{
 //    @ManyToOne(fetch = FetchType.LAZY)
 //    @JoinColumn(name = "customerId", foreignKey = @ForeignKey(name = "fk_customer_id"))

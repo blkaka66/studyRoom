@@ -9,6 +9,6 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "timeTicketHistory")
+@DiscriminatorValue("TIME_HISTORY")
 public class TimeTicketHistoryEntity extends TicketHistoryEntity<TimeTicketEntity>{
 }

@@ -11,7 +11,7 @@ import java.time.Duration;
 @Getter
 @Setter
 @Entity
-@Table(name = "timeTicket")
+@DiscriminatorValue("TIME")
 //시간권
 public class TimeTicketEntity extends TicketEntity{
     @Column(nullable = false)

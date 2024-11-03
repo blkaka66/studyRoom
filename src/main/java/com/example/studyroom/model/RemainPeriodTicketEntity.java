@@ -11,7 +11,7 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "remainPeriodTicket")
+@DiscriminatorValue("REMAIN_PERIOD")
 public class RemainPeriodTicketEntity extends RemainTicketEntity{ //기간권
 //    @ManyToOne(fetch = FetchType.LAZY)
 //    @JoinColumn(name = "memberId", foreignKey = @ForeignKey(name = "fk_member_id"))

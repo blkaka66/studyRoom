@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @MappedSuperclass
+
 public class TicketHistoryEntity<T extends TicketEntity> extends BaseEntity{
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customerId", foreignKey = @ForeignKey(name = "fk_customer_id"))

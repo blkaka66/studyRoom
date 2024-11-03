@@ -65,7 +65,7 @@ public class TimeTicketServiceImpl extends BaseServiceImpl<TimeTicketEntity> imp
            RemainTimeTicketEntity timeTicket = new RemainTimeTicketEntity();
            timeTicket.setMember(member);
            timeTicket.setShop(shop);
-           timeTicket.setRemainTime(Duration.ofDays(ticket.getHours()));
+           timeTicket.setRemainTime(Duration.ofHours(ticket.getHours()));
            remainTimeTicketRepository.save(timeTicket);
        }
     }
