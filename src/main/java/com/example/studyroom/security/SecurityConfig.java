@@ -6,6 +6,7 @@ import com.example.studyroom.security.CustomAccessDeniedHandler;
 import com.example.studyroom.security.CustomAuthenticationEntryPoint;
 import com.example.studyroom.security.JwtAuthFilter;
 import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -31,12 +32,20 @@ public class SecurityConfig  {
     private final MemberRepository memberRepository;
     private final ShopRepository shopRepository;
 
+//    @Value("${cookie.secure.enabled}")
+//    boolean cookieEnabled;
+
     private static final String[] AUTH_WHITELIST = {
             "/shop/login", "/member/login"
     };
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+//        if(cookieEnabled) {
+//            cookie.setSecure(true);
+//        }
+
         //CSRF, CORS
         http.csrf((csrf) -> csrf.disable());
         http.cors(Customizer.withDefaults());
