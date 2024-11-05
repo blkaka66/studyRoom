@@ -50,7 +50,6 @@ public class ShopController {
     private static final Logger logger = LoggerFactory.getLogger(ShopController.class);
 
     @GetMapping("/sign-in/shop-list")
-    @CrossOrigin(origins = {"http://localhost:5173","http://localhost:8080","http://localhost:63342"}, allowCredentials = "true")
     public ResponseEntity<FinalResponseDto<List<ShopListResponseDto>>> getShopList() {
         logger.info("getShopList 호출됨");
         FinalResponseDto<List<ShopEntity>> shopResponse = shopService.getShopList();
