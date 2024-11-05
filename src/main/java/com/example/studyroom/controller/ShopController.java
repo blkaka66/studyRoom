@@ -5,6 +5,8 @@ import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.service.ShopService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,19 +47,22 @@ public class ShopController {
         return ResponseEntity.ok(token);
     }
 
+    private static final Logger logger = LoggerFactory.getLogger(ShopController.class);
 
-//    @GetMapping()
-//    public ResponseEntity<FinalResponseDto<List<ShopListResponseDto>>> getShopList() {
-//        List<ShopEntity> shops = shopService.getShopList();
-//        List<ShopListResponseDto> shopDtos = ShopListResponseDto.of(shops);
-//        return ResponseEntity.ok(
-//                FinalResponseDto.<List<ShopListResponseDto>>builder()
-//                        .message("상점 목록을 성공적으로 가져왔습니다.")
-//                        .statusCode("0000")
-//                        .data(shopDtos)
-//                        .build()
-//        );
-//    }
+    @GetMapping("/sign-in/shop-list")
+    @CrossOrigin(origins = {"http://localhost:5173","http://localhost:8080","http://localhost:63342"}, allowCredentials = "true")
+    public ResponseEntity<FinalResponseDto<List<ShopListResponseDto>>> getShopList() {
+        logger.info("getShopList 호출됨");
+        FinalResponseDto<List<ShopEntity>> shopResponse = shopService.getShopList();
+        List<ShopListResponseDto> shopDtos = ShopListResponseDto.of(shopResponse.getData());
+        return ResponseEntity.ok(
+                FinalResponseDto.<List<ShopListResponseDto>>builder()
+                        .message("상점 목록을 성공적으로 가져왔습니다.")
+                        .statusCode("0000")
+                        .data(shopDtos)
+                        .build()
+        );
+    }
 
     @GetMapping("/member-list/{shop_id}")
     public ResponseEntity<FinalResponseDto<List<MemberResponseDto>>> memberList(@PathVariable("shop_id") Long shopId) {

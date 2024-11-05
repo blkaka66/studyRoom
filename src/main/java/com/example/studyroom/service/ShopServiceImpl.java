@@ -76,11 +76,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     public FinalResponseDto<List<ShopEntity>> getShopList() {//shopId가 안들어오면 모든 리스트를 보내고 shopid가 들어오면 해당 shop리스트만 보내고
         //TODO:이 제네릭이 맞는지 모르겠다 리턴할 데이터의 자료형을쓰는게 맞나?
         return FinalResponseDto.successWithData(this.findAll());
-//        return FinalResponseDto.builder()
-//                .message("정보가 성공적으로 반환되었습니다")
-//                .statusCode("0000")
-//                .data(this.findAll())
-//                .build();
+
 
     }
 
