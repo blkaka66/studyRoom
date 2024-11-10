@@ -107,9 +107,12 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
             if (tokenStatus == JwtUtil.TokenStatus.VALID) {
                 authenticateUser(token);
             } else if (tokenStatus == JwtUtil.TokenStatus.EXPIRED) { //재발급
-                jwtUtil.handleExpiredAccessToken(token, response);
-                return;  // 액세스 토큰 재발급 시 종료
+                // jwtUtil.handleExpiredAccessToken(token, response);
+                // return;  // 액세스 토큰 재발급 시 종료
+                SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.unauthenticated("", ""));
             }
+        } else {
+            SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.unauthenticated("", ""));
         }
         filterChain.doFilter(request, response);  // 다음 필터로 넘기기
     }

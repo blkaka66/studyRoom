@@ -86,14 +86,15 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     public FinalResponseDto<String> login(ShopSignInRequestDto dto) {
         //레포지토리에있는 함수가져오기
         //
-        ShopEntity Shop = repository.findByEmailAndPassword(dto.getEmail(), dto.getPassword());
+        ShopEntity shop = repository.findByEmailAndPassword(dto.getEmail(), dto.getPassword());
 
         // TODO: Email 기준으로 Shop을 가져온 후
         //      - Shop이 존재하지 않는다면, 회원 존재하지 않는다는 오류 Response
         //      - Shop이 존재한다면, 암호화된 Password 를 비교
 
-        if (Shop != null) {
+        if (shop != null) {
             String token = this.jwtUtil.createAccessToken(dto);
+            this.jwtUtil.createRefreshToken(shop);
 
 
             return FinalResponseDto.successWithData(token);

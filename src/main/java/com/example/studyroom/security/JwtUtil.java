@@ -260,7 +260,7 @@ public class JwtUtil {
     }
 
 
-    private void handleExpiredAccessToken(String token,HttpServletResponse response) throws IOException {
+    public void handleExpiredAccessToken(String token,HttpServletResponse response) throws IOException {
         String role = getRole(token);
 
 
@@ -276,7 +276,7 @@ public class JwtUtil {
                 newAccessToken= reCreateToken(shop,accessTokenExpTime);
                 redisService.deleteValue(String.valueOf(shop.getId()));
                 createRefreshToken(shop);
-            }else{
+            } else{
                 //로그아웃처리
             }
 

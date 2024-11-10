@@ -9,6 +9,7 @@ public enum ApiResult {
     ALREADY_EXIST_EMAIL("1003", "이미 존재하는 이메일 입니다"),
     ALREADY_EXIST_PHONE("1003", "이미 존재하는 전화번호 입니다"),
     AUTHENTICATION_FAILED("1004", "인증 실패 (잘못된 이메일/패스워드/전화번호/인증 코드 등)"),
+    TOKEN_EXPIRED("1009", "Token is expired"),
     SHOP_NOT_FOUND("1005", "잘못된 샵정보"),
     ROOM_NOT_FOUND("1006", "잘못된 방정보"),
     SEAT_NOT_FOUND("1007", "잘못된 자리정보"),

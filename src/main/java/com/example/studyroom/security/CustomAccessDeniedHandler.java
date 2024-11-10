@@ -16,7 +16,7 @@ import java.io.IOException;
 import org.springframework.security.access.AccessDeniedException;
 import java.time.LocalDateTime;
 
-import static com.example.studyroom.type.ApiResult.AUTHENTICATION_FAILED;
+import static com.example.studyroom.type.ApiResult.TOKEN_EXPIRED;
 
 @Slf4j(topic = "FORBIDDEN_EXCEPTION_HANDLER")
 @AllArgsConstructor
@@ -31,11 +31,11 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
                        AccessDeniedException accessDeniedException) throws IOException, ServletException {
         log.error("No Authorities", accessDeniedException);
 
-        FinalResponseDto<String> errorResponseDto = FinalResponseDto.failureWithData(AUTHENTICATION_FAILED, accessDeniedException.getMessage());
+        FinalResponseDto<String> errorResponseDto = FinalResponseDto.failureWithData(TOKEN_EXPIRED, accessDeniedException.getMessage());
 
         String responseBody = objectMapper.writeValueAsString(errorResponseDto);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setStatus(HttpStatus.FORBIDDEN.value());
+        response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write(responseBody);
     }
