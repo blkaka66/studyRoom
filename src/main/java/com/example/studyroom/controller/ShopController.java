@@ -96,20 +96,20 @@ public class ShopController {
         return ResponseEntity.ok(shopInfo);
     }
 
-//    @GetMapping("/{shopId}/room")
-//    public ResponseEntity<FinalResponseDto<List<RoomAndSeatInfoResponseDto>>> getRoomsAndSeatsByShopId(@PathVariable("shopId") Long shopId) {
-//        // TODO: 쿠키에서 customerId 추출하는 메서드 추가 (토큰에서..)
-//        List<RoomAndSeatInfoResponseDto> roomAndSeatInfo = this.shopService.getRoomsAndSeatsByShopId(shopId, customerId);
-//
-//        // TODO: 수정 필요
-//        return ResponseEntity.ok(
-//                FinalResponseDto.<List<RoomAndSeatInfoResponseDto>>builder()
-//                        .message("방과 좌석 정보를 성공적으로 가져왔습니다.")
-//                        .statusCode("0000")
-//                        .data(roomAndSeatInfo)
-//                        .build()
-//        );
-//    }
+    @GetMapping("/{shopId}/room")
+    public ResponseEntity<FinalResponseDto<List<RoomAndSeatInfoResponseDto>>> getRoomsAndSeatsByShopId(@PathVariable("shopId") Long shopId) {
+        // TODO: 쿠키에서 customerId 추출하는 메서드 추가 (토큰에서..)
+        List<RoomAndSeatInfoResponseDto> roomAndSeatInfo = this.shopService.getRoomsAndSeatsByShopId(shopId, customerId);
+
+        // TODO: 수정 필요
+        return ResponseEntity.ok(
+                FinalResponseDto.<List<RoomAndSeatInfoResponseDto>>builder()
+                        .message("방과 좌석 정보를 성공적으로 가져왔습니다.")
+                        .statusCode("0000")
+                        .data(roomAndSeatInfo)
+                        .build()
+        );
+    }
 
     @GetMapping("/{shopId}/{productType}")
     public ResponseEntity<FinalResponseDto<ProductResponseDto>> getProductListByShopId(@PathVariable("shopId") Long shopId, @PathVariable("productType") String type) {

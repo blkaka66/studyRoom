@@ -1,6 +1,7 @@
 package com.example.studyroom.model;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -21,4 +22,18 @@ public class MemberEntity extends BaseEntity{
 
     @Column(nullable = false)
     private String password;
+
+    @Builder
+    public MemberEntity(ShopEntity shop, String name,String phone,String password) {
+        this.shop = shop;
+        this.name = name;
+        this.phone = phone;
+        this.password = password;
+
+    }
+
+
+    public MemberEntity() {
+
+    }
 }

@@ -1,18 +1,22 @@
 package com.example.studyroom.controller;
 
-import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
-import com.example.studyroom.dto.requestDto.OccupySeatRequestDto;
-import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
+import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.MemberResponseDto;
+import com.example.studyroom.dto.responseDto.ShopListResponseDto;
 import com.example.studyroom.model.MemberEntity;
+import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.security.SecurityUtil;
 import com.example.studyroom.service.MailService;
 import com.example.studyroom.service.MemberService;
 
+import com.example.studyroom.service.ShopService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
 @RestController
 @RequestMapping("/member")
 public class MemberController {
@@ -20,17 +24,20 @@ public class MemberController {
 
     private final MemberService memberService;
     private final MailService mailService;
-
+    private final ShopService shopService;
 
 
     public MemberController(
            MemberService memberService,
-            MailService mailService) {
+            MailService mailService,
+           ShopService shopService
+        ) {
         this.memberService = memberService;
         this.mailService = mailService;
+        this.shopService = shopService;
     }
 
-    @PostMapping("/emails/verification-requests")
+    @PostMapping("/emails/verification-requests")//이건 나중에 전화번호로 바꾸기
     public ResponseEntity sendMessage(@RequestParam("email") String email) {
         System.out.println("ddddddddd");
         mailService.sendEmail(email, "안녕하세요", "반갑습니다");
@@ -47,6 +54,27 @@ public class MemberController {
     public ResponseEntity<FinalResponseDto<String>> in(@RequestBody OccupySeatRequestDto occupySeatRequestDto) {
         MemberEntity member = SecurityUtil.getMemberInfo();
         return ResponseEntity.ok(memberService.occupySeat(member.getShop().getId(), occupySeatRequestDto.getRoomName(), occupySeatRequestDto.getSeatCode(), member.getId()));
+    }
+
+    @PostMapping("/sign-up")
+    public ResponseEntity<FinalResponseDto<MemberEntity>> signUp(@RequestBody MemberSignUpRequestDto member) {
+        // signUp 로직을 구현한 후, 성공 메시지와 함께 생성된 ShopEntity를 반환
+        System.out.println("회원가입 요청: " + member);
+        FinalResponseDto<MemberEntity> createdMember = memberService.signUp(member);
+        return ResponseEntity.ok(createdMember);
+    }
+
+    @GetMapping("/sign-in/shop-list")
+    public ResponseEntity<FinalResponseDto<List<ShopListResponseDto>>> getShopList() {
+        FinalResponseDto<List<ShopEntity>> shopResponse = shopService.getShopList();
+        List<ShopListResponseDto> shopDtos = ShopListResponseDto.of(shopResponse.getData());
+        return ResponseEntity.ok(
+                FinalResponseDto.<List<ShopListResponseDto>>builder()
+                        .message("상점 목록을 성공적으로 가져왔습니다.")
+                        .statusCode("0000")
+                        .data(shopDtos)
+                        .build()
+        );
     }
 
 //    @GetMapping("/emails/verifications")

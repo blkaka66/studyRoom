@@ -31,5 +31,13 @@ public class RedisServiceImpl implements RedisService {
         redisTemplate.opsForValue().set(key, value, ttlSeconds, TimeUnit.SECONDS);
     }
 
+    public Long getTTL(String key) {
+        return redisTemplate.getExpire(key);
+    }
+
+    @Override
+    public void deleteValue(String key) {
+        redisTemplate.delete(key);
+    }
 }
 

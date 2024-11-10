@@ -1,6 +1,8 @@
 package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
+import com.example.studyroom.dto.requestDto.MemberSignUpRequestDto;
+import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.MemberResponseDto;
 import com.example.studyroom.dto.responseDto.MySeatInfoResponseDto;
@@ -95,6 +97,17 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         }
     }
 
+    @Override //회원가입 // TODO - 암호화 필요
+    public FinalResponseDto<MemberEntity> signUp(MemberSignUpRequestDto member) {
+
+        if (repository.existsByPhone(member.getPhone())) {
+            return FinalResponseDto.failure(ApiResult.ALREADY_EXIST_PHONE);
+        }
+        MemberEntity createdMember = member.toEntity();
+        repository.save(createdMember);
+        return FinalResponseDto.successWithData(createdMember);
+        // return repository.save(shop);
+    }
 
 
     @Override
