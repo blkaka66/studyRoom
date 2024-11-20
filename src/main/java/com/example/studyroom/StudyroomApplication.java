@@ -15,13 +15,4 @@ public class StudyroomApplication {
         SpringApplication.run(StudyroomApplication.class, args);
     }//스프링 부트 애플리케이션을 실행하는 메서드입니다.
 
-//    @Bean
-//    public WebMvcConfigurer corsConfigurer() {
-//        return new WebMvcConfigurer() {
-//            @Override
-//            public void addCorsMappings(CorsRegistry registry) {
-//                registry.addMapping("/**").allowedOrigins("http://localhost:5173");
-//            }
-//        };
-//    }
 }

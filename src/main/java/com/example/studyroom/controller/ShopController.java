@@ -5,6 +5,7 @@ import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.service.ShopService;
+import com.example.studyroom.service.TokenRefreshService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -17,13 +18,16 @@ import java.util.List;
 public class ShopController {
 
     private final ShopService shopService;
-//    private final MemberService memberService;
 
-    public ShopController(ShopService shopService
-//                          MemberService memberService
+    private final TokenRefreshService tokenRefreshService;
+
+    public ShopController(ShopService shopService, TokenRefreshService tokenRefreshService
+
+
     ) {
         this.shopService = shopService;
 //        this.memberService = memberService;
+        this.tokenRefreshService = tokenRefreshService;
     }
 
     @PostMapping("/sign-up")
@@ -120,7 +124,12 @@ public class ShopController {
     }
 
 
+    @PostMapping("/refresh-token")
+    public ResponseEntity<FinalResponseDto<String>> getProductListByShopId(@RequestHeader("Authorization") String token) {
+        System.out.println("컨트롤러 토큰!!!!!"+token);
+        return ResponseEntity.ok(this.tokenRefreshService.handleExpiredAccessToken(token));
 
+    }
 }
 
 

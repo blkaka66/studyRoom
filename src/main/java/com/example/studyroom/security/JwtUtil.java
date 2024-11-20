@@ -128,7 +128,7 @@ public class JwtUtil {
         }
 
     }
-    private String reCreateToken(ShopEntity shop, long expireTime) {
+    public String reCreateToken(ShopEntity shop, long expireTime) {
 
 
             Claims claims = Jwts.claims();
@@ -181,7 +181,7 @@ public class JwtUtil {
 
     }
 
-    private String reCreateToken(MemberEntity member, long expireTime) {
+    public String reCreateToken(MemberEntity member, long expireTime) {
 
 
         Claims claims = Jwts.claims();
@@ -240,6 +240,8 @@ public class JwtUtil {
      * @return IsValidate
      */
     public TokenStatus validateToken(String token) {
+        System.out.println("토큰!!!!!"+token);
+
         try {
             Jwts.parserBuilder()
                     .setSigningKey(key)
