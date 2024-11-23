@@ -1,11 +1,15 @@
 package com.example.studyroom.controller;
 
+import com.example.studyroom.dto.CookieDto;
 import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.ShopEntity;
+import com.example.studyroom.security.JwtCookieUtil;
 import com.example.studyroom.service.ShopService;
 import com.example.studyroom.service.TokenRefreshService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -46,8 +50,8 @@ public class ShopController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<FinalResponseDto<String>> login(@RequestBody ShopSignInRequestDto shop) {
-        FinalResponseDto<String> token = shopService.login(shop);
+    public ResponseEntity<FinalResponseDto<String>> login(@RequestBody ShopSignInRequestDto shop, HttpServletResponse response) {
+        FinalResponseDto<String> token = shopService.login(shop,response);
         return ResponseEntity.ok(token);
     }
 
@@ -100,21 +104,17 @@ public class ShopController {
         return ResponseEntity.ok(shopInfo);
     }
 
-    @GetMapping("/{shopId}/room")
-    public ResponseEntity<FinalResponseDto<List<RoomAndSeatInfoResponseDto>>> getRoomsAndSeatsByShopId(@PathVariable("shopId") Long shopId) {
-        // TODO: 쿠키에서 customerId 추출하는 메서드 추가 (토큰에서..)
-        Long customerId = 1L;
+    @GetMapping("/getRoomAndSeat/{id}")
+    public ResponseEntity<FinalResponseDto<List<RoomAndSeatInfoResponseDto>>> getRoomsAndSeatsByShopId(@PathVariable("id") Long id) {
+        System.out.println("GET /getRoomAndSeat/{id} 요청이 들어옴. id=" + id);
 
         // TODO: 수정 필요
         return ResponseEntity.ok(
-//                FinalResponseDto.<List<RoomAndSeatInfoResponseDto>>builder()
-//                        .message("방과 좌석 정보를 성공적으로 가져왔습니다.")
-//                        .statusCode("0000")
-//                        .data(roomAndSeatInfo)
-//                        .build()
-                this.shopService.getRoomsAndSeatsByShopId(shopId, customerId)
+                this.shopService.getRoomsAndSeatsByShopId(id)
         );
     }
+
+
 
     @GetMapping("/{shopId}/{productType}")
     public ResponseEntity<FinalResponseDto<ProductResponseDto>> getProductListByShopId(@PathVariable("shopId") Long shopId, @PathVariable("productType") String type) {
@@ -125,10 +125,12 @@ public class ShopController {
 
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<FinalResponseDto<String>> getProductListByShopId(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<FinalResponseDto<String>> handleExpiredAccessToken(@RequestHeader("Authorization") String token, HttpServletRequest request) {
+        CookieDto cookieDto = JwtCookieUtil.getShopId(request);
+        System.out.println("쿠키에서 받은 id: " + cookieDto.getShopId());
         System.out.println("컨트롤러 토큰!!!!!"+token);
+        System.out.println("안녕");
         return ResponseEntity.ok(this.tokenRefreshService.handleExpiredAccessToken(token));
-
     }
 }
 

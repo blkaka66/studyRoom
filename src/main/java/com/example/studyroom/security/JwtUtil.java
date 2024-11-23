@@ -129,8 +129,6 @@ public class JwtUtil {
 
     }
     public String reCreateToken(ShopEntity shop, long expireTime) {
-
-
             Claims claims = Jwts.claims();
             claims.put("email", shop.getEmail());
             claims.put("role", "SHOP");
@@ -158,13 +156,14 @@ public class JwtUtil {
      */
     private String createToken(MemberSignInRequestDto member, long expireTime) {
         MemberEntity existingMember = memberRepository.findByPhoneAndPassword(member.getPhoneNumber(),member.getPassword());
+        System.out.println("existingMember"+existingMember.getName());
         if(existingMember != null) {
             Claims claims = Jwts.claims();
-            //claims.put("phoneNumber", member.getPhoneNumber());전화번호는 개인정보니까 안넣어야하는거 아닌가?
             claims.put("role", "CUSTOMER");
             claims.put("userId",existingMember.getId());
-            claims.put("shopId",existingMember.getShop().getId());
-
+            claims.put("shopId",member.getShopId());
+            System.out.println("userid"+existingMember.getId());
+            System.out.println("shopId"+member.getShopId());
             ZonedDateTime now = ZonedDateTime.now();
             ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
 

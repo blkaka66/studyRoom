@@ -9,6 +9,7 @@ import com.example.studyroom.dto.responseDto.RemainTimeResponseDto;
 import com.example.studyroom.model.EnterHistoryEntity;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.List;
 
@@ -23,7 +24,7 @@ public interface MemberService extends BaseService<MemberEntity> {
 
     FinalResponseDto<MySeatInfoResponseDto> getSeatId(Long userId); //회원id받아서 어떤자리에 앉았는지 추출
 
-    FinalResponseDto<String> login(MemberSignInRequestDto dto); //로그인 기능
+    FinalResponseDto<String> login(MemberSignInRequestDto dto, HttpServletResponse response); //로그인 기능
 
     FinalResponseDto<MemberEntity> signUp(MemberSignUpRequestDto member); //회원가입
 

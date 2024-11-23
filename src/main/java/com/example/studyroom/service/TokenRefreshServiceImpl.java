@@ -43,9 +43,11 @@ public class TokenRefreshServiceImpl implements TokenRefreshService {
 
     @Override
     public FinalResponseDto<String> handleExpiredAccessToken(String token) {
+        System.out.println("역시 정상화는"+token);
         System.out.println("토큰!!!!!"+token);
         String role = jwtUtil.getRole(token);
-
+        System.out.println("역할!!!!!");
+        System.out.println("역할!!!!!"+role);
 
         String newAccessToken = null;
         String id = null;
@@ -59,8 +61,10 @@ public class TokenRefreshServiceImpl implements TokenRefreshService {
                 newAccessToken = jwtUtil.reCreateToken(shop, accessTokenExpTime);
                 redisService.deleteValue(String.valueOf(shop.getId()));
                 jwtUtil.createRefreshToken(shop);
+                System.out.println("새로운 토큰!!"+newAccessToken);
                 return FinalResponseDto.successWithData(newAccessToken);
             } else {
+                System.out.println("토큰만료로 인한실패!!");
                 return FinalResponseDto.failure(ApiResult.TOKEN_EXPIRED);
             }
 
@@ -75,8 +79,10 @@ public class TokenRefreshServiceImpl implements TokenRefreshService {
                     newAccessToken = jwtUtil.reCreateToken(member, accessTokenExpTime);
                     redisService.deleteValue(String.valueOf(member.getId()));
                     jwtUtil.createRefreshToken(member);
+                    System.out.println("새로운 토큰!!"+newAccessToken);
                     return FinalResponseDto.successWithData(newAccessToken);
                 } else {
+                    System.out.println("토큰만료로 인한실패!!");
                     return FinalResponseDto.failure(ApiResult.TOKEN_EXPIRED);
                 }
 

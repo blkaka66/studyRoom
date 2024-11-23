@@ -10,8 +10,10 @@ import com.example.studyroom.dto.responseDto.RemainTimeResponseDto;
 import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
 
+import com.example.studyroom.security.JwtCookieUtil;
 import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.type.ApiResult;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -82,13 +84,13 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     //자리선택시 enterhistory enterTime까지 생성하는 메서드 만들어야함
     @Override //로그인
-    public FinalResponseDto<String> login(MemberSignInRequestDto dto) {
+    public FinalResponseDto<String> login(MemberSignInRequestDto dto, HttpServletResponse response) {
         //레포지토리에있는 함수가져오기
         MemberEntity Member = repository.findByPhoneAndPassword(dto.getPhoneNumber(), dto.getPassword());
 
         if (Member != null) {
-
             String token = this.jwtUtil.createAccessToken(dto);
+            JwtCookieUtil.addInfoToCookie(String.valueOf(dto.getShopId()), response, 3600);
             return FinalResponseDto.successWithData(token);
             //return Member;
         } else {
@@ -164,10 +166,10 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     // 회원 ID를 받아 해당 회원의 좌석 ID를 반환하는 메서드
     // 조건에 맞는 EnterHistoryEntity가 없으면 null을 반환
     public Long getSeatIdByCustomerId(Long customerId) {
-//        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(customerId);
-//        if (enterHistory != null) {
-//            return enterHistory.getSeatId();  // 좌석 ID를 반환
-//        }
+        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(customerId);
+        if (enterHistory != null) {
+            return enterHistory.getSeatId();  // 좌석 ID를 반환
+        }
         return null;  // 조건에 맞는 기록이 없으면 null 반환
     }
 

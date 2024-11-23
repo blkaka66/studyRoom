@@ -18,6 +18,7 @@ import lombok.Setter;
 //        .build();
 
 public class ShopSignUpRequestDto {
+
     private String location;
     private String name;
     private String email;

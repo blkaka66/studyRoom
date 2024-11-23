@@ -37,6 +37,12 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
     /**
      * JWT 토큰 검증 필터 수행
      */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        // '/shop/refresh-token' 경로로 들어오는 요청은 만료검증을 제외(jwt토큰을 refresh하는 요청은 당연히 토큰이 만료돼있을테니까)
+        String requestURI = request.getRequestURI();
+        return "/shop/refresh-token".equals(requestURI);
+    }
 
 
     @Transactional
@@ -52,14 +58,17 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
             JwtUtil.TokenStatus tokenStatus = jwtUtil.validateToken(token);
 
             if (tokenStatus == JwtUtil.TokenStatus.VALID) {
+                System.out.println("토큰이 유효합니다 !!!!");
                 authenticateUser(token);
             } else if (tokenStatus == JwtUtil.TokenStatus.EXPIRED) { //재발급
                 // jwtUtil.handleExpiredAccessToken(token, response);
                 // return;  // 액세스 토큰 재발급 시 종료
+                System.out.println("토큰이 만료됨 !!!!");
                 SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.unauthenticated("", ""));
 
             }
         } else {
+            System.out.println("넌뭐냐?");
             SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.unauthenticated("", ""));
 
         }
@@ -73,22 +82,21 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
         if (role.equals("SHOP")) {
             String email = jwtUtil.getShopEmail(token);
             ShopEntity shop = shopRepository.findByEmail(email);
+            System.out.println("shop은"+shop);
             authenticationToken = new UsernamePasswordAuthenticationToken(shop, "", getAuthorities(role));
         } else if (role.equals("CUSTOMER")) {
             Long userId = jwtUtil.getCustomerUserId(token);
             MemberEntity member = memberRepository.findById(userId).orElse(null);
             if (member != null) {
+                System.out.println("member"+member);
                 authenticationToken = new UsernamePasswordAuthenticationToken(member, "", getAuthorities(role));
             }
         }
         if (authenticationToken != null) {
+            System.out.println("수고요");
             SecurityContextHolder.getContext().setAuthentication(authenticationToken);
         }
     }
-
-
-
-
 
     public Collection<? extends GrantedAuthority> getAuthorities(String role) {
         List<String> roles = new ArrayList<>();

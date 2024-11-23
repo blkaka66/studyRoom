@@ -7,6 +7,7 @@ import com.example.studyroom.dto.requestDto.TicketHistoryRequestDto;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.List;
 
@@ -19,7 +20,7 @@ public interface ShopService extends BaseService<ShopEntity> {
 //    List<ShopListResponseDto> getShopListResponseDto(Long shopId);
 
     //ShopEntity login(String username, String password);
-    FinalResponseDto<String> login(ShopSignInRequestDto dto);
+    FinalResponseDto<String> login(ShopSignInRequestDto dto, HttpServletResponse response);
 
     //ShopEntity signUp(ShopSignUpRequestDto dto); //회원가입
     FinalResponseDto<ShopEntity> signUp(ShopSignUpRequestDto dto); //회원가입
@@ -29,7 +30,7 @@ public interface ShopService extends BaseService<ShopEntity> {
 
 
     //List<RoomAndSeatInfoResponseDto> getRoomsAndSeatsByShopId(Long shopId,Long customerId); //shopid,customerId받아서 방이랑 좌석정보 가져오기
-    FinalResponseDto getRoomsAndSeatsByShopId(Long shopId,Long customerId); //shopid,customerId받아서 방이랑 좌석정보 가져오기
+    FinalResponseDto getRoomsAndSeatsByShopId(Long customerId); //customerId받아서 방이랑 좌석정보 가져오기
 
     FinalResponseDto <ProductResponseDto> getProductList(Long shopId );//티켓 정보가져오기(시간권 기간권나눠서)
 

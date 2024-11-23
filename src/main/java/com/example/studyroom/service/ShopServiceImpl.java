@@ -7,8 +7,10 @@ import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
+import com.example.studyroom.security.JwtCookieUtil;
 import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.type.ApiResult;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
@@ -83,7 +85,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
 
     @Override //로그인
-    public FinalResponseDto<String> login(ShopSignInRequestDto dto) {
+    public FinalResponseDto<String> login(ShopSignInRequestDto dto, HttpServletResponse response) {
         //레포지토리에있는 함수가져오기
         //
         ShopEntity shop = repository.findByEmailAndPassword(dto.getEmail(), dto.getPassword());
@@ -95,7 +97,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         if (shop != null) {
             String token = this.jwtUtil.createAccessToken(dto);
             this.jwtUtil.createRefreshToken(shop);
-
+            JwtCookieUtil.addInfoToCookie(String.valueOf(dto.getShopId()), response, 3600);
 
             return FinalResponseDto.successWithData(token);
 
@@ -151,11 +153,17 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
 
     @Override
-    public FinalResponseDto<List<RoomAndSeatInfoResponseDto>> getRoomsAndSeatsByShopId(Long shopId, Long customerId) {
+    public FinalResponseDto<List<RoomAndSeatInfoResponseDto>> getRoomsAndSeatsByShopId( Long customerId) {
         // EnterHistoryService를 사용하여 현재 사용자의 좌석 ID를 조회
         Long mySeatId = memberServiceImpl.getSeatIdByCustomerId(customerId);
-
+        System.out.println("mySeatId"+mySeatId);
+        Optional<MemberEntity> member = memberRepository.findById(customerId);
         // Shop ID로 방 목록을 조회
+        if(member.isEmpty()){
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+        Long shopId = member.get().getShop().getId();
+        System.out.println("shopId"+shopId);
         List<RoomEntity> rooms = roomRepository.findByShopId(shopId);
 
         // 방 목록을 DTO로 변환
@@ -186,11 +194,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
         // FinalResponseDto 객체 생성 및 반환
         return FinalResponseDto.successWithData(roomAndSeatInfoDtos);
-//        return FinalResponseDto.builder()
-//                .message("정보가 성공적으로 반환되었습니다.")
-//                .statusCode("0000")
-//                .data(roomAndSeatInfoDtos)
-//                .build();
+
     }
 
     //누가 자리점유요청 메시지창만 띄워도 점유가 되게 하고 다른 자리를 점유하면 그 자리는 점유를 풀기(어떻게하지?)->일단 보류

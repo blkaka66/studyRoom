@@ -11,6 +11,7 @@ import com.example.studyroom.service.MailService;
 import com.example.studyroom.service.MemberService;
 
 import com.example.studyroom.service.ShopService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -45,8 +46,8 @@ public class MemberController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<FinalResponseDto<String>> login(@RequestBody MemberSignInRequestDto member) {
-        FinalResponseDto<String> token = memberService.login(member);
+    public ResponseEntity<FinalResponseDto<String>> login(@RequestBody MemberSignInRequestDto member, HttpServletResponse response) {
+        FinalResponseDto<String> token = memberService.login(member,response);
         return ResponseEntity.ok(token);
     }
 
