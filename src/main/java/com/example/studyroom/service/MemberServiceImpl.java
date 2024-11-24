@@ -13,8 +13,11 @@ import com.example.studyroom.repository.*;
 import com.example.studyroom.security.JwtCookieUtil;
 import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.type.ApiResult;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
+import org.springframework.data.crossstore.ChangeSetPersister;
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Member;
@@ -105,7 +108,13 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         if (repository.existsByPhone(member.getPhone())) {
             return FinalResponseDto.failure(ApiResult.ALREADY_EXIST_PHONE);
         }
+        Optional<ShopEntity> shopOptional = shopRepository.findById(member.getShopId());
+        if(!shopOptional.isPresent()) {
+            return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
+        }
+
         MemberEntity createdMember = member.toEntity();
+        createdMember.setShop(shopOptional.get());
         repository.save(createdMember);
         return FinalResponseDto.successWithData(createdMember);
         // return repository.save(shop);

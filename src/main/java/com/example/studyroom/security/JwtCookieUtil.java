@@ -11,12 +11,12 @@ public class JwtCookieUtil {
     // id를 쿠키에 설정하고 응답에 추가하는 메서드
     public static void addInfoToCookie(String id, HttpServletResponse response, long maxAgeInSeconds) {
         // 쿠키 생성
-        Cookie idCookie = new Cookie("id", id);
+        Cookie idCookie = new Cookie("shopId", id);
 
         // 쿠키 속성 설정
-        idCookie.setHttpOnly(true);  // 클라이언트에서 접근 불가
-        idCookie.setSecure(false);  // HTTPS 연결에서만 전송
-        idCookie.setPath("/");  // 전체 경로에 대해 유효
+//        idCookie.setHttpOnly(true);  // 클라이언트에서 접근 불가
+//        idCookie.setSecure(false);  // HTTPS 연결에서만 전송
+//        idCookie.setPath("/");  // 전체 경로에 대해 유효
         idCookie.setMaxAge((int) maxAgeInSeconds);  // 쿠키의 유효 기간 설정 (초 단위)
         System.out.println("idcookie"+idCookie);
         // 응답에 쿠키 추가

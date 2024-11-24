@@ -4,15 +4,20 @@ import com.example.studyroom.dto.CookieDto;
 import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.*;
+import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.security.JwtCookieUtil;
+import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.service.ShopService;
 import com.example.studyroom.service.TokenRefreshService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -104,13 +109,19 @@ public class ShopController {
         return ResponseEntity.ok(shopInfo);
     }
 
-    @GetMapping("/getRoomAndSeat/{id}")
-    public ResponseEntity<FinalResponseDto<List<RoomAndSeatInfoResponseDto>>> getRoomsAndSeatsByShopId(@PathVariable("id") Long id) {
-        System.out.println("GET /getRoomAndSeat/{id} 요청이 들어옴. id=" + id);
+    @GetMapping("/getRoomAndSeat")
+    public ResponseEntity<FinalResponseDto<List<RoomAndSeatInfoResponseDto>>> getRoomsAndSeatsByShopId(HttpServletResponse response) {
+        MemberEntity member = JwtUtil.getMember();
+        System.out.println("Member: " + member.getId());
+//        System.out.println("GET /getRoomAndSeat/{id} 요청이 들어옴. id=" + id);
+
+        // for Test
+        response.addHeader("Set-Cookie", "myCookie=cookieValue; Path=/; HttpOnly;");
+
 
         // TODO: 수정 필요
         return ResponseEntity.ok(
-                this.shopService.getRoomsAndSeatsByShopId(id)
+                this.shopService.getRoomsAndSeatsByShopId(member.getId())
         );
     }
 

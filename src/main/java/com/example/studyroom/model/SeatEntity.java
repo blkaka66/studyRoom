@@ -7,14 +7,15 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "seat")
-
+@Table(name = "seat", uniqueConstraints = {
+        @UniqueConstraint( name="uk-seat-room", columnNames={"seat_code", "room_id"} )
+})
 public class SeatEntity extends BaseEntity{
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "roomId", foreignKey = @ForeignKey(name = "roomId"))
+    @JoinColumn(name = "room_id", foreignKey = @ForeignKey(name = "roomId"))
     private RoomEntity room;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, name="seat_code")
     private int seatCode;
 
     @Column(nullable = false)

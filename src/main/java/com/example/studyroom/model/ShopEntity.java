@@ -30,7 +30,8 @@ public class ShopEntity extends BaseEntity {
     private List<MemberEntity> members = new ArrayList<>();
 
     @Builder
-    public ShopEntity(String location, String name,String email,String password) {
+    public ShopEntity(Long id, String location, String name,String email,String password) {
+        setId(id);
         this.location = location;
         this.name = name;
         this.email = email;

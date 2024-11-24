@@ -84,6 +84,7 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
             ShopEntity shop = shopRepository.findByEmail(email);
             System.out.println("shop은"+shop);
             authenticationToken = new UsernamePasswordAuthenticationToken(shop, "", getAuthorities(role));
+
         } else if (role.equals("CUSTOMER")) {
             Long userId = jwtUtil.getCustomerUserId(token);
             MemberEntity member = memberRepository.findById(userId).orElse(null);
