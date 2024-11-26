@@ -127,18 +127,18 @@ public class ShopController {
 
 
 
-    @GetMapping("/{shopId}/{productType}")
-    public ResponseEntity<FinalResponseDto<ProductResponseDto>> getProductListByShopId(@PathVariable("shopId") Long shopId, @PathVariable("productType") String type) {
+    @GetMapping("/{shopId}/getProductInfo")
+    public ResponseEntity<FinalResponseDto<ProductResponseDto>> getProductListByShopId(@PathVariable("shopId") Long shopId) {
 //        FinalResponseDto<List<ProductResponseDto>> productList = this.shopService.getProductList(shopId, type);
 
         return ResponseEntity.ok(this.shopService.getProductList(shopId));
     }
 
 
-    @PostMapping("/refresh-token")
-    public ResponseEntity<FinalResponseDto<String>> handleExpiredAccessToken(@RequestHeader("Authorization") String token, HttpServletRequest request) {
-        CookieDto cookieDto = JwtCookieUtil.getShopId(request);
-        System.out.println("쿠키에서 받은 id: " + cookieDto.getShopId());
+    @PostMapping("/refreshToken")
+    public ResponseEntity<FinalResponseDto<String>> handleExpiredAccessToken(@RequestHeader("Authorization") String token) {
+        //CookieDto cookieDto = JwtCookieUtil.getShopId(request);
+
         System.out.println("컨트롤러 토큰!!!!!"+token);
         System.out.println("안녕");
         return ResponseEntity.ok(this.tokenRefreshService.handleExpiredAccessToken(token));

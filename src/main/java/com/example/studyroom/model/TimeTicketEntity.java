@@ -14,6 +14,9 @@ import java.time.Duration;
 @DiscriminatorValue("TIME")
 //시간권
 public class TimeTicketEntity extends TicketEntity{
+    @Column(nullable = true)  // TimeTicketEntity에서는 null 가능
+    private int days; // 기간 (nullable)
+
     @Column(nullable = false)
     private int hours;
 }

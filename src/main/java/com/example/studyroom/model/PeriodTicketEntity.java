@@ -14,4 +14,7 @@ import java.time.Duration;
 public class PeriodTicketEntity extends TicketEntity{
     @Column(nullable = false)
     private int days;
+
+    @Column(nullable = true)  // PeriodTicketEntity에서는 null 가능
+    private int hours; // 기간 (nullable)
 }

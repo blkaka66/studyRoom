@@ -19,4 +19,15 @@ public class TicketEntity  extends BaseEntity{
 
     @Column(nullable = false)
     private int amount;
+
+    @Enumerated(EnumType.STRING)  // Enum으로 ticket_type 지정
+    @Column(name = "ticket_type", nullable = false, insertable = false, updatable = false) // insertable=false, updatable=false로 설정하여 서브클래스에서 중복 매핑을 방지
+    private TicketTypeEnum ticketType; // PERIOD or TIME
+
+    // 공통된 필드
+    @Column(nullable = true)
+    private int days; // 기간 (nullable)
+
+    @Column(nullable = true)
+    private int hours; // 시간 (nullable)
 }

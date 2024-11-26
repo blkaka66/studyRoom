@@ -27,6 +27,7 @@ public class ShopEntity extends BaseEntity {
     private String password;
 
     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "shop")
+
     private List<MemberEntity> members = new ArrayList<>();
 
     @Builder
@@ -39,7 +40,7 @@ public class ShopEntity extends BaseEntity {
 
     }
 
-    public ShopEntity() { //난 기본생성자가 필요없는데 이걸 만들어야만 하나?
+    protected  ShopEntity() { //난 기본생성자가 필요없는데 이걸 만들어야만 하나?
 
     }
 }

@@ -49,9 +49,9 @@ public class TicketController {
 //        timeTicketRepository.saveAndFlush(ticket);
 
         switch(product.getCategory()) {
-            case "기간권":
+            case "period":
                 return periodTicketService.processPayment(product, member.getShop().getId(), member.getId());
-            case "시간권":
+            case "time":
                 return timeTicketService.processPayment(product, member.getShop().getId(), member.getId());
         }
         return FinalResponseDto.failure(ApiResult.FAIL);

@@ -204,12 +204,22 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
         List<PeriodTicketEntity> periodTicketEntities = periodTicketRepository.findByShopId(shopId);
         List<TimeTicketEntity> timeTicketEntities = timeTicketRepository.findByShopId(shopId);
+        if (!periodTicketEntities.isEmpty()) {
+            System.out.println("첫 번째 PeriodTicketEntity: " + periodTicketEntities.get(0).getName());
+        } else {
+            System.out.println("PeriodTicketEntity 리스트가 비어 있습니다.");
+        }
 
+        if (!timeTicketEntities.isEmpty()) {
+            System.out.println("첫 번째 TimeTicketEntity: " + timeTicketEntities.get(0).getName());
+        } else {
+            System.out.println("TimeTicketEntity 리스트가 비어 있습니다.");
+        }
         ProductResponseDto productResponseDto = ProductResponseDto.builder()
                 .periodTicketEntities(periodTicketEntities)
                 .timeTicketEntities(timeTicketEntities)
                 .build();
-
+        System.out.println(productResponseDto);
 
 
         return FinalResponseDto.successWithData(productResponseDto);

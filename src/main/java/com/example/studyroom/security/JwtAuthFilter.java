@@ -39,9 +39,13 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
      */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        // '/shop/refresh-token' 경로로 들어오는 요청은 만료검증을 제외(jwt토큰을 refresh하는 요청은 당연히 토큰이 만료돼있을테니까)
+        // '/shop/refreshToken' 경로로 들어오는 요청은 만료검증을 제외(jwt토큰을 refresh하는 요청은 당연히 토큰이 만료돼있을테니까)
         String requestURI = request.getRequestURI();
-        return "/shop/refresh-token".equals(requestURI);
+        System.out.println("requestURI"+requestURI);
+        if(requestURI.equals("/shop/refreshToken")){
+            System.out.println("필터건너뜀");
+        }
+        return "/shop/refreshToken".equals(requestURI);
     }
 
 
@@ -76,6 +80,7 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
     }
 
     private void authenticateUser(String token) {
+        System.out.println("authenticateUser!!!");
         String role = jwtUtil.getRole(token);
         UsernamePasswordAuthenticationToken authenticationToken = null;
 
