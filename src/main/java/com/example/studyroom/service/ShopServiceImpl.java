@@ -216,11 +216,10 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
             System.out.println("TimeTicketEntity 리스트가 비어 있습니다.");
         }
         ProductResponseDto productResponseDto = ProductResponseDto.builder()
-                .periodTicketEntities(periodTicketEntities)
-                .timeTicketEntities(timeTicketEntities)
+                .periodTicketList(periodTicketEntities)
+                .timeTicketList(timeTicketEntities)
                 .build();
         System.out.println(productResponseDto);
-
 
         return FinalResponseDto.successWithData(productResponseDto);
 

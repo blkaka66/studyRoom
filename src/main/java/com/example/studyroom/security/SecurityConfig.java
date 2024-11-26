@@ -36,11 +36,12 @@ public class SecurityConfig  {
 //    boolean cookieEnabled;
 
     private static final String[] AUTH_WHITELIST = {
-        "/shop/login",
-        "/member/login",
-        "/shop/sign-in/shop-list",
-        "/shop/sign-up",
-        "/member/sign-up"
+            "/shop/login",
+            "/member/login",
+            "/shop/sign-in/shop-list",
+            "/shop/sign-up",
+            "/member/sign-up",
+            "/shop/refreshToken"
     };
 
     @Bean
