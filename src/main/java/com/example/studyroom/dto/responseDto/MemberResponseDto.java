@@ -11,12 +11,12 @@ import java.util.stream.Collectors;
 @Getter
 @Setter
 public class MemberResponseDto {
-    private String phone;
+    private String phoneNumber;
     private String name;
 
     @Builder
     public MemberResponseDto(String phone, String name) {
-        this.phone = phone;
+        this.phoneNumber = phone;
         this.name = name;
     }
 

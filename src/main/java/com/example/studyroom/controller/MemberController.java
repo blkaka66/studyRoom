@@ -6,6 +6,7 @@ import com.example.studyroom.dto.responseDto.MemberResponseDto;
 import com.example.studyroom.dto.responseDto.ShopListResponseDto;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
+import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.security.SecurityUtil;
 import com.example.studyroom.service.MailService;
 import com.example.studyroom.service.MemberService;
@@ -119,12 +120,13 @@ public class MemberController {
 //                requestDto.getMovingSeatNumber()
 //        );
 //    }
-//    @GetMapping("/{userId}/ticket")
-//    public FinalResponseDto<MemberResponseDto> getMemberInfo(@PathVariable("userId") Long userId) {
-//        //TODO: 쿠키에서 userId추출하는 메서드추가
-//        return this.memberService.getMemberInfo( userId);
-//
-//    }
+    @GetMapping("/getUserInfo")
+    public ResponseEntity<FinalResponseDto<MemberResponseDto>> getMemberInfo() {
+        MemberEntity member = JwtUtil.getMember();
+        FinalResponseDto<MemberResponseDto> response = this.memberService.getMemberInfo(member.getId());
+        return ResponseEntity.ok(response);
+
+    }
 //    @DeleteMapping("/delete")
 //    public FinalResponseDto<String> deleteMember() {
 //        //TODO: 쿠키에서 userId추출하는 메서드추가
