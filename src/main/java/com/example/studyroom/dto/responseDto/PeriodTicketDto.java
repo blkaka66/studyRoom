@@ -15,7 +15,9 @@ import java.util.List;
 @Data
 @Builder
 public class PeriodTicketDto {
+    private long id;
     private String name;
+    private TicketTypeEnum ticketType;
     private int amount;
     private int days;
 }

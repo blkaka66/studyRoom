@@ -3,6 +3,8 @@ package com.example.studyroom.controller;
 import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.MemberResponseDto;
+
+import com.example.studyroom.dto.responseDto.PaymentHistoryDto;
 import com.example.studyroom.dto.responseDto.ShopListResponseDto;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
@@ -12,6 +14,7 @@ import com.example.studyroom.service.MailService;
 import com.example.studyroom.service.MemberService;
 
 import com.example.studyroom.service.ShopService;
+import com.example.studyroom.service.TicketService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,16 +30,18 @@ public class MemberController {
     private final MemberService memberService;
     private final MailService mailService;
     private final ShopService shopService;
-
+    private final TicketService ticketService;
 
     public MemberController(
            MemberService memberService,
             MailService mailService,
-           ShopService shopService
+           ShopService shopService,
+           TicketService ticketService
         ) {
         this.memberService = memberService;
         this.mailService = mailService;
         this.shopService = shopService;
+        this.ticketService=ticketService;
     }
 
     @PostMapping("/emails/verification-requests")//이건 나중에 전화번호로 바꾸기
@@ -134,6 +139,14 @@ public class MemberController {
 //
 //    }
 
+
+    @GetMapping("/pay-info")
+    public ResponseEntity<FinalResponseDto<PaymentHistoryDto>> getPaymentHistory() {
+        MemberEntity member = JwtUtil.getMember();
+        FinalResponseDto<PaymentHistoryDto> response = this.ticketService.getPaymentHistory(member.getShop().getId(), member.getId());
+
+        return ResponseEntity.ok(response);
+    }
 }
  //TODO: 자리 점유 요청
 //회원 회원가입 , 로그인,회원정보 가져오기 , 회원탈퇴요청,로그아웃

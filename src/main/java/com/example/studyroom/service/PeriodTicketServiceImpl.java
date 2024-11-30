@@ -2,6 +2,9 @@ package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.ShopPayRequestDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
+import com.example.studyroom.dto.responseDto.PeriodTicketPaymentHistoryDto;
+import com.example.studyroom.dto.responseDto.TimeTicketPaymentHistoryDto;
+
 import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
 import com.example.studyroom.type.ApiResult;
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -78,5 +82,20 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         ticketHistory.setPaymentDate(now);
         periodTicketHistoryRepository.save(ticketHistory);
+    }
+
+    @Override
+    public List<PeriodTicketPaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId) {
+        List<PeriodTicketHistoryEntity> periodTicketHistoryList = periodTicketHistoryRepository.findByShop_IdAndMember_Id(shopId,customerId);
+        return periodTicketHistoryList.stream()
+                .map(entity -> PeriodTicketPaymentHistoryDto.builder()
+                        .ticketType(String.valueOf(entity.getTicket().getTicketType()))  // 기간권, 시간권 설정
+                        .name(entity.getTicket().getName())       // 제품명 설정
+                        .amount(entity.getTicket().getAmount())          // 가격 설정
+                        .days(entity.getTicket().getDays()) // 제품 기간 설정
+                        .paymentDate(entity.getPaymentDate())     // 결제일 설정
+                        .build())
+                .toList();
+
     }
 }

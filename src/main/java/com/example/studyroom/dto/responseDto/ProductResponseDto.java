@@ -22,7 +22,9 @@ public class ProductResponseDto {
     public ProductResponseDto(List<PeriodTicketEntity> periodTicketList, List<TimeTicketEntity> timeTicketList) {
         this.periodTicketList = periodTicketList.stream()
                 .map(x -> PeriodTicketDto.builder()
+                        .id(x.getId())
                         .amount(x.getAmount())
+                        .ticketType(x.getTicketType())
                         .name(x.getName())
                         .days(x.getDays())
                         .build())
@@ -30,7 +32,9 @@ public class ProductResponseDto {
 
         this.timeTicketList = timeTicketList.stream()
                 .map(x -> TimeTicketDto.builder()
+                        .id(x.getId())
                         .amount(x.getAmount())
+                        .ticketType(x.getTicketType())
                         .name(x.getName())
                         .hours(x.getHours())
                         .build())

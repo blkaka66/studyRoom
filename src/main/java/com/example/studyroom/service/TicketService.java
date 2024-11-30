@@ -2,6 +2,7 @@ package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.ShopPayRequestDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
+import com.example.studyroom.dto.responseDto.PaymentHistoryDto;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.TicketEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,4 +15,6 @@ public interface TicketService {
             ShopPayRequestDto product, Long shopId, Long customerId,
             JpaRepository<T, Long> ticketRepository
            );
+
+    FinalResponseDto<PaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId);
 }

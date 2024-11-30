@@ -211,7 +211,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         }
 
         if (!timeTicketEntities.isEmpty()) {
-            System.out.println("첫 번째 TimeTicketEntity: " + timeTicketEntities.get(0).getName());
+            System.out.println("첫 번째 TimeTicketEntity: " + timeTicketEntities.get(0).getDays());
         } else {
             System.out.println("TimeTicketEntity 리스트가 비어 있습니다.");
         }

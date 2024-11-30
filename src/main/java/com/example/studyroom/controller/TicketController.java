@@ -37,7 +37,7 @@ public class TicketController {
     @PostMapping("/pay")
     public FinalResponseDto<String> processPayment(@RequestBody ShopPayRequestDto product) {
         MemberEntity member = SecurityUtil.getMemberInfo();
-
+        System.out.println("안녕하세요"+member.getName());
 //        TimeTicketEntity ticket = new TimeTicketEntity();
 //        ShopEntity shop = new ShopEntity();
 //        shop.setId(1L);
@@ -47,11 +47,13 @@ public class TicketController {
 //        ticket.setPeriod(Duration.ofHours(1));
 //
 //        timeTicketRepository.saveAndFlush(ticket);
-
+        System.out.println("카테고리"+product.getCategory());
         switch(product.getCategory()) {
-            case "period":
+            case "기간권":
+                System.out.println("기간권!!");
                 return periodTicketService.processPayment(product, member.getShop().getId(), member.getId());
-            case "time":
+            case "시간권":
+                System.out.println("시간권!!");
                 return timeTicketService.processPayment(product, member.getShop().getId(), member.getId());
         }
         return FinalResponseDto.failure(ApiResult.FAIL);
