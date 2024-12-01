@@ -2,6 +2,7 @@ package com.example.studyroom.dto.responseDto;
 
 import com.example.studyroom.model.PeriodTicketEntity;
 import com.example.studyroom.model.TicketEntity;
+import com.example.studyroom.model.TicketTypeEnum;
 import com.example.studyroom.model.TimeTicketEntity;
 import lombok.Builder;
 import lombok.Data;
@@ -24,7 +25,8 @@ public class ProductResponseDto {
                 .map(x -> PeriodTicketDto.builder()
                         .id(x.getId())
                         .amount(x.getAmount())
-                        .ticketType(x.getTicketType())
+//                        .ticketType(x.getTicketType())
+                        .ticketType(TicketTypeEnum.PERIOD)
                         .name(x.getName())
                         .days(x.getDays())
                         .build())
@@ -34,7 +36,8 @@ public class ProductResponseDto {
                 .map(x -> TimeTicketDto.builder()
                         .id(x.getId())
                         .amount(x.getAmount())
-                        .ticketType(x.getTicketType())
+//                        .ticketType(x.getTicketType())
+                        .ticketType(TicketTypeEnum.TIME)
                         .name(x.getName())
                         .hours(x.getHours())
                         .build())

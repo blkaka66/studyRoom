@@ -42,7 +42,9 @@ public class TokenRefreshServiceImpl implements TokenRefreshService {
     }
 
     @Override
-    public FinalResponseDto<String> handleExpiredAccessToken(String token) {
+    public FinalResponseDto<String> handleExpiredAccessToken(String accessToken) {
+        String token = accessToken.substring(7);
+
         System.out.println("역시 정상화는"+token);
         System.out.println("토큰!!!!!"+token);
         String role = jwtUtil.getRole(token);

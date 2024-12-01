@@ -44,6 +44,9 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
         System.out.println("requestURI"+requestURI);
         if(requestURI.equals("/shop/refreshToken")){
             System.out.println("필터건너뜀");
+            UsernamePasswordAuthenticationToken authenticationToken = null;
+            authenticationToken = new UsernamePasswordAuthenticationToken(new MemberEntity(), "", getAuthorities("CUSTOMER"));
+            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
         }
         return "/shop/refreshToken".equals(requestURI);
     }

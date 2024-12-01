@@ -210,11 +210,11 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
             System.out.println("PeriodTicketEntity 리스트가 비어 있습니다.");
         }
 
-        if (!timeTicketEntities.isEmpty()) {
-            System.out.println("첫 번째 TimeTicketEntity: " + timeTicketEntities.get(0).getDays());
-        } else {
-            System.out.println("TimeTicketEntity 리스트가 비어 있습니다.");
-        }
+//        if (!timeTicketEntities.isEmpty()) {
+//            System.out.println("첫 번째 TimeTicketEntity: " + timeTicketEntities.get(0).getDays());
+//        } else {
+//            System.out.println("TimeTicketEntity 리스트가 비어 있습니다.");
+//        }
         ProductResponseDto productResponseDto = ProductResponseDto.builder()
                 .periodTicketList(periodTicketEntities)
                 .timeTicketList(timeTicketEntities)
