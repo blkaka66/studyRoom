@@ -90,7 +90,7 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
         return periodTicketHistoryList.stream()
                 .map(entity -> PeriodTicketPaymentHistoryDto.builder()
 //                        .ticketType(String.valueOf(entity.getTicket().getTicketType()))  // 기간권, 시간권 설정
-                        .ticketType("PERIOD")
+                        .ticketType(String.valueOf(TicketTypeEnum.PERIOD))
                         .name(entity.getTicket().getName())       // 제품명 설정
                         .amount(entity.getTicket().getAmount())          // 가격 설정
                         .days(entity.getTicket().getDays()) // 제품 기간 설정

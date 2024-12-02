@@ -94,7 +94,7 @@ public class TimeTicketServiceImpl extends BaseServiceImpl<TimeTicketEntity> imp
 
         return timeTicketHistoryList.stream()
                 .map(entity -> TimeTicketPaymentHistoryDto.builder()
-                        .ticketType("TIME")
+                        .ticketType(String.valueOf(TicketTypeEnum.TIME))
 //                        .ticketType(String.valueOf(entity.getTicket().getTicketType()))  // 기간권, 시간권 설정
                         .name(entity.getTicket().getName())       // 제품명 설정
                         .amount(entity.getTicket().getAmount())          // 가격 설정
