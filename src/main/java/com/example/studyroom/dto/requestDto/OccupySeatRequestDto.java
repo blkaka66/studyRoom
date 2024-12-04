@@ -9,6 +9,7 @@ import lombok.Setter;
 @Builder
 
 public class OccupySeatRequestDto {
-    private String roomName;
+    private long roomId;
+    private long seatId;
     private int seatCode;
 }

@@ -57,10 +57,12 @@ public class MemberController {
         return ResponseEntity.ok(token);
     }
 
-    @PostMapping("/in")
-    public ResponseEntity<FinalResponseDto<String>> in(@RequestBody OccupySeatRequestDto occupySeatRequestDto) {
-        MemberEntity member = SecurityUtil.getMemberInfo();
-        return ResponseEntity.ok(memberService.occupySeat(member.getShop().getId(), occupySeatRequestDto.getRoomName(), occupySeatRequestDto.getSeatCode(), member.getId()));
+    @PostMapping("/occupy-seat")
+    public ResponseEntity<FinalResponseDto<String>> occupySeat(@RequestBody OccupySeatRequestDto requestDto) {
+        System.out.println("^^^");
+       // MemberEntity member = SecurityUtil.getMemberInfo();
+        MemberEntity member = JwtUtil.getMember();
+        return ResponseEntity.ok(memberService.occupySeat(member, requestDto));
     }
 
     @PostMapping("/sign-up")
@@ -100,14 +102,7 @@ public class MemberController {
 //
 //    }
 //
-//    @PostMapping("/in")
-//    public FinalResponseDto occupySeat(@RequestBody OccupySeatRequestDto requestDto) {
-//        //TODO: 쿠키에서 shopid와 memberid 추출하는 메서드추가
-//        return shopService.occupySeat(
-//                requestDto.getRoomName(),
-//                requestDto.getSeatCode()
-//        );
-//    }
+
 //
 //    @PatchMapping("/out")
 //    public FinalResponseDto out() {

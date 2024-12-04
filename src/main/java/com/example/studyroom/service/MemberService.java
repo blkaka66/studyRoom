@@ -2,6 +2,7 @@ package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
 import com.example.studyroom.dto.requestDto.MemberSignUpRequestDto;
+import com.example.studyroom.dto.requestDto.OccupySeatRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.MySeatInfoResponseDto;
@@ -28,7 +29,7 @@ public interface MemberService extends BaseService<MemberEntity> {
 
     FinalResponseDto<MemberEntity> signUp(MemberSignUpRequestDto member); //회원가입
 
-    FinalResponseDto<String> occupySeat(Long shopId , String roomName, int seatCode, Long memberId); //자리 점유요청 메서드
+    FinalResponseDto<String> occupySeat( MemberEntity member,OccupySeatRequestDto requestDto); //자리 점유요청 메서드
 
     FinalResponseDto out(Long userId);//퇴장
 

@@ -2,6 +2,7 @@ package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
 import com.example.studyroom.dto.requestDto.MemberSignUpRequestDto;
+import com.example.studyroom.dto.requestDto.OccupySeatRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.MemberResponseDto;
@@ -186,15 +187,16 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     @Override
     @Transactional
-    public FinalResponseDto<String> occupySeat(Long shopId , String roomName, int seatCode, Long userId) {
-        Optional<ShopEntity> shopOpt = shopRepository.findById(shopId);
+    public FinalResponseDto<String> occupySeat( MemberEntity member,OccupySeatRequestDto requestDto) {
+        System.out.println("안녕하세");
+        Optional<ShopEntity> shopOpt = (shopRepository.findById(member.getShop().getId()));
         if(shopOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
 
-        Optional<RoomEntity> roomOpt = roomRepository.findByName(roomName);//룸체크
+        Optional<RoomEntity> roomOpt = roomRepository.findById(requestDto.getRoomId());//룸체크
         if(roomOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.ROOM_NOT_FOUND);
 
         Long roomId = roomOpt.get().getId();
-        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(seatCode, roomId);//자리체크
+        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(requestDto.getSeatCode(), roomId);//자리체크
         if(seatOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
 
         SeatEntity seat = seatOpt.get();
@@ -204,14 +206,14 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         seat.setAvailable(false);
         seatRepository.save(seat);//윗줄 false저장
 
-        Optional<MemberEntity> memberOpt = repository.findById(userId);
+        Optional<MemberEntity> memberOpt = repository.findById(member.getId());
         if(memberOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
 
 
-        MemberEntity member = memberOpt.get();
+        System.out.println("안녕하세");
 
-        Optional<RemainPeriodTicketEntity> optionalRemainPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberId(shopId, userId);
-        Optional<RemainTimeTicketEntity> optionalRemainTimeTicket = remainTimeTicketRepository.findByShopIdAndMemberId(shopId, userId);
+        Optional<RemainPeriodTicketEntity> optionalRemainPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberId(member.getShop().getId(), member.getId());
+        Optional<RemainTimeTicketEntity> optionalRemainTimeTicket = remainTimeTicketRepository.findByShopIdAndMemberId(member.getShop().getId(), member.getId());
 
         if(optionalRemainPeriodTicket.isPresent()){ //기간권있으면 기간권먼저
             RemainPeriodTicketEntity remainPeriodTicket = optionalRemainPeriodTicket.get();
@@ -221,7 +223,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             long ttlSeconds = Duration.between(now, endDate).getSeconds();
 
             if (ttlSeconds > 0) {
-                String redisKey = "periodSeat:" +seat.getId()+ ":user:" + userId + ":shop:" + shopId;
+                String redisKey = "periodSeat:" +seat.getId()+ ":user:" + member.getId() + ":shop:" + member.getShop().getId();
                 redisService.setValuesWithTTL(redisKey, "occupied", ttlSeconds);
 
             } else {
@@ -240,7 +242,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             long millis = remainTime.toMillis();//남은시간을 밀리초로 변환
 
 
-            String redisKey = "timeSeat:" +seat.getId()+ ":user:" + userId + ":shop:" + shopId;
+            String redisKey = "timeSeat:" +seat.getId()+ ":user:" + member.getId()  + ":shop:" +member.getShop().getId();
             redisService.setValues(redisKey, "occupied", Duration.ofMillis(millis));
 
             OffsetDateTime now = OffsetDateTime.now();
