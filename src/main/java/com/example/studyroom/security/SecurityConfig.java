@@ -5,6 +5,7 @@ import com.example.studyroom.repository.ShopRepository;
 import com.example.studyroom.security.CustomAccessDeniedHandler;
 import com.example.studyroom.security.CustomAuthenticationEntryPoint;
 import com.example.studyroom.security.JwtAuthFilter;
+import com.example.studyroom.service.RedisService;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -19,6 +20,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true)
@@ -31,7 +34,7 @@ public class SecurityConfig  {
 
     private final MemberRepository memberRepository;
     private final ShopRepository shopRepository;
-
+    private final RedisService redisService;
 //    @Value("${cookie.secure.enabled}")
 //    boolean cookieEnabled;
 
@@ -53,7 +56,16 @@ public class SecurityConfig  {
 
         //CSRF, CORS
         http.csrf((csrf) -> csrf.disable());
-        http.cors(Customizer.withDefaults());
+        //http.cors(Customizer.withDefaults());
+        http.cors(cors -> cors.configurationSource(request -> {
+            var corsConfig = new org.springframework.web.cors.CorsConfiguration();
+            corsConfig.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174")); // 여기에 허용할 출처를 명시
+            corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+            corsConfig.setAllowedHeaders(List.of("*"));
+            corsConfig.setAllowCredentials(true); // 쿠키 및 인증정보 허용
+            return corsConfig;
+        }));
+
 
         //세션 관리 상태 없음으로 구성, Spring Security가 세션 생성 or 사용 X
         http.sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(
@@ -65,7 +77,8 @@ public class SecurityConfig  {
 
 
         //JwtAuthFilter를 UsernamePasswordAuthenticationFilter 앞에 추가
-        http.addFilterBefore(new JwtAuthFilter(jwtUtil, memberRepository, shopRepository), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new JwtAuthFilter(jwtUtil, memberRepository, shopRepository,redisService), UsernamePasswordAuthenticationFilter.class);
+
 
         http.exceptionHandling((exceptionHandling) -> exceptionHandling
 //                .authenticationEntryPoint(authenticationEntryPoint)

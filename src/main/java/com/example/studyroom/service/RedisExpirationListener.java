@@ -28,31 +28,36 @@ public class RedisExpirationListener implements MessageListener {
     }
 
     @Override
-    public void onMessage(Message message, byte[] pattern) { //ttl만료이벤트가 발생하면 호출됨
+    public void onMessage(Message message, byte[] pattern) {
+        System.out.println("TTL 이벤트 시작");
         String expiredKey = message.toString();
+
+        // Key에서 필요한 정보 추출
         Long seatId = extractSeatIdFromKey(expiredKey);
         Long userId = extractUserIdFromKey(expiredKey);
         Long shopId = extractShopIdFromKey(expiredKey);
-        SeatEntity seat = seatRepository.findById(seatId).orElseThrow();
-        if (expiredKey.startsWith("periodSeat:")) {//만약 ttl이 만료됐으면
+
+
+        SeatEntity seat = seatRepository.findById(seatId)
+                .orElseThrow(() -> new IllegalArgumentException("Seat not found for id: " + seatId));
+
+        if (expiredKey.startsWith("periodSeat:")) {
             remainPeriodTicketRepository.deleteByShopIdAndMemberId(shopId, userId);
-            RemainPeriodTicketEntity remainPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberId(shopId, userId).orElseThrow();
-            remainPeriodTicketRepository.delete(remainPeriodTicket);
-
-            //
-
-        }else if(expiredKey.startsWith("timeSeat:")){
+            System.out.println("기간권 만료 처리 완료: userId = " + userId);
+        } else if (expiredKey.startsWith("timeSeat:")) {
             remainTimeTicketRepository.deleteByShopIdAndMemberId(shopId, userId);
-            RemainTimeTicketEntity remainTimeTicketEntity = remainTimeTicketRepository.findByShopIdAndMemberId(shopId, userId).orElseThrow();
-            remainTimeTicketRepository.delete(remainTimeTicketEntity);
-        }else{
-            throw new IllegalArgumentException("존재하지 않는 티켓종류(redis ttl 만료시 이벤트): " + expiredKey);
+            System.out.println("시간권 만료 처리 완료: userId = " + userId);
+        } else {
+            throw new IllegalArgumentException("존재하지 않는 티켓 종류: " + expiredKey);
         }
+
+        // 좌석 상태를 사용 가능으로 변경
         seat.setAvailable(true);
         seatRepository.save(seat);
 
-        
+        System.out.println("좌석 사용 가능 상태로 변경: seatId = " + seatId);
     }
+
 
     private Long extractSeatIdFromKey(String key) {
         String[] parts = key.split(":");

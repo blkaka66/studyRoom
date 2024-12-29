@@ -4,6 +4,7 @@ import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.repository.MemberRepository;
 import com.example.studyroom.repository.ShopRepository;
+import com.example.studyroom.service.RedisService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,6 +34,7 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
     private final ShopRepository shopRepository;
+    private final RedisService redisService;
 
     /**
      * JWT 토큰 검증 필터 수행
@@ -65,8 +67,16 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
             JwtUtil.TokenStatus tokenStatus = jwtUtil.validateToken(token);
 
             if (tokenStatus == JwtUtil.TokenStatus.VALID) {
+                if (isTokenBlacklisted(token)) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    System.out.println("이 토큰은 현재 블랙리스트에 등록돼있습니다.");
+                    response.getWriter().write("이 토큰은 현재 블랙리스트에 등록돼있습니다.");
+                    return;
+                }
+
                 System.out.println("토큰이 유효합니다 !!!!");
                 authenticateUser(token);
+
             } else if (tokenStatus == JwtUtil.TokenStatus.EXPIRED) { //재발급
                 // jwtUtil.handleExpiredAccessToken(token, response);
                 // return;  // 액세스 토큰 재발급 시 종료
@@ -80,6 +90,11 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
 
         }
         filterChain.doFilter(request, response);  // 다음 필터로 넘기기
+    }
+
+    private boolean isTokenBlacklisted(String token) {
+        String blacklistKey = "blacklist:accessToken:" + token;  // 블랙리스트 키를 액세스 토큰으로 설정
+        return redisService.isKeyPresent(blacklistKey);  // Redis에서 블랙리스트 확인
     }
 
     private void authenticateUser(String token) {

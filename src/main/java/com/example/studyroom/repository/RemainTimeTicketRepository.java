@@ -12,4 +12,8 @@ public interface RemainTimeTicketRepository extends JpaRepository<RemainTimeTick
     Optional<RemainTimeTicketEntity> findByShopIdAndMemberId(Long shopId, Long userId);
     @Transactional
     void deleteByShopIdAndMemberId(Long shopId, Long userId);
+
+
+    Optional<RemainTimeTicketEntity> findByMemberId(Long memberId); // memberId로 시간권을 찾는 메서드
+
 }

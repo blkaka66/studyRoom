@@ -36,9 +36,11 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     private final JwtUtil jwtUtil;
     private final PeriodTicketRepository periodTicketRepository;
     private final TimeTicketRepository timeTicketRepository;
+    private final RedisService redisService;
 
     public ShopServiceImpl(ShopRepository repository,  MemberService memberService, SeatRepository seatRepository,
-                           RoomRepository roomRepository, MemberServiceImpl memberServiceImpl,
+                           RoomRepository roomRepository, MemberServiceImpl memberServiceImpl
+                           ,RedisService redisService,
                            EnterHistoryRepository enterHistoryRepository, MemberRepository memberRepository,
                            ShopRepository shopRepository, JwtUtil jwtUtil, PeriodTicketRepository periodTicketRepository, TimeTicketRepository timeTicketRepository) {
         super(repository);
@@ -50,7 +52,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         this.enterHistoryRepository = enterHistoryRepository;
         this.memberRepository = memberRepository;
         this.shopRepository = shopRepository;
-
+        this.redisService = redisService;
         this.jwtUtil = jwtUtil;
         this.periodTicketRepository = periodTicketRepository;
         this.timeTicketRepository = timeTicketRepository;
@@ -106,6 +108,27 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
         }
     }
+
+//    @Override //로그인
+//    public FinalResponseDto<String> logout(MemberEntity member) {
+//
+//        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(member.getId());
+//        if(enterHistory != null && enterHistory.getExitTime()==null) { //따로 자리퇴장요청을 하지않고 바로 로그아웃했을땐 자리를 빼야하니까
+//            FinalResponseDto<String> outResponse = memberService.out(member.getId()); // out 메서드를 호출하여 좌석 퇴장 처리
+//
+//            if (outResponse.getMessage().equals(ApiResult.DATA_NOT_FOUND.name())) {
+//                return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+//            }
+//
+//
+//        }
+//        String refreshTokenKey = "refreshToken:" + member.getId();  // 해당 사용자에 해당하는 refreshToken Redis 키
+//        redisService.deleteValue(refreshTokenKey);
+//
+//        return FinalResponseDto.success(); // 로그아웃 성공
+//
+//    }
+
 
 
     @Override //회원가입 // TODO - 암호화 필요

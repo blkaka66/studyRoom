@@ -111,18 +111,19 @@ public class MemberController {
 //
 //    }
 //
-//    @PostMapping("/move")
-//    public FinalResponseDto move(@RequestBody MemberMoveRequestDto requestDto) {
-//        //TODO: 쿠키에서 userid, customerId 추출하는 메서드추가
-//        return this.memberService.move(
-//                userId,
-//                requestDto.getMovingRoomCode(),
-//                requestDto.getMovingSeatNumber()
-//        );
-//    }
+    @PostMapping("/move")
+    public FinalResponseDto move(@RequestBody MemberMoveRequestDto requestDto) {
+        //TODO: 쿠키에서 userid, customerId 추출하는 메서드추가
+        MemberEntity member = JwtUtil.getMember();
+        return this.memberService.move(
+                member,
+                requestDto
+        );
+    }
     @GetMapping("/getUserInfo")
     public ResponseEntity<FinalResponseDto<MemberResponseDto>> getMemberInfo() {
         MemberEntity member = JwtUtil.getMember();
+
         FinalResponseDto<MemberResponseDto> response = this.memberService.getMemberInfo(member.getId());
         return ResponseEntity.ok(response);
 
@@ -134,6 +135,16 @@ public class MemberController {
 //
 //    }
 
+    @PostMapping("/logOut")
+    public ResponseEntity<FinalResponseDto<String>> logout(@RequestHeader("Authorization") String authorizationHeader) {
+        MemberEntity member = JwtUtil.getMember();
+        String accessToken = null;
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            accessToken = authorizationHeader.substring(7); // "Bearer "를 제외한 토큰만 추출
+        }
+        FinalResponseDto<String> response = this.memberService.logout(member , accessToken);
+        return ResponseEntity.ok(response);
+    }
 
     @GetMapping("/pay-info")
     public ResponseEntity<FinalResponseDto<PaymentHistoryDto>> getPaymentHistory() {

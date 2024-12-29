@@ -10,6 +10,7 @@ import com.example.studyroom.repository.*;
 import com.example.studyroom.type.ApiResult;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -49,6 +50,7 @@ public class TicketServiceImpl extends BaseServiceImpl<TicketEntity> implements 
         Optional<ShopEntity> optionalShop = shopRepository.findById(shopId);
         Optional<MemberEntity> optionalMember = memberRepository.findById(customerId);
 
+
         if (optionalTicket.isPresent() && optionalMember.isPresent() && optionalShop.isPresent()) {
             T ticket = optionalTicket.get();
             if (ticket instanceof TimeTicketEntity) {
@@ -79,4 +81,6 @@ public class TicketServiceImpl extends BaseServiceImpl<TicketEntity> implements 
 
         return FinalResponseDto.successWithData(paymentHistoryListDto);
     }
+
+
 }

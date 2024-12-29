@@ -1,5 +1,7 @@
 package com.example.studyroom.service;
 
+import com.example.studyroom.dto.responseDto.FinalResponseDto;
+
 import java.time.Duration;
 
 public interface RedisService {
@@ -7,5 +9,8 @@ public interface RedisService {
     String getValues(String key);
     void setValuesWithTTL(String key, String value, long ttlSeconds); //자리점유 만료시간체크
     Long getTTL(String key); //남은 ttl(수명)확인
-    void deleteValue(String key);//key받아서 redis에 저장된거 삭제
+    FinalResponseDto<String> deleteValue(String key);//key받아서 redis에 저장된거 삭제
+    void checkAndNotifyExpiry(String redisKey, Long userId);
+    String findMatchingKey(String pattern);
+    boolean isKeyPresent(String key);
 }

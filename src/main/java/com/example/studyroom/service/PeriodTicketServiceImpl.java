@@ -10,6 +10,7 @@ import com.example.studyroom.repository.*;
 import com.example.studyroom.type.ApiResult;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -72,6 +73,7 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
             periodTicket.setEndDate(endDate);
             remainPeriodTicketRepository.save(periodTicket);
         }
+
     }
 
     private void recordTicketHistory (ShopEntity shop, PeriodTicketEntity ticket, MemberEntity member){
@@ -98,5 +100,11 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
                         .build())
                 .toList();
 
+    }
+
+    @Override //  remain periodrepository의 enddate가 현재시간보다 이전이면 그 row 삭제(만료된거니까)
+    public void removeExpiredTickets() {
+        OffsetDateTime now = OffsetDateTime.now(); // 현재 시간
+        remainPeriodTicketRepository.deleteExpiredTickets(now);
     }
 }

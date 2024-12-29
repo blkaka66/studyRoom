@@ -27,13 +27,3 @@ public class RoomEntity extends BaseEntity {
     private List<SeatEntity> seats = new ArrayList<>();
 }
 
-//
-//SELECT * FROM ROOM where shop_id = 10;
-//List<RoomEntity>
-//
-//
-//room.getSeats()
-//
-//
-//
-//SELECT * FROM SEAT WEHRE room_id = 51;

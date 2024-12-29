@@ -1,9 +1,6 @@
 package com.example.studyroom.service;
 
-import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
-import com.example.studyroom.dto.requestDto.MemberSignUpRequestDto;
-import com.example.studyroom.dto.requestDto.OccupySeatRequestDto;
-import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
+import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.MySeatInfoResponseDto;
 import com.example.studyroom.dto.responseDto.RemainTimeResponseDto;
@@ -27,13 +24,15 @@ public interface MemberService extends BaseService<MemberEntity> {
 
     FinalResponseDto<String> login(MemberSignInRequestDto dto, HttpServletResponse response); //로그인 기능
 
+    FinalResponseDto<String> logout(MemberEntity member ,String accessToken);
+
     FinalResponseDto<MemberEntity> signUp(MemberSignUpRequestDto member); //회원가입
 
     FinalResponseDto<String> occupySeat( MemberEntity member,OccupySeatRequestDto requestDto); //자리 점유요청 메서드
 
     FinalResponseDto out(Long userId);//퇴장
 
-    FinalResponseDto<String> move(Long userId, Long movingRoomCode, int movingSeatNumber);//자리이동
+    FinalResponseDto<String> move(MemberEntity member,MemberMoveRequestDto requestDto);//자리이동
 
     FinalResponseDto getMemberInfo(Long userId);//회원 정보가져오기
 

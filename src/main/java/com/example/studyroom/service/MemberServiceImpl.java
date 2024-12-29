@@ -1,9 +1,6 @@
 package com.example.studyroom.service;
 
-import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
-import com.example.studyroom.dto.requestDto.MemberSignUpRequestDto;
-import com.example.studyroom.dto.requestDto.OccupySeatRequestDto;
-import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
+import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.MemberResponseDto;
 import com.example.studyroom.dto.responseDto.MySeatInfoResponseDto;
@@ -61,7 +58,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                              RoomRepository roomRepository, MemberRepository memberRepository,
                              MailService mailService, RedisService redisService,
                              RemainPeriodTicketRepository remainPeriodTicketRepository,
-                             RemainTimeTicketRepository remainTimeTicketRepository, JwtUtil jwtUtil) {
+                             RemainTimeTicketRepository remainTimeTicketRepository, JwtUtil jwtUtil
+                             ) {
         super(repository);
         this.repository = repository;
         this.enterHistoryRepository = enterHistoryRepository;
@@ -86,7 +84,6 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
 
-    //자리선택시 enterhistory enterTime까지 생성하는 메서드 만들어야함
     @Override //로그인
     public FinalResponseDto<String> login(MemberSignInRequestDto dto, HttpServletResponse response) {
         //레포지토리에있는 함수가져오기
@@ -95,6 +92,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         if (Member != null) {
             String token = this.jwtUtil.createAccessToken(dto);
             JwtCookieUtil.addInfoToCookie(String.valueOf(dto.getShopId()), response, 3600);
+
+
+
             return FinalResponseDto.successWithData(token);
             //return Member;
         } else {
@@ -102,6 +102,40 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             //throw new RuntimeException("로그인 실패: 사용자명 또는 비밀번호가 올바르지 않습니다.");
         }
     }
+
+    @Override //로그인
+    public FinalResponseDto<String> logout(MemberEntity member ,String accessToken) {
+
+        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(member.getId());
+        if(enterHistory != null && enterHistory.getExitTime()==null) { //따로 자리퇴장요청을 하지않고 바로 로그아웃했을땐 자리를 빼야하니까
+
+            FinalResponseDto<String> outResponse = out(member.getId()); // out 메서드를 호출하여 좌석 퇴장 처리
+            System.out.println("outResponse.getMessage()은?"+outResponse.getMessage());
+            System.out.println("ApiResult.DATA_NOT_FOUND.name()은?"+ApiResult.DATA_NOT_FOUND.name());
+            if (outResponse.getMessage().equals(ApiResult.DATA_NOT_FOUND.name())) {
+                System.out.println("outResponse.getMessage()은?"+outResponse.getMessage());
+                System.out.println("ApiResult.DATA_NOT_FOUND.name()은?"+ApiResult.DATA_NOT_FOUND.name());
+                return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+            }
+        }
+        //redis에 남아있던 리프레시토큰 제거
+        String refreshTokenKey = "refreshToken:" + member.getId();  // 해당 사용자에 해당하는 refreshToken Redis 키
+        FinalResponseDto<String> deleteResponse=  redisService.deleteValue(refreshTokenKey);
+        if(deleteResponse.getMessage().equals(ApiResult.FAIL.name())){
+            System.out.println("deleteResponse.getMessage()은?"+deleteResponse.getMessage());
+            System.out.println("ApiResult.FAIL.name()은?"+ApiResult.FAIL.name());
+            return FinalResponseDto.failure(ApiResult.FAIL);
+        }
+
+        //액세스토큰의 남은 유효기간만큼 redis에서 블랙리스트에 저장
+        String accessTokenKey = "blacklist:accessToken:" + member.getId();
+        jwtUtil.setAccessTokenWithRemainingTTL(accessTokenKey, accessToken);
+
+        return FinalResponseDto.success(); // 로그아웃 성공
+
+    }
+
+
 
     @Override //회원가입 // TODO - 암호화 필요
     public FinalResponseDto<MemberEntity> signUp(MemberSignUpRequestDto member) {
@@ -222,9 +256,14 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             OffsetDateTime now = OffsetDateTime.now();
             long ttlSeconds = Duration.between(now, endDate).getSeconds();
 
+            System.out.println("ttlSeconds"+ttlSeconds);
+
             if (ttlSeconds > 0) {
                 String redisKey = "periodSeat:" +seat.getId()+ ":user:" + member.getId() + ":shop:" + member.getShop().getId();
                 redisService.setValuesWithTTL(redisKey, "occupied", ttlSeconds);
+
+
+
 
             } else {
                 return FinalResponseDto.failure(ApiResult.EXPIRED_TICKET);
@@ -233,6 +272,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
 
             EnterHistoryEntity enterHistory = EnterHistoryEntity.builder().member(member).seat(seat).enterTime(now).build();
+            System.out.println("enterHistory"+enterHistory);
             enterHistoryRepository.save(enterHistory);
             return FinalResponseDto.success();
 
@@ -261,31 +301,50 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
     @Override
-    public FinalResponseDto<String> out(Long userId){
-
-        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId); //현재 어디앉았는지
-        if(enterHistory != null) {
+    public FinalResponseDto<String> out(Long userId) {
+        // 현재 사용 중인 입실 기록 조회
+        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
+        if (enterHistory != null) {
             OffsetDateTime now = OffsetDateTime.now();
             enterHistory.setExitTime(now);
-            enterHistoryRepository.save(enterHistory);
+            enterHistoryRepository.save(enterHistory); // 입실 기록 업데이트
 
+            // Redis 키 패턴 생성
+            String periodKeyPattern = "periodSeat:*:user:" + userId + ":*";
+            String timeKeyPattern = "timeSeat:*:user:" + userId + ":*";
+
+            // Redis에서 해당 키 조회 및 TTL 확인
+            String redisKey = redisService.findMatchingKey(timeKeyPattern);
+            if (redisKey != null) {
+                long remainingSeconds = redisService.getTTL(redisKey);
+                if (remainingSeconds > 0) {
+                    // 남은 시간을 RemainTimeTicketEntity에 반영
+                    Optional<RemainTimeTicketEntity> remainTimeTicketOpt = remainTimeTicketRepository.findByMemberId(userId);
+                    if (remainTimeTicketOpt.isPresent()) {
+                        RemainTimeTicketEntity remainTimeTicket = remainTimeTicketOpt.get();
+                        Duration remainingDuration = Duration.ofSeconds(remainingSeconds);
+                        remainTimeTicket.setRemainTime(remainTimeTicket.getRemainTime().plus(remainingDuration));
+                        remainTimeTicketRepository.save(remainTimeTicket);
+                    }
+                }
+                // Redis 키 삭제 (구독 해제)
+                redisService.deleteValue(redisKey);
+            }
 
             return FinalResponseDto.success();
-
         }
+
         return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
-
-
-
     }
 
+
     @Override
-    public FinalResponseDto<String> move(Long userId, Long movingRoomCode, int movingSeatNumber){
-        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
+    public FinalResponseDto<String> move(MemberEntity member,MemberMoveRequestDto requestDto){
+        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(member.getId());
         if(enterHistory!=null){
             SeatEntity currentSeat = enterHistory.getSeat();
             Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(currentSeat.getSeatCode(), currentSeat.getRoom().getId()); //자리체크
-            Optional<SeatEntity> newSeatOpt = seatRepository.findBySeatCodeAndRoom_Id(movingSeatNumber, movingRoomCode);
+            Optional<SeatEntity> newSeatOpt = seatRepository.findBySeatCodeAndRoom_Id(requestDto.getSeatCode(), requestDto.getRoomId());
             if(newSeatOpt.isPresent() && seatOpt.isPresent()){
                 SeatEntity newSeat = newSeatOpt.get();
                 SeatEntity previousSeat = seatOpt.get();

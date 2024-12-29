@@ -22,6 +22,7 @@ public interface ShopService extends BaseService<ShopEntity> {
     //ShopEntity login(String username, String password);
     FinalResponseDto<String> login(ShopSignInRequestDto dto, HttpServletResponse response);
 
+
     //ShopEntity signUp(ShopSignUpRequestDto dto); //회원가입
     FinalResponseDto<ShopEntity> signUp(ShopSignUpRequestDto dto); //회원가입
 

@@ -14,4 +14,7 @@ public interface PeriodTicketService extends BaseService<PeriodTicketEntity>{
     FinalResponseDto<String> processPayment(ShopPayRequestDto product , Long shopId, Long customerId);
 
     List<PeriodTicketPaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId);
+
+    void removeExpiredTickets();
+
 }

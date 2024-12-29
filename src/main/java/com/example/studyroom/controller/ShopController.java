@@ -60,6 +60,8 @@ public class ShopController {
         return ResponseEntity.ok(token);
     }
 
+
+
     private static final Logger logger = LoggerFactory.getLogger(ShopController.class);
 
     @GetMapping("/sign-in/shop-list")

@@ -58,7 +58,9 @@ public class TokenRefreshServiceImpl implements TokenRefreshService {
             String email = jwtUtil.getShopEmail(token);
             ShopEntity shop = shopRepository.findByEmail(email);
             id = String.valueOf(shop.getId());
+
             Long ttl = redisService.getTTL(id);
+            System.out.println("ttl남은시간"+ttl);
             if (ttl > 0) {
                 newAccessToken = jwtUtil.reCreateToken(shop, accessTokenExpTime);
                 redisService.deleteValue(String.valueOf(shop.getId()));
@@ -76,7 +78,9 @@ public class TokenRefreshServiceImpl implements TokenRefreshService {
 
             if (member != null) {
                 id = String.valueOf(member.getId());
+                System.out.println("member id는?"+id);
                 Long ttl = redisService.getTTL(id);
+                System.out.println("ttl남은시간"+ttl);
                 if (ttl > 0) {
                     newAccessToken = jwtUtil.reCreateToken(member, accessTokenExpTime);
                     redisService.deleteValue(String.valueOf(member.getId()));

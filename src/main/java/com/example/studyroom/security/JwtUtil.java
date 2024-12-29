@@ -354,6 +354,24 @@ public class JwtUtil {
         }
     }
 
+    //액세스토큰을 블랙리스트에 저장
+    public void setAccessTokenWithRemainingTTL(String key, String accessToken) {
+        // AccessToken의 만료 시간을 추출
+        Claims claims = parseClaims(accessToken);
+        Date expirationDate = claims.getExpiration();
+
+        // 현재 시간과 만료 시간의 차이를 계산하여 남은 TTL을 구함
+        long ttlInMillis = expirationDate.getTime() - System.currentTimeMillis();
+
+        // TTL이 음수인 경우 (즉, 이미 만료된 경우)에는 TTL을 0으로 설정하여 삭제
+        if (ttlInMillis > 0) {
+            long ttlInSeconds = ttlInMillis / 1000; // 밀리초를 초 단위로 변환
+            redisService.setValuesWithTTL(key, accessToken, ttlInSeconds);  // Redis에 남은 TTL을 적용하여 저장
+        } else {
+            // 이미 만료된 토큰 처리 (예: 삭제하거나 다른 조치 취하기)
+            redisService.deleteValue(key);  // 예: 만료된 토큰 삭제
+        }
+    }
 
 
 }
