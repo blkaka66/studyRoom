@@ -93,8 +93,11 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
     }
 
     private boolean isTokenBlacklisted(String token) {
-        String blacklistKey = "blacklist:accessToken:" + token;  // 블랙리스트 키를 액세스 토큰으로 설정
-        return redisService.isKeyPresent(blacklistKey);  // Redis에서 블랙리스트 확인
+        String blacklistKey = "blacklist:accessToken:" + jwtUtil.getCustomerUserId(token);  // 블랙리스트 키를 액세스 토큰으로 설정
+        if(redisService.isKeyPresent(blacklistKey)) {
+            return redisService.getValues(blacklistKey).equals(token);
+        }
+        return false;
     }
 
     private void authenticateUser(String token) {
