@@ -3,6 +3,7 @@ package com.example.studyroom.service;
 import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.MySeatInfoResponseDto;
+import com.example.studyroom.dto.responseDto.RemainTimeInfoResponseDto;
 import com.example.studyroom.dto.responseDto.RemainTimeResponseDto;
 import com.example.studyroom.model.EnterHistoryEntity;
 import com.example.studyroom.model.MemberEntity;
@@ -38,6 +39,6 @@ public interface MemberService extends BaseService<MemberEntity> {
 
     FinalResponseDto<String> deleteMember(Long userId);//회원탈퇴
 
-
+    FinalResponseDto<RemainTimeInfoResponseDto> getRemainTime(Long userId);
 
 }

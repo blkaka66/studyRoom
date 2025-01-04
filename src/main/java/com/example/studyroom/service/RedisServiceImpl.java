@@ -1,10 +1,13 @@
 package com.example.studyroom.service;
 
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
+import com.example.studyroom.dto.responseDto.RemainTimeInfoResponseDto;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import com.example.studyroom.type.ApiResult;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -12,12 +15,11 @@ import java.util.concurrent.TimeUnit;
 public class RedisServiceImpl implements RedisService {
 
     private final StringRedisTemplate redisTemplate;
-    private final WebSocketService webSocketService;
     private final PeriodTicketService periodTicketService;
     // Constructor injection
-    public RedisServiceImpl(StringRedisTemplate redisTemplate , PeriodTicketService periodTicketService, WebSocketService webSocketService) {
+    public RedisServiceImpl(StringRedisTemplate redisTemplate , PeriodTicketService periodTicketService) {
         this.redisTemplate = redisTemplate;
-        this.webSocketService = webSocketService;
+
         this.periodTicketService = periodTicketService;
     }
 
@@ -56,7 +58,7 @@ public class RedisServiceImpl implements RedisService {
 
     public void sendNotification(Long userId, String message) {
         // WebSocket을 통해 클라이언트에게 알림 발송
-        webSocketService.sendNotification(userId, message);
+       // webSocketService.sendNotification(userId, message);
     }
 
     @Override
@@ -87,6 +89,28 @@ public class RedisServiceImpl implements RedisService {
         }
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));  // 키 존재 여부 확인
     }
+
+    @Override
+    public RemainTimeInfoResponseDto getSeatInfoByUserId(Long userId) {
+        String pattern = "*:user:" + userId + ":*";
+        String matchingKey = findMatchingKey(pattern);
+
+        if (matchingKey != null) {
+            String seatType = matchingKey.startsWith("timeSeat:") ? "timeSeat" : "periodSeat";
+            String value = getValues(matchingKey);
+            Long ttl = getTTL(matchingKey);
+
+            return RemainTimeInfoResponseDto.builder()
+                    .seatType(seatType)
+                    .key(matchingKey)
+                    .value(value)
+                    .ttl(ttl)
+                    .build();
+        }
+
+        return null; // 매칭되는 키가 없는 경우
+    }
+
 
 }
 

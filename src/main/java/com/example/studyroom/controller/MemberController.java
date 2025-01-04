@@ -1,11 +1,8 @@
 package com.example.studyroom.controller;
 
 import com.example.studyroom.dto.requestDto.*;
-import com.example.studyroom.dto.responseDto.FinalResponseDto;
-import com.example.studyroom.dto.responseDto.MemberResponseDto;
+import com.example.studyroom.dto.responseDto.*;
 
-import com.example.studyroom.dto.responseDto.PaymentHistoryDto;
-import com.example.studyroom.dto.responseDto.ShopListResponseDto;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.security.JwtUtil;
@@ -103,13 +100,13 @@ public class MemberController {
 //    }
 //
 
-//
-//    @PatchMapping("/out")
-//    public FinalResponseDto out() {
-//        //TODO: 쿠키에서 userid, customerId 추출하는 메서드추가
-//        return this.memberService.out(userId);
-//
-//    }
+
+
+    @PostMapping("/out")
+    public FinalResponseDto out() {
+        MemberEntity member = JwtUtil.getMember();
+        return this.memberService.out(member.getId());
+    }
 //
     @PostMapping("/move")
     public FinalResponseDto move(@RequestBody MemberMoveRequestDto requestDto) {
@@ -134,6 +131,13 @@ public class MemberController {
 //        return this.memberService.deleteMember(userId);
 //
 //    }
+
+    @GetMapping("/getRemainTime")
+    public ResponseEntity<FinalResponseDto<RemainTimeInfoResponseDto>> getRemainTime(Long userId) {
+        MemberEntity member = JwtUtil.getMember();
+        FinalResponseDto<RemainTimeInfoResponseDto> response = this.memberService.getRemainTime(member.getId());
+        return ResponseEntity.ok(response);
+    }
 
     @PostMapping("/logOut")
     public ResponseEntity<FinalResponseDto<String>> logout(@RequestHeader("Authorization") String authorizationHeader) {

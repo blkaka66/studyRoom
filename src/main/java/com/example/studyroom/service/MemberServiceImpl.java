@@ -1,10 +1,7 @@
 package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.*;
-import com.example.studyroom.dto.responseDto.FinalResponseDto;
-import com.example.studyroom.dto.responseDto.MemberResponseDto;
-import com.example.studyroom.dto.responseDto.MySeatInfoResponseDto;
-import com.example.studyroom.dto.responseDto.RemainTimeResponseDto;
+import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
 
@@ -237,8 +234,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         if(!seat.getAvailable()) return FinalResponseDto.failure(ApiResult.SEAT_ALREADY_OCCUPIED);
 
 
-        seat.setAvailable(false);
-        seatRepository.save(seat);//윗줄 false저장
+
 
         Optional<MemberEntity> memberOpt = repository.findById(member.getId());
         if(memberOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
@@ -262,7 +258,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                 String redisKey = "periodSeat:" +seat.getId()+ ":user:" + member.getId() + ":shop:" + member.getShop().getId();
                 redisService.setValuesWithTTL(redisKey, "occupied", ttlSeconds);
 
-
+                seat.setAvailable(false);
+                seatRepository.save(seat);//윗줄 false저장
 
 
             } else {
@@ -281,6 +278,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             Duration remainTime = remainTimeTicket.getRemainTime();
             long millis = remainTime.toMillis();//남은시간을 밀리초로 변환
 
+            seat.setAvailable(false);
+            seatRepository.save(seat);//윗줄 false저장
 
             String redisKey = "timeSeat:" +seat.getId()+ ":user:" + member.getId()  + ":shop:" +member.getShop().getId();
             redisService.setValues(redisKey, "occupied", Duration.ofMillis(millis));
@@ -300,14 +299,33 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     }
 
+
+    @Override
+    public FinalResponseDto<RemainTimeInfoResponseDto> getRemainTime(Long userId) {
+        RemainTimeInfoResponseDto result = redisService.getSeatInfoByUserId(userId);
+
+        return FinalResponseDto.successWithData(result);
+    }
+
     @Override
     public FinalResponseDto<String> out(Long userId) {
         // 현재 사용 중인 입실 기록 조회
         EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
+
         if (enterHistory != null) {
             OffsetDateTime now = OffsetDateTime.now();
             enterHistory.setExitTime(now);
             enterHistoryRepository.save(enterHistory); // 입실 기록 업데이트
+
+            SeatEntity currentSeat = enterHistory.getSeat();
+            Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(currentSeat.getSeatCode(), currentSeat.getRoom().getId()); //자리체크
+            if(seatOpt.isPresent()){
+                SeatEntity newSeat = seatOpt.get();
+                newSeat.setAvailable(true);
+                seatRepository.save(newSeat);
+            }else{
+                return FinalResponseDto.failure(ApiResult.SEAT_ALREADY_OCCUPIED);
+            } //기존자리 퇴장하니까 빈자리로 만들기
 
             // Redis 키 패턴 생성
             String periodKeyPattern = "periodSeat:*:user:" + userId + ":*";
