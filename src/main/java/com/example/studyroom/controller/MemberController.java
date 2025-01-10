@@ -103,7 +103,7 @@ public class MemberController {
 
 
     @PostMapping("/out")
-    public FinalResponseDto out() {
+    public FinalResponseDto<String> out() {
         MemberEntity member = JwtUtil.getMember();
         return this.memberService.out(member.getId());
     }
@@ -125,17 +125,19 @@ public class MemberController {
         return ResponseEntity.ok(response);
 
     }
-//    @DeleteMapping("/delete")
-//    public FinalResponseDto<String> deleteMember() {
-//        //TODO: 쿠키에서 userId추출하는 메서드추가
-//        return this.memberService.deleteMember(userId);
-//
-//    }
+
+    @DeleteMapping("/delete")
+    public FinalResponseDto<String> deleteMember() {
+        MemberEntity member = JwtUtil.getMember();
+        return this.memberService.deleteMember(member.getId());
+    }
+
+
 
     @GetMapping("/getRemainTime")
-    public ResponseEntity<FinalResponseDto<RemainTimeInfoResponseDto>> getRemainTime(Long userId) {
+    public ResponseEntity<FinalResponseDto<RemainTicketInfoResponseDto>> getRemainTime(Long userId) {
         MemberEntity member = JwtUtil.getMember();
-        FinalResponseDto<RemainTimeInfoResponseDto> response = this.memberService.getRemainTime(member.getId());
+        FinalResponseDto<RemainTicketInfoResponseDto> response = this.memberService.getRemainTime(member.getShop().getId(),member.getId());
         return ResponseEntity.ok(response);
     }
 
@@ -147,6 +149,18 @@ public class MemberController {
             accessToken = authorizationHeader.substring(7); // "Bearer "를 제외한 토큰만 추출
         }
         FinalResponseDto<String> response = this.memberService.logout(member , accessToken);
+        return ResponseEntity.ok(response);
+    }
+
+
+
+    @PostMapping("/reset/pw")
+    public ResponseEntity<FinalResponseDto<String>> resetPw(@RequestBody ResetPwRequestDto requestDto) {
+        MemberEntity member = JwtUtil.getMember();
+        System.out.println("ㄴㄴ재설정 비밀번호"+requestDto.getNewPassword());
+        System.out.println("ㄴㄴ기존 비밀번호"+requestDto.getPassword());
+        FinalResponseDto<String> response = this.memberService.resetPw(member,requestDto);
+
         return ResponseEntity.ok(response);
     }
 

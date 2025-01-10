@@ -1,9 +1,7 @@
 package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.ShopPayRequestDto;
-import com.example.studyroom.dto.responseDto.FinalResponseDto;
-import com.example.studyroom.dto.responseDto.PeriodTicketPaymentHistoryDto;
-import com.example.studyroom.dto.responseDto.TimeTicketPaymentHistoryDto;
+import com.example.studyroom.dto.responseDto.*;
 
 import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
@@ -106,5 +104,14 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
     public void removeExpiredTickets() {
         OffsetDateTime now = OffsetDateTime.now(); // 현재 시간
         remainPeriodTicketRepository.deleteExpiredTickets(now);
+    }
+
+    @Override
+    public RemainTicketInfoResponseDto getEndDate(Long shopId, Long customerId, String ticketCategory) {
+        Optional<RemainPeriodTicketEntity> RemainPeriodTicketEntity= remainPeriodTicketRepository.findByShopIdAndMemberId(shopId,customerId);
+        return RemainPeriodTicketEntity.map(remainPeriodTicketEntity -> RemainTicketInfoResponseDto.builder()
+                .seatType(ticketCategory)
+                .endDate(remainPeriodTicketEntity.getEndDate())
+                .build()).orElse(null);
     }
 }

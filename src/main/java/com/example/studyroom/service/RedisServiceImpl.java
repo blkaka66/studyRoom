@@ -1,13 +1,11 @@
 package com.example.studyroom.service;
 
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
-import com.example.studyroom.dto.responseDto.RemainTimeInfoResponseDto;
+import com.example.studyroom.dto.responseDto.RemainTicketInfoResponseDto;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import com.example.studyroom.type.ApiResult;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -91,17 +89,19 @@ public class RedisServiceImpl implements RedisService {
     }
 
     @Override
-    public RemainTimeInfoResponseDto getSeatInfoByUserId(Long userId) {
+    public String getUsingTicketCategoryInfoByUserId(Long userId) {
         String pattern = "*:user:" + userId + ":*";
-        String matchingKey = findMatchingKey(pattern);
+        return findMatchingKey(pattern);
+    }
 
+    @Override
+    public RemainTicketInfoResponseDto getReaminTimeInfoByUserId(String matchingKey, String ticketCategory) {
         if (matchingKey != null) {
-            String seatType = matchingKey.startsWith("timeSeat:") ? "timeSeat" : "periodSeat";
             String value = getValues(matchingKey);
             Long ttl = getTTL(matchingKey);
 
-            return RemainTimeInfoResponseDto.builder()
-                    .seatType(seatType)
+            return RemainTicketInfoResponseDto.builder()
+                    .seatType(ticketCategory)
                     .key(matchingKey)
                     .value(value)
                     .ttl(ttl)
@@ -110,7 +110,6 @@ public class RedisServiceImpl implements RedisService {
 
         return null; // 매칭되는 키가 없는 경우
     }
-
 
 }
 

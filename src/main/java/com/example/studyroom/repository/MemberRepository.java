@@ -10,6 +10,7 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
     boolean existsByPhone(String phone);
     List<MemberEntity> findByShop(ShopEntity shop);
     MemberEntity findByNameAndPassword(String name, String password);
+
     MemberEntity findByPhoneAndPassword(String phone, String password);
     MemberEntity findByPhone(String phone);
     void deleteById(Long id);

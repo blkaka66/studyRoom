@@ -1,6 +1,7 @@
 package com.example.studyroom.controller;
 
 import com.example.studyroom.dto.CookieDto;
+import com.example.studyroom.dto.requestDto.CreateAnnouncementRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.*;
@@ -137,13 +138,19 @@ public class ShopController {
     }
 
 
-    @PostMapping("/refreshToken")
-    public ResponseEntity<FinalResponseDto<String>> handleExpiredAccessToken(@RequestHeader("Authorization") String token) {
-        //CookieDto cookieDto = JwtCookieUtil.getShopId(request);
+    @PostMapping("/create/announcement")
+    public ResponseEntity<FinalResponseDto<String>> createAnnounement(@RequestBody CreateAnnouncementRequestDto dto) {
 
-        System.out.println("컨트롤러 토큰!!!!!"+token);
-        System.out.println("안녕");
-        return ResponseEntity.ok(this.tokenRefreshService.handleExpiredAccessToken(token));
+        Long id = JwtUtil.getMember().getShop().getId();
+
+        return ResponseEntity.ok(this.shopService.createAnnounement(id,dto));
+    }
+
+
+    @GetMapping("/announcement")
+    public ResponseEntity<FinalResponseDto<List<AnnouncementResponseDto>>> handleExpiredAccessToken() {
+        Long id = JwtUtil.getMember().getShop().getId();
+        return ResponseEntity.ok(this.shopService.getAnnouncementList(id));
     }
 }
 

@@ -14,11 +14,13 @@ import java.util.Optional;
 public interface RemainPeriodTicketRepository extends JpaRepository<RemainPeriodTicketEntity, Long> {
 
     Optional<RemainPeriodTicketEntity> findByShopIdAndMemberId(Long shopId, Long userId);
-
+    Optional<RemainPeriodTicketEntity> findByMemberId(Long userId);
     void deleteByShopIdAndMemberId(Long shopId, Long userId);
 
     @Modifying
     @Transactional
     @Query("DELETE FROM RemainPeriodTicketEntity r WHERE r.endDate < :now")
     void deleteExpiredTickets(OffsetDateTime now);
+
+
 }
