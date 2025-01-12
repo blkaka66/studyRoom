@@ -59,7 +59,7 @@ public class SecurityConfig  {
         //http.cors(Customizer.withDefaults());
         http.cors(cors -> cors.configurationSource(request -> {
             var corsConfig = new org.springframework.web.cors.CorsConfiguration();
-            corsConfig.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174")); // 여기에 허용할 출처를 명시
+            corsConfig.setAllowedOrigins(List.of("https://studyroom-webfush.web.app", "http://localhost:5173", "http://localhost:5174")); // 여기에 허용할 출처를 명시
             corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
             corsConfig.setAllowedHeaders(List.of("*"));
             corsConfig.setAllowCredentials(true); // 쿠키 및 인증정보 허용
