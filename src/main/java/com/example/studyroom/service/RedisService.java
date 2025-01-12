@@ -1,7 +1,7 @@
 package com.example.studyroom.service;
 
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
-import com.example.studyroom.dto.responseDto.RemainTimeInfoResponseDto;
+import com.example.studyroom.dto.responseDto.RemainTicketInfoResponseDto;
 
 import java.time.Duration;
 
@@ -14,5 +14,7 @@ public interface RedisService {
     void checkAndNotifyExpiry(String redisKey, Long userId);
     String findMatchingKey(String pattern);
     boolean isKeyPresent(String key);
-    RemainTimeInfoResponseDto getSeatInfoByUserId(Long userId);
+
+    String getUsingTicketCategoryInfoByUserId(Long userId);
+    RemainTicketInfoResponseDto getReaminTimeInfoByUserId(String matchingKey, String ticketCategory);
 }

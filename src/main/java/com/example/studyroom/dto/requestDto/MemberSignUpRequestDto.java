@@ -28,5 +28,4 @@ public class MemberSignUpRequestDto {
                 .password(this.password)
                 .build();
     }
-
 }

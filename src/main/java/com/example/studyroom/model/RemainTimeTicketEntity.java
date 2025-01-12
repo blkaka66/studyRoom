@@ -12,13 +12,6 @@ import java.time.OffsetDateTime;
 @Entity
 @DiscriminatorValue("REMAIN_TIME")
 public class RemainTimeTicketEntity extends RemainTicketEntity{
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "customerId", foreignKey = @ForeignKey(name = "fk_customer_id"))
-//    private MemberEntity member;
-//
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "shopId", foreignKey = @ForeignKey(name = "fk_shop_id"))
-//    private ShopEntity shop;
 
     @Convert(converter = DurationConverter.class)
     @Column(nullable = false)

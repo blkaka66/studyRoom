@@ -91,7 +91,7 @@ public class JwtUtil {
      * @param member
      * @return Access Token String
      */
-    public String createAccessToken(MemberSignInRequestDto member) {
+    public String createAccessToken(MemberEntity member) {
         return createToken(member, accessTokenExpTime);
     }
 
@@ -155,28 +155,22 @@ public class JwtUtil {
      * @param expireTime
      * @return JWT String
      */
-    private String createToken(MemberSignInRequestDto member, long expireTime) {
-        MemberEntity existingMember = memberRepository.findByPhoneAndPassword(member.getPhoneNumber(),member.getPassword());
-        System.out.println("existingMember"+existingMember.getName());
-        if(existingMember != null) {
-            Claims claims = Jwts.claims();
-            claims.put("role", "CUSTOMER");
-            claims.put("userId",existingMember.getId());
-            claims.put("shopId",member.getShopId());
-            System.out.println("userid"+existingMember.getId());
-            System.out.println("shopId"+member.getShopId());
-            ZonedDateTime now = ZonedDateTime.now();
-            ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
+    private String createToken(MemberEntity member, long expireTime) {
+        //MemberEntity existingMember = memberRepository.findByPhoneAndPassword(member.getPhoneNumber(),member.getPassword());
+        System.out.println("existingMember"+member.getName());
+        Claims claims = Jwts.claims();
+        claims.put("role", "CUSTOMER");
+        claims.put("userId",member.getId());
+        claims.put("shopId",member.getShop().getId());
+        ZonedDateTime now = ZonedDateTime.now();
+        ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
 
 
-            return Jwts.builder()
-                    .setClaims(claims)
-                    .setExpiration(Date.from(tokenValidity.toInstant()))
-                    .signWith(key, SignatureAlgorithm.HS256)
-                    .compact();
-        }else{
-            return null;//여기선 굳이 FinalResponseDto할필요 없겠지?
-        }
+        return Jwts.builder()
+                .setClaims(claims)
+                .setExpiration(Date.from(tokenValidity.toInstant()))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
 
 
     }

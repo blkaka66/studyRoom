@@ -9,5 +9,4 @@ public interface ShopRepository extends JpaRepository<ShopEntity, Long> {
     ShopEntity findByEmail(String email);
     ShopEntity findById(long Id);
 
-
 }

@@ -1,9 +1,6 @@
 package com.example.studyroom.service;
 
-import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
-import com.example.studyroom.dto.requestDto.ShopPayRequestDto;
-import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
-import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
+import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
@@ -37,12 +34,13 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     private final PeriodTicketRepository periodTicketRepository;
     private final TimeTicketRepository timeTicketRepository;
     private final RedisService redisService;
-
+    private final AnnouncementRepository announcementRepository;
     public ShopServiceImpl(ShopRepository repository,  MemberService memberService, SeatRepository seatRepository,
                            RoomRepository roomRepository, MemberServiceImpl memberServiceImpl
                            ,RedisService redisService,
                            EnterHistoryRepository enterHistoryRepository, MemberRepository memberRepository,
-                           ShopRepository shopRepository, JwtUtil jwtUtil, PeriodTicketRepository periodTicketRepository, TimeTicketRepository timeTicketRepository) {
+                           ShopRepository shopRepository, JwtUtil jwtUtil, PeriodTicketRepository periodTicketRepository,
+                           TimeTicketRepository timeTicketRepository, AnnouncementRepository announcementRepository) {
         super(repository);
         this.repository = repository;
         this.memberService = memberService;
@@ -56,6 +54,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         this.jwtUtil = jwtUtil;
         this.periodTicketRepository = periodTicketRepository;
         this.timeTicketRepository = timeTicketRepository;
+        this.announcementRepository = announcementRepository;
     }
 
     @Override
@@ -250,6 +249,48 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
 
 
+    @Override
+    public FinalResponseDto <String> createAnnounement(Long shopId, CreateAnnouncementRequestDto dto){
+
+        Optional<ShopEntity> shopOptional = shopRepository.findById(shopId);
+        if (shopOptional.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
+        }
+        System.out.println("제목"+dto.getTitle());
+        System.out.println("본문"+dto.getContent());
+        ShopEntity shop = shopOptional.get();
+        OffsetDateTime now = OffsetDateTime.now();
+        AnnouncementEntity announcement = AnnouncementEntity.builder()
+                .shop(shop)
+                .title(dto.getTitle())
+                .content(dto.getContent())
+                .createdAt(now)
+                .build();
+
+        announcementRepository.save(announcement);
+
+
+        return FinalResponseDto.success();
+
+    }
+
+
+
+    @Override
+    public FinalResponseDto<List<AnnouncementResponseDto>> getAnnouncementList(Long shopId) {
+        Optional<ShopEntity> shopOptional = shopRepository.findById(shopId);
+        if (shopOptional.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
+        }
+
+        List<AnnouncementEntity> announcements = announcementRepository.findByShopId(shopId);
+
+        List<AnnouncementResponseDto> responseDtos = announcements.stream()
+                .map(AnnouncementResponseDto::convertToDto)
+                .collect(Collectors.toList());
+
+        return FinalResponseDto.successWithData(responseDtos);
+    }
 
 
 
