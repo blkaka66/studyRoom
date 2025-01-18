@@ -11,8 +11,12 @@ import java.time.OffsetDateTime;
 
 public class TicketHistoryEntity<T extends TicketEntity> extends BaseEntity{
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customerId", foreignKey = @ForeignKey(name = "fk_customer_id"))
+    @JoinColumn(name = "customerId", foreignKey = @ForeignKey(name = "fk_customer_id"), nullable = true)
     private MemberEntity member;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "couponId", foreignKey = @ForeignKey(name = "fk_coupon_id"), nullable = true)
+    private CouponEntity coupon;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shopId", foreignKey = @ForeignKey(name = "fk_shop_id"))
@@ -24,4 +28,6 @@ public class TicketHistoryEntity<T extends TicketEntity> extends BaseEntity{
 
     @Column(nullable = false)
     private OffsetDateTime paymentDate;//결제일
+
+
 }

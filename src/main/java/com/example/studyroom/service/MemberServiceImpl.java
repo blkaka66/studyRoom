@@ -26,6 +26,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements MemberService {
@@ -519,11 +520,13 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
     @Override
-    public FinalResponseDto<String> deleteMember(Long userId){
-        Optional<MemberEntity> member = memberRepository.findById(userId);
+    @Transactional
+    public FinalResponseDto<String> deleteMember(MemberEntity memberEntity ,String accessToken){
+        Optional<MemberEntity> member = memberRepository.findById(memberEntity.getId());
         if(member.isEmpty()){
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
+        this.logout(memberEntity, accessToken);
         memberRepository.deleteById(member.get().getId());
         return FinalResponseDto.success();
     }

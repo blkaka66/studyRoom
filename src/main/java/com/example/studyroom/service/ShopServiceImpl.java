@@ -35,12 +35,15 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     private final TimeTicketRepository timeTicketRepository;
     private final RedisService redisService;
     private final AnnouncementRepository announcementRepository;
+    private final CouponRepository couponRepository;
     public ShopServiceImpl(ShopRepository repository,  MemberService memberService, SeatRepository seatRepository,
                            RoomRepository roomRepository, MemberServiceImpl memberServiceImpl
                            ,RedisService redisService,
                            EnterHistoryRepository enterHistoryRepository, MemberRepository memberRepository,
                            ShopRepository shopRepository, JwtUtil jwtUtil, PeriodTicketRepository periodTicketRepository,
-                           TimeTicketRepository timeTicketRepository, AnnouncementRepository announcementRepository) {
+                           TimeTicketRepository timeTicketRepository,
+                           AnnouncementRepository announcementRepository
+        , CouponRepository couponRepository) {
         super(repository);
         this.repository = repository;
         this.memberService = memberService;
@@ -55,6 +58,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         this.periodTicketRepository = periodTicketRepository;
         this.timeTicketRepository = timeTicketRepository;
         this.announcementRepository = announcementRepository;
+        this.couponRepository = couponRepository;
     }
 
     @Override
@@ -265,6 +269,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
                 .title(dto.getTitle())
                 .content(dto.getContent())
                 .createdAt(now)
+                .isActive(true)
                 .build();
 
         announcementRepository.save(announcement);
@@ -276,6 +281,8 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
 
 
+
+
     @Override
     public FinalResponseDto<List<AnnouncementResponseDto>> getAnnouncementList(Long shopId) {
         Optional<ShopEntity> shopOptional = shopRepository.findById(shopId);
@@ -283,7 +290,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
             return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
         }
 
-        List<AnnouncementEntity> announcements = announcementRepository.findByShopId(shopId);
+        List<AnnouncementEntity> announcements = announcementRepository.findByShopIdAndIsActiveTrue(shopId);
 
         List<AnnouncementResponseDto> responseDtos = announcements.stream()
                 .map(AnnouncementResponseDto::convertToDto)
@@ -293,6 +300,41 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     }
 
 
+    @Override
+    public FinalResponseDto<AnnouncementResponseDto> getAnnouncementInfo(Long docsId) {
+        Optional<AnnouncementEntity> announcement = announcementRepository.findByIdAndIsActiveTrue(docsId);
+
+        if (announcement.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
+        }
+
+        AnnouncementResponseDto responseDto = AnnouncementResponseDto.convertToDto(announcement.get());
+
+        return FinalResponseDto.successWithData(responseDto);
+    }
+
+
+
+
+    @Override
+    public FinalResponseDto<CouponInfoResponseDto> getCouponInfo(String couponCode,Long shopId) {
+        Optional<CouponEntity> coupon = Optional.ofNullable(couponRepository.findByCouponCodeAndShopId(couponCode, shopId));
+
+        if (coupon.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
+        }
+
+        // CouponEntity를 CouponInfoResponseDto로 변환
+        CouponInfoResponseDto responseDto = CouponInfoResponseDto.builder()
+                .id(coupon.get().getId())
+                .couponName(coupon.get().getCouponName())
+                .discountType(coupon.get().getDiscountType())
+                .discountAmount(coupon.get().getDiscountAmount())
+                .build();
+
+        // FinalResponseDto에 담아서 반환
+        return FinalResponseDto.successWithData(responseDto);
+    }
 
 
 

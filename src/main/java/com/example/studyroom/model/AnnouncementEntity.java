@@ -17,9 +17,18 @@ public class AnnouncementEntity extends BaseEntity {
     @JoinColumn(name = "shopId", foreignKey = @ForeignKey(name = "fk_shop_id"))
     private ShopEntity shop;
 
+    @Column(nullable = false)
     private String title;
 
+    @Column(nullable = false)
     private String content;
 
+    @Column(nullable = false)
     private OffsetDateTime createdAt;
+
+    @Column(nullable = true)
+    private OffsetDateTime updatedAt;
+
+    @Column(nullable = false)
+    private boolean isActive = true;
 }

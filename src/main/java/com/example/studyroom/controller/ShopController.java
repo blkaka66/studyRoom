@@ -148,9 +148,21 @@ public class ShopController {
 
 
     @GetMapping("/announcement")
-    public ResponseEntity<FinalResponseDto<List<AnnouncementResponseDto>>> handleExpiredAccessToken() {
+    public ResponseEntity<FinalResponseDto<List<AnnouncementResponseDto>>> getAnnouncementList() {
         Long id = JwtUtil.getMember().getShop().getId();
         return ResponseEntity.ok(this.shopService.getAnnouncementList(id));
+    }
+
+    @GetMapping("/announcement/{id}")
+    public ResponseEntity<FinalResponseDto<AnnouncementResponseDto>> getAnnouncementInfo(@PathVariable("id") Long docsId) {
+        return ResponseEntity.ok(this.shopService.getAnnouncementInfo(docsId));
+    }
+
+
+    @GetMapping("/couponInfo/{couponCode}")
+    public ResponseEntity<FinalResponseDto<CouponInfoResponseDto>> getCouponInfo(@PathVariable("couponCode") String couponCode) {
+        Long id = JwtUtil.getMember().getShop().getId();
+        return ResponseEntity.ok(this.shopService.getCouponInfo(couponCode,id));
     }
 }
 

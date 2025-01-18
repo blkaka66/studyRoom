@@ -24,16 +24,18 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
     private final ShopRepository shopRepository;
     private final MemberRepository memberRepository;
     private final RemainPeriodTicketRepository remainPeriodTicketRepository;
+    private final CouponRepository couponRepository;
     public PeriodTicketServiceImpl(JpaRepository<PeriodTicketEntity, Long> repository , PeriodTicketRepository periodTicketRepository,
                                    PeriodTicketHistoryRepository periodTicketHistoryRepository, ShopRepository shopRepository
                                     , MemberRepository memberRepository,
-                                   RemainPeriodTicketRepository remainPeriodTicketRepository) {
+                                   RemainPeriodTicketRepository remainPeriodTicketRepository , CouponRepository couponRepository) {
         super(repository);
         this.periodTicketRepository = periodTicketRepository;
         this.periodTicketHistoryRepository = periodTicketHistoryRepository;
         this.shopRepository = shopRepository;
         this.memberRepository = memberRepository;
         this.remainPeriodTicketRepository = remainPeriodTicketRepository;
+        this.couponRepository = couponRepository;
     }
 
     @Transactional
@@ -47,7 +49,7 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
             PeriodTicketEntity ticket = optionalTicket.get();
             MemberEntity member = optionalMember.get();
             ShopEntity shop =  optionalShop.get();
-            recordTicketHistory(shop, ticket,member);
+            recordTicketHistory(shop,ticket,member,product.getCouponId());
             addEndDate(ticket , shopId, customerId,shop,member);
 
         }else{
@@ -74,11 +76,15 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
 
     }
 
-    private void recordTicketHistory (ShopEntity shop, PeriodTicketEntity ticket, MemberEntity member){
+    private void recordTicketHistory (ShopEntity shop, PeriodTicketEntity ticket, MemberEntity member,Long couponId){
         PeriodTicketHistoryEntity ticketHistory = new PeriodTicketHistoryEntity();
         ticketHistory.setMember(member);
         ticketHistory.setShop(shop);
         ticketHistory.setTicket(ticket);
+        if (couponId != null) {
+            Optional<CouponEntity> coupon = couponRepository.findById(couponId);
+            coupon.ifPresent(ticketHistory::setCoupon);  // Optional에서 값을 꺼내서 setCoupon 호출
+        }
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         ticketHistory.setPaymentDate(now);
         periodTicketHistoryRepository.save(ticketHistory);
@@ -95,6 +101,8 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
                         .amount(entity.getTicket().getAmount())          // 가격 설정
                         .days(entity.getTicket().getDays()) // 제품 기간 설정
                         .paymentDate(entity.getPaymentDate())     // 결제일 설정
+                        .couponType(entity.getCoupon() != null ? entity.getCoupon().getDiscountType() : null) // coupon이 null일 경우 null 할당
+                        .couponAmount(entity.getCoupon() != null ? entity.getCoupon().getDiscountAmount() : null) // coupon이 null일 경우 null 할당
                         .build())
                 .toList();
 

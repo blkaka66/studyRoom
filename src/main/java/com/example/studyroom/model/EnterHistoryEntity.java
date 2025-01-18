@@ -14,8 +14,12 @@ import java.time.OffsetDateTime;
 @Table(name = "enterHistory")
 public class EnterHistoryEntity extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY) //lazy가 있어야 EnterHistroyEntity를 조회할떄 MemberEntity를 조회
-    @JoinColumn(name = "customerId", foreignKey = @ForeignKey(name = "fk_customer_id"))
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "customerId",
+            foreignKey = @ForeignKey(name = "fk_customer_id"),
+            nullable = true // 외래 키를 null로 설정 가능
+    )
     private MemberEntity member;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -30,15 +34,6 @@ public class EnterHistoryEntity extends BaseEntity {
     @Setter
     @Column(nullable = true)
     private OffsetDateTime exitTime;
-
-//    public EnterHistoryEntity() {
-//
-//    }
-
-//    // TODO: Long memberId -> MemberEntity member;
-//    public EnterHistoryEntity(MemberEntity member, SeatEntity seat, OffsetDateTime now, OffsetDateTime exitTime) {
-//        super();
-//    }
 
 
     public Long getSeatId() {

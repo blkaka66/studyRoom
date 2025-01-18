@@ -10,4 +10,5 @@ import lombok.*;
 public class ShopPayRequestDto {
     private Long productId;
     private String category;
+    private Long couponId;
 }

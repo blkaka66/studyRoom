@@ -26,16 +26,18 @@ public class TimeTicketServiceImpl extends BaseServiceImpl<TimeTicketEntity> imp
     private final TimeTicketRepository timeTicketRepository;
     private final TimeTicketHistoryRepository timeTicketHistoryRepository;
     private final RemainTimeTicketRepository remainTimeTicketRepository;
+    private final CouponRepository couponRepository;
     public TimeTicketServiceImpl(JpaRepository<TimeTicketEntity, Long> repository,
                                  MemberRepository memberRepository
             ,  TimeTicketRepository timeTicketRepository,TimeTicketHistoryRepository timeTicketHistoryRepository
-            , RemainTimeTicketRepository remainTimeTicketRepository, ShopRepository shopRepository) {
+            , RemainTimeTicketRepository remainTimeTicketRepository, ShopRepository shopRepository, CouponRepository couponRepository) {
         super(repository);
         this.memberRepository = memberRepository;
         this.timeTicketRepository = timeTicketRepository;
         this.timeTicketHistoryRepository = timeTicketHistoryRepository;
         this.remainTimeTicketRepository = remainTimeTicketRepository;
         this.shopRepository = shopRepository;
+        this.couponRepository = couponRepository;
     }
 
     @Transactional
@@ -49,7 +51,7 @@ public class TimeTicketServiceImpl extends BaseServiceImpl<TimeTicketEntity> imp
             TimeTicketEntity ticket = optionalTicket.get();
             MemberEntity member = optionalMember.get();
             ShopEntity shop =  optionalShop.get();
-            recordTicketHistory(shop, ticket,member);
+            recordTicketHistory(shop,ticket,member,product.getCouponId());
             addRemainTime(ticket , shopId, customerId,shop,member);
 
         }else{
@@ -65,8 +67,7 @@ public class TimeTicketServiceImpl extends BaseServiceImpl<TimeTicketEntity> imp
 
        if(optionalTimeTicket.isPresent()){
            RemainTimeTicketEntity timeTicket = optionalTimeTicket.get();
-           System.out.println("타임티켓이 이미 존재함!!"+timeTicket.getRemainTime().plus(Duration.ofDays(ticket.getHours())));
-           timeTicket.setRemainTime(timeTicket.getRemainTime().plus(Duration.ofDays(ticket.getHours())));
+           timeTicket.setRemainTime(timeTicket.getRemainTime().plusHours(ticket.getHours()));
        }else{
            RemainTimeTicketEntity timeTicket = new RemainTimeTicketEntity();
            timeTicket.setMember(member);
@@ -77,11 +78,15 @@ public class TimeTicketServiceImpl extends BaseServiceImpl<TimeTicketEntity> imp
        }
     }
 
-    private void recordTicketHistory (ShopEntity shop, TimeTicketEntity ticket,MemberEntity member){
+    private void recordTicketHistory (ShopEntity shop, TimeTicketEntity ticket,MemberEntity member ,Long couponId){
         TimeTicketHistoryEntity ticketHistory = new TimeTicketHistoryEntity();
         ticketHistory.setMember(member);
         ticketHistory.setShop(shop);
         ticketHistory.setTicket(ticket);
+        if (couponId != null) {
+            Optional<CouponEntity> coupon = couponRepository.findById(couponId);
+            coupon.ifPresent(ticketHistory::setCoupon);  // Optional에서 값을 꺼내서 setCoupon 호출
+        }
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         ticketHistory.setPaymentDate(now);
         timeTicketHistoryRepository.save(ticketHistory);
@@ -89,21 +94,21 @@ public class TimeTicketServiceImpl extends BaseServiceImpl<TimeTicketEntity> imp
 
     @Override
     public List<TimeTicketPaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId) {
-        List<TimeTicketHistoryEntity> timeTicketHistoryList = timeTicketHistoryRepository.findByShop_IdAndMember_Id(shopId,customerId);
-
+        List<TimeTicketHistoryEntity> timeTicketHistoryList = timeTicketHistoryRepository.findByShop_IdAndMember_Id(shopId, customerId);
 
         return timeTicketHistoryList.stream()
                 .map(entity -> TimeTicketPaymentHistoryDto.builder()
-                        .ticketType(String.valueOf(TicketTypeEnum.TIME))
-//                        .ticketType(String.valueOf(entity.getTicket().getTicketType()))  // 기간권, 시간권 설정
-                        .name(entity.getTicket().getName())       // 제품명 설정
-                        .amount(entity.getTicket().getAmount())          // 가격 설정
+                        .ticketType(String.valueOf(TicketTypeEnum.TIME)) // 시간권, 기간권 설정
+                        .name(entity.getTicket().getName()) // 제품명 설정
+                        .amount(entity.getTicket().getAmount()) // 가격 설정
                         .hours(entity.getTicket().getHours()) // 제품 기간 설정
-                        .paymentDate(entity.getPaymentDate())     // 결제일 설정
+                        .paymentDate(entity.getPaymentDate()) // 결제일 설정
+                        .couponType(entity.getCoupon() != null ? entity.getCoupon().getDiscountType() : null) // coupon이 null일 경우 null 할당
+                        .couponAmount(entity.getCoupon() != null ? entity.getCoupon().getDiscountAmount() : null) // coupon이 null일 경우 null 할당
                         .build())
                 .toList();
-
     }
+
 
 
 }

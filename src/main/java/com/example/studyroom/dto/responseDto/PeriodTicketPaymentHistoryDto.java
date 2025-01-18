@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 @Getter
 @Setter
@@ -14,4 +15,6 @@ public class PeriodTicketPaymentHistoryDto {
     private int amount;              // 가격 (예: 50000, 90000)
     private int days;    // 제품 기간 (예: 7D, 30H)
     private OffsetDateTime paymentDate;  // 결제일
+    private String couponType;
+    private BigDecimal couponAmount; //할인금액
 }

@@ -41,7 +41,7 @@ public interface MemberService extends BaseService<MemberEntity> {
 
     FinalResponseDto getMemberInfo(Long userId);//회원 정보가져오기
 
-    FinalResponseDto<String> deleteMember(Long userId);//회원탈퇴
+    FinalResponseDto<String> deleteMember(MemberEntity member ,String accessToken);//회원탈퇴
 
     FinalResponseDto<RemainTicketInfoResponseDto> getRemainTime(Long shopId, Long userId);
 

@@ -34,5 +34,10 @@ public interface ShopService extends BaseService<ShopEntity> {
 
     FinalResponseDto <String> createAnnounement(Long shopId, CreateAnnouncementRequestDto dto);
 
+
     FinalResponseDto<List<AnnouncementResponseDto>> getAnnouncementList(Long shopId);
+
+    FinalResponseDto<AnnouncementResponseDto> getAnnouncementInfo(Long docsId);
+
+    FinalResponseDto<CouponInfoResponseDto> getCouponInfo(String couponCode,Long shopId);
 }

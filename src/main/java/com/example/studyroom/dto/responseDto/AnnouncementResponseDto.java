@@ -13,10 +13,11 @@ public class AnnouncementResponseDto {
     private String title;
     private String content;
     private OffsetDateTime createdAt;
-
+    private long id;
 
     public static AnnouncementResponseDto convertToDto(AnnouncementEntity entity) {
         return AnnouncementResponseDto.builder()
+                .id(entity.getId())
                 .title(entity.getTitle())
                 .content(entity.getContent())
                 .createdAt(entity.getCreatedAt())

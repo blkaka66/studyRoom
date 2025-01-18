@@ -127,9 +127,13 @@ public class MemberController {
     }
 
     @DeleteMapping("/delete")
-    public FinalResponseDto<String> deleteMember() {
+    public FinalResponseDto<String> deleteMember(@RequestHeader("Authorization") String authorizationHeader) {
+        String accessToken = null;
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            accessToken = authorizationHeader.substring(7); // "Bearer "를 제외한 토큰만 추출
+        }
         MemberEntity member = JwtUtil.getMember();
-        return this.memberService.deleteMember(member.getId());
+        return this.memberService.deleteMember(member,accessToken);
     }
 
 
