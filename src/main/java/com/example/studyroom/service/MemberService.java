@@ -21,15 +21,15 @@ public interface MemberService extends BaseService<MemberEntity> {
 //    Duration getRemainTime(Long shopId, Long userId);
 //    FinalResponseDto getRemainTime(Long shopId, Long userId);
 
-    FinalResponseDto<MySeatInfoResponseDto> getSeatId(Long userId); //회원id받아서 어떤자리에 앉았는지 추출
+    FinalResponseDto<MySeatInfoResponseDto> getSeatId(Long userId);
 
     FinalResponseDto<String> login(MemberSignInRequestDto dto, HttpServletResponse response); //로그인 기능
 
-    FinalResponseDto<String> logout(MemberEntity member ,String accessToken);
+    FinalResponseDto<String> outAndlogout(MemberEntity member ,String accessToken);
 
     FinalResponseDto<MemberEntity> signUp(MemberSignUpRequestDto member); //회원가입
 
-    FinalResponseDto<String> occupySeat( MemberEntity member,OccupySeatRequestDto requestDto); //자리 점유요청 메서드
+    FinalResponseDto<String> occupySeatAndHandleTicket( MemberEntity member,OccupySeatRequestDto requestDto); //자리 점유요청 메서드
 
     FinalResponseDto<String> out(Long userId);//퇴장
 
@@ -37,13 +37,15 @@ public interface MemberService extends BaseService<MemberEntity> {
 
     boolean updateSeatAvailability(SeatEntity seat);
 
-    FinalResponseDto<String> move(MemberEntity member,MemberMoveRequestDto requestDto);//자리이동
+    FinalResponseDto<String> moveAndHandleTicket(MemberEntity member,MemberMoveRequestDto requestDto);//자리이동
+
+
 
     FinalResponseDto getMemberInfo(Long userId);//회원 정보가져오기
 
-    FinalResponseDto<String> deleteMember(MemberEntity member ,String accessToken);//회원탈퇴
+    FinalResponseDto<String> deleteMemberAndLogout(MemberEntity member ,String accessToken);//회원탈퇴
 
     FinalResponseDto<RemainTicketInfoResponseDto> getRemainTime(Long shopId, Long userId);
 
-    FinalResponseDto<String> resetPw(MemberEntity member , ResetPwRequestDto requestDto);
+    FinalResponseDto<String> resetPwAndLogout(MemberEntity member , ResetPwRequestDto requestDto, String accessToken);
 }

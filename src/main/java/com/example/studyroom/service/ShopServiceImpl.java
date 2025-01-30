@@ -321,7 +321,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         Optional<CouponEntity> coupon = Optional.ofNullable(couponRepository.findByCouponCodeAndShopId(couponCode, shopId));
 
         if (coupon.isEmpty()) {
-            return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
+            return FinalResponseDto.failure(ApiResult.COUPON_NOT_FOUND);
         }
 
         // CouponEntity를 CouponInfoResponseDto로 변환
@@ -337,6 +337,30 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     }
 
 
+    @Override
+    public FinalResponseDto<List<SeatUsageStatsResponseDto>> getSeatUsageStats(Long shopId) {
+        // shopId로 좌석 이용 통계 데이터 조회
+        List<EnterHistoryEntity> enterHistory = enterHistoryRepository.findByShop_Id(shopId);
+
+        if (enterHistory.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+
+        // EnterHistoryEntity 목록을 SeatUsageStatsResponseDto 목록으로 변환
+        List<SeatUsageStatsResponseDto> responseDtos = enterHistory.stream()
+                .map(history -> SeatUsageStatsResponseDto.builder()
+                        .id(history.getId())
+                        .enterTime(history.getEnterTime())
+                        .exitTime(history.getExitTime())
+                        .shopId(history.getShop().getId())  // shopId로 변환
+                        .seatId(history.getSeatId())
+                        .memberId(history.getMember() != null ? history.getMember().getId() : null)  // memberId 처리
+                        .build())
+                .collect(Collectors.toList());
+
+        // 변환된 데이터 반환
+        return FinalResponseDto.successWithData(responseDtos);
+    }
 
 
 }

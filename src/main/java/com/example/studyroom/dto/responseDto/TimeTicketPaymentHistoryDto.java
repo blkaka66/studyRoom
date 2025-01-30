@@ -16,6 +16,6 @@ public class TimeTicketPaymentHistoryDto {
     private int hours;    // 제품 기간 (예: 7D, 30H)
     private OffsetDateTime paymentDate;  // 결제일
     private String couponType;
-    private BigDecimal couponAmount;
+    private Long couponAmount;
 
 }

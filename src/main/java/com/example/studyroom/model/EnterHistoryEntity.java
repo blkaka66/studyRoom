@@ -23,6 +23,10 @@ public class EnterHistoryEntity extends BaseEntity {
     private MemberEntity member;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shop_id", foreignKey = @ForeignKey(name = "FK_SHOP_ID"))
+    private ShopEntity shop;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @Setter
     @Getter
     @JoinColumn(name = "seatId", foreignKey = @ForeignKey(name = "fk_seat_id"))

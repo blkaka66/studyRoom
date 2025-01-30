@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface EnterHistoryRepository extends JpaRepository<EnterHistoryEntity, Long> {
 
 
@@ -12,4 +14,7 @@ public interface EnterHistoryRepository extends JpaRepository<EnterHistoryEntity
     // 조건: customerId가 일치하고, expiredTime이 현재 시간 이전이며, closeTime이 null인 레코드
     @Query("SELECT e FROM EnterHistoryEntity e WHERE e.member.id = :customerId AND e.exitTime IS NULL")
     EnterHistoryEntity findActiveByCustomerId(@Param("customerId") Long customerId);//쿼리조건 추가할거면 이름에 active라고 추가해야함
+
+    List<EnterHistoryEntity> findByShop_Id(Long shopId);
+
 }

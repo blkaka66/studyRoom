@@ -2,9 +2,11 @@ package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
+import com.example.studyroom.model.EnterHistoryEntity;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
@@ -40,4 +42,6 @@ public interface ShopService extends BaseService<ShopEntity> {
     FinalResponseDto<AnnouncementResponseDto> getAnnouncementInfo(Long docsId);
 
     FinalResponseDto<CouponInfoResponseDto> getCouponInfo(String couponCode,Long shopId);
+
+    FinalResponseDto<List<SeatUsageStatsResponseDto>> getSeatUsageStats(Long shopId);
 }

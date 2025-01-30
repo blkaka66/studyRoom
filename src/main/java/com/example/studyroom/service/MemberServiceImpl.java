@@ -8,6 +8,8 @@ import com.example.studyroom.repository.*;
 import com.example.studyroom.security.JwtCookieUtil;
 import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.type.ApiResult;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
@@ -48,6 +50,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     private static final long authCodeExpirationMillis = 60*60*1000;
     private final RemainPeriodTicketRepository remainPeriodTicketRepository;
     private final RemainTimeTicketRepository remainTimeTicketRepository;
+    private final DeleteMemberRepository deleteMemberRepository;
+
     private final PeriodTicketServiceImpl periodTicketServiceImpl;
     private final PasswordEncoder passwordEncoder;
 
@@ -59,6 +63,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                              RoomRepository roomRepository, MemberRepository memberRepository,
                              MailService mailService, RedisService redisService,
                              RemainPeriodTicketRepository remainPeriodTicketRepository,
+                             DeleteMemberRepository deleteMemberRepository,
                              RemainTimeTicketRepository remainTimeTicketRepository, JwtUtil jwtUtil,
                              PeriodTicketServiceImpl periodTicketServiceImpl
                             , PasswordEncoder passwordEncoder) {
@@ -77,6 +82,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         //this.remainTicketRepository = remainTicketRepository;
         this.remainPeriodTicketRepository = remainPeriodTicketRepository;
         this.remainTimeTicketRepository = remainTimeTicketRepository;
+        this.deleteMemberRepository = deleteMemberRepository;
         this.periodTicketServiceImpl = periodTicketServiceImpl;
         this.passwordEncoder = passwordEncoder;
     }
@@ -125,8 +131,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
 
-    @Override //로그인
-    public FinalResponseDto<String> logout(MemberEntity member ,String accessToken) {
+    @Override //로그아웃
+    public FinalResponseDto<String> outAndlogout(MemberEntity member ,String accessToken) {
 
         EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(member.getId());
         if(enterHistory != null && enterHistory.getExitTime()==null) { //따로 자리퇴장요청을 하지않고 바로 로그아웃했을땐 자리를 빼야하니까
@@ -265,6 +271,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     // TODO: Get Seat ID... 현재 유저가 자리하는 곳 반환
     public FinalResponseDto<MySeatInfoResponseDto> getSeatId(Long userId) {
         EnterHistoryEntity enterHistory= enterHistoryRepository.findActiveByCustomerId(userId);
+        if(enterHistory==null){
+            return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
+        }
         Long id = enterHistory.getSeatId();
         MySeatInfoResponseDto responseDto = MySeatInfoResponseDto.builder()
                 .seatId(id)
@@ -287,7 +296,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     @Override
     @Transactional
-    public FinalResponseDto<String> occupySeat( MemberEntity member,OccupySeatRequestDto requestDto) {
+    public FinalResponseDto<String> occupySeatAndHandleTicket( MemberEntity member,OccupySeatRequestDto requestDto) {
         Optional<ShopEntity> shopOpt = (shopRepository.findById(member.getShop().getId()));
         if(shopOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
 
@@ -333,7 +342,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             seat.setAvailable(false);
             seatRepository.save(seat);
 
-            EnterHistoryEntity enterHistory = EnterHistoryEntity.builder().member(member).seat(seat).enterTime(now).build();
+            EnterHistoryEntity enterHistory = EnterHistoryEntity.builder().member(member).seat(seat).enterTime(now).shop(member.getShop()).build();
             enterHistoryRepository.save(enterHistory);
             return FinalResponseDto.success();
         } else {
@@ -352,7 +361,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         redisService.setValues(redisKey, "occupied", Duration.ofMillis(millis));
 
         OffsetDateTime now = OffsetDateTime.now();
-        EnterHistoryEntity enterHistory = EnterHistoryEntity.builder().member(member).seat(seat).enterTime(now).build();
+        EnterHistoryEntity enterHistory = EnterHistoryEntity.builder().member(member).seat(seat).enterTime(now).shop(member.getShop()).build();
         enterHistoryRepository.save(enterHistory);
         return FinalResponseDto.success();
     }
@@ -378,7 +387,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
     @Override
-    public FinalResponseDto<String> move(MemberEntity member, MemberMoveRequestDto requestDto) {
+    public FinalResponseDto<String> moveAndHandleTicket(MemberEntity member, MemberMoveRequestDto requestDto) {
         EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(member.getId());
         if (enterHistory == null) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
@@ -444,11 +453,13 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
 
     @Override
-    public FinalResponseDto<String> resetPw(MemberEntity member, ResetPwRequestDto requestDto) {
-        System.out.println("재설정 비밀번호"+requestDto.getNewPassword());
-        System.out.println("기존 비밀번호"+requestDto.getPassword());
+    public FinalResponseDto<String> resetPwAndLogout(MemberEntity member, ResetPwRequestDto requestDto , String accessToken) {
+        System.out.println("재설정 비밀번호"+passwordEncoder.encode(requestDto.getNewPassword()));
+        System.out.println("기존 비밀번호"+passwordEncoder.encode(requestDto.getPassword()));
+        System.out.println(passwordEncoder.matches(requestDto.getPassword(), member.getPassword()));
         if (passwordEncoder.matches(requestDto.getPassword(), member.getPassword())) {
             member.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
+            this.outAndlogout(member, accessToken);
             return FinalResponseDto.success();
         } else {
             return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);
@@ -521,12 +532,24 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     @Override
     @Transactional
-    public FinalResponseDto<String> deleteMember(MemberEntity memberEntity ,String accessToken){
+    public FinalResponseDto<String> deleteMemberAndLogout(MemberEntity memberEntity ,String accessToken){
         Optional<MemberEntity> member = memberRepository.findById(memberEntity.getId());
         if(member.isEmpty()){
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
-        this.logout(memberEntity, accessToken);
+        this.outAndlogout(memberEntity, accessToken);
+        // 탈퇴 전 회원 정보를 DeletedMemberEntity에 저장
+        DeletedMemberEntity deletedMember = DeletedMemberEntity.builder()
+                .shop(member.get().getShop()) // 탈퇴한 회원이 속한 상점 정보
+                .name(member.get().getName()) // 회원 이름
+                .phone(member.get().getPhone()) // 회원 전화번호
+                .password(member.get().getPassword()) // 회원 패스워드
+                .deleteTime(OffsetDateTime.now()) // 탈퇴 시간
+                .build();
+
+        // DeletedMemberEntity에 저장
+        deleteMemberRepository.save(deletedMember);
+
         memberRepository.deleteById(member.get().getId());
         return FinalResponseDto.success();
     }

@@ -16,5 +16,5 @@ public class PeriodTicketPaymentHistoryDto {
     private int days;    // 제품 기간 (예: 7D, 30H)
     private OffsetDateTime paymentDate;  // 결제일
     private String couponType;
-    private BigDecimal couponAmount; //할인금액
+    private Long couponAmount; //할인금액
 }

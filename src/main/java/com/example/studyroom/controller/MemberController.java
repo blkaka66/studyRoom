@@ -59,7 +59,7 @@ public class MemberController {
         System.out.println("^^^");
        // MemberEntity member = SecurityUtil.getMemberInfo();
         MemberEntity member = JwtUtil.getMember();
-        return ResponseEntity.ok(memberService.occupySeat(member, requestDto));
+        return ResponseEntity.ok(memberService.occupySeatAndHandleTicket(member, requestDto));
     }
 
     @PostMapping("/sign-up")
@@ -112,7 +112,7 @@ public class MemberController {
     public FinalResponseDto move(@RequestBody MemberMoveRequestDto requestDto) {
         //TODO: 쿠키에서 userid, customerId 추출하는 메서드추가
         MemberEntity member = JwtUtil.getMember();
-        return this.memberService.move(
+        return this.memberService.moveAndHandleTicket(
                 member,
                 requestDto
         );
@@ -133,7 +133,7 @@ public class MemberController {
             accessToken = authorizationHeader.substring(7); // "Bearer "를 제외한 토큰만 추출
         }
         MemberEntity member = JwtUtil.getMember();
-        return this.memberService.deleteMember(member,accessToken);
+        return this.memberService.deleteMemberAndLogout(member,accessToken);
     }
 
 
@@ -152,18 +152,20 @@ public class MemberController {
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             accessToken = authorizationHeader.substring(7); // "Bearer "를 제외한 토큰만 추출
         }
-        FinalResponseDto<String> response = this.memberService.logout(member , accessToken);
+        FinalResponseDto<String> response = this.memberService.outAndlogout(member , accessToken);
         return ResponseEntity.ok(response);
     }
 
 
 
     @PostMapping("/reset/pw")
-    public ResponseEntity<FinalResponseDto<String>> resetPw(@RequestBody ResetPwRequestDto requestDto) {
+    public ResponseEntity<FinalResponseDto<String>> resetPw(@RequestBody ResetPwRequestDto requestDto ,@RequestHeader("Authorization") String authorizationHeader) {
         MemberEntity member = JwtUtil.getMember();
-        System.out.println("ㄴㄴ재설정 비밀번호"+requestDto.getNewPassword());
-        System.out.println("ㄴㄴ기존 비밀번호"+requestDto.getPassword());
-        FinalResponseDto<String> response = this.memberService.resetPw(member,requestDto);
+        String accessToken = null;
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            accessToken = authorizationHeader.substring(7); // "Bearer "를 제외한 토큰만 추출
+        }
+        FinalResponseDto<String> response = this.memberService.resetPwAndLogout(member,requestDto,accessToken);
 
         return ResponseEntity.ok(response);
     }
@@ -173,6 +175,13 @@ public class MemberController {
         MemberEntity member = JwtUtil.getMember();
         FinalResponseDto<PaymentHistoryDto> response = this.ticketService.getPaymentHistory(member.getShop().getId(), member.getId());
 
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/findMySeat")
+    public ResponseEntity<FinalResponseDto<MySeatInfoResponseDto>> getSeatId() {
+        MemberEntity member = JwtUtil.getMember();
+        FinalResponseDto<MySeatInfoResponseDto> response = this.memberService.getSeatId(member.getId());
         return ResponseEntity.ok(response);
     }
 }

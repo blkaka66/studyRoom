@@ -14,6 +14,7 @@ public enum ApiResult {
     ROOM_NOT_FOUND("1006", "잘못된 방정보"),
     SEAT_NOT_FOUND("1007", "잘못된 자리정보"),
     SEAT_ALREADY_OCCUPIED("1008", "주인있는 자리"),
+    COUPON_NOT_FOUND("1009", "존재하지 않는 쿠폰"),
     TICKET_NOT_EXPIRED("1405", "만료되지않은티켓존재"),
     DATA_NOT_FOUND("3000", "데이터가없음"),
     TIMEOUT_EXCEEDED("3001", "유효시간초과"),

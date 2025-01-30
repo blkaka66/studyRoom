@@ -5,6 +5,7 @@ import com.example.studyroom.dto.requestDto.CreateAnnouncementRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.*;
+import com.example.studyroom.model.EnterHistoryEntity;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.security.JwtCookieUtil;
@@ -88,6 +89,11 @@ public class ShopController {
 //        return ResponseEntity.ok(memberDtos);
 
         return ResponseEntity.ok(this.shopService.getMemberList(shopId));
+    }
+
+    @GetMapping("/seat-usage/{shop_id}")
+    public ResponseEntity<FinalResponseDto<List<SeatUsageStatsResponseDto>>> seatUsageStats(@PathVariable("shop_id") Long shopId) {
+        return ResponseEntity.ok(this.shopService.getSeatUsageStats(shopId));
     }
 
 //    @GetMapping("/member-list")

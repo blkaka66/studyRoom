@@ -25,6 +25,6 @@ public class CouponEntity extends BaseEntity  {
     private String discountType;  // 할인 유형 (예: PERCENT, AMOUNT)
 
     @Column(nullable = false)
-    private BigDecimal discountAmount;  // 할인 금액 또는 비율 (예: 10%, 5000원)
+    private Long discountAmount;  // 할인 금액 또는 비율 (예: 10%, 5000원)
 
 }
