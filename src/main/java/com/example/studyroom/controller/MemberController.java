@@ -5,6 +5,7 @@ import com.example.studyroom.dto.responseDto.*;
 
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
+import com.example.studyroom.repository.MemberRepository;
 import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.security.SecurityUtil;
 import com.example.studyroom.service.MailService;
@@ -12,6 +13,7 @@ import com.example.studyroom.service.MemberService;
 
 import com.example.studyroom.service.ShopService;
 import com.example.studyroom.service.TicketService;
+import com.example.studyroom.type.ApiResult;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,17 +30,19 @@ public class MemberController {
     private final MailService mailService;
     private final ShopService shopService;
     private final TicketService ticketService;
+    private final MemberRepository memberRepository;
 
     public MemberController(
            MemberService memberService,
             MailService mailService,
            ShopService shopService,
-           TicketService ticketService
-        ) {
+           TicketService ticketService,
+           MemberRepository memberRepository) {
         this.memberService = memberService;
         this.mailService = mailService;
         this.shopService = shopService;
         this.ticketService=ticketService;
+        this.memberRepository = memberRepository;
     }
 
     @PostMapping("/emails/verification-requests")//이건 나중에 전화번호로 바꾸기

@@ -453,17 +453,24 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
 
     @Override
-    public FinalResponseDto<String> resetPwAndLogout(MemberEntity member, ResetPwRequestDto requestDto , String accessToken) {
+    public FinalResponseDto<String> resetPwAndLogout(MemberEntity tokenMember, ResetPwRequestDto requestDto , String accessToken) {
+//        MemberEntity member = memberRepository.findById(tokenMember.getId()).orElseThrow(() -> new RuntimeException(ApiResult.DATA_NOT_FOUND.getCode()));
+
+        MemberEntity member = memberRepository.findById(tokenMember.getId()).orElse(null);
+        if(member == null) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+
         System.out.println("재설정 비밀번호"+passwordEncoder.encode(requestDto.getNewPassword()));
         System.out.println("기존 비밀번호"+passwordEncoder.encode(requestDto.getPassword()));
         System.out.println(passwordEncoder.matches(requestDto.getPassword(), member.getPassword()));
-        if (passwordEncoder.matches(requestDto.getPassword(), member.getPassword())) {
-            member.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
-            this.outAndlogout(member, accessToken);
-            return FinalResponseDto.success();
-        } else {
+        if(!passwordEncoder.matches(requestDto.getPassword(), member.getPassword())) {
             return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);
         }
+        member.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
+        this.outAndlogout(member, accessToken);
+        memberRepository.save(member);
+        return FinalResponseDto.success();
     }
     ///
     //fixme:이메일기능에서 이 밑에함수들이 필요한가?
