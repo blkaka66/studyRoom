@@ -1,5 +1,6 @@
 package com.example.studyroom.service;
 
+import com.example.studyroom.dto.requestDto.PaymentHistoryDateRequestDto;
 import com.example.studyroom.dto.requestDto.ShopPayRequestDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.PaymentHistoryDto;
@@ -16,5 +17,5 @@ public interface TicketService {
             JpaRepository<T, Long> ticketRepository
            );
 
-    FinalResponseDto<PaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId);
+    FinalResponseDto<PaymentHistoryDto> getPaymentHistory(PaymentHistoryDateRequestDto requestDto,Long shopId, Long customerId);
 }

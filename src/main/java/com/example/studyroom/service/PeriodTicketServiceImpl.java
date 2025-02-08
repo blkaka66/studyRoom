@@ -91,8 +91,9 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
     }
 
     @Override
-    public List<PeriodTicketPaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId) {
-        List<PeriodTicketHistoryEntity> periodTicketHistoryList = periodTicketHistoryRepository.findByShop_IdAndMember_Id(shopId,customerId);
+    public List<PeriodTicketPaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId, OffsetDateTime startDateTime,OffsetDateTime endDateTime) {
+        List<PeriodTicketHistoryEntity> periodTicketHistoryList = periodTicketHistoryRepository.findByShop_IdAndMember_IdAndPaymentDateBetween(shopId,customerId,startDateTime,endDateTime);
+        System.out.println("기간권권기록"+periodTicketHistoryList.size());
         return periodTicketHistoryList.stream()
                 .map(entity -> PeriodTicketPaymentHistoryDto.builder()
 //                        .ticketType(String.valueOf(entity.getTicket().getTicketType()))  // 기간권, 시간권 설정

@@ -174,10 +174,10 @@ public class MemberController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/pay-info")
-    public ResponseEntity<FinalResponseDto<PaymentHistoryDto>> getPaymentHistory() {
+    @PostMapping("/pay-info")
+    public ResponseEntity<FinalResponseDto<PaymentHistoryDto>> getPaymentHistory(@RequestBody PaymentHistoryDateRequestDto requestDto) {
         MemberEntity member = JwtUtil.getMember();
-        FinalResponseDto<PaymentHistoryDto> response = this.ticketService.getPaymentHistory(member.getShop().getId(), member.getId());
+        FinalResponseDto<PaymentHistoryDto> response = this.ticketService.getPaymentHistory(requestDto,member.getShop().getId(), member.getId());
 
         return ResponseEntity.ok(response);
     }

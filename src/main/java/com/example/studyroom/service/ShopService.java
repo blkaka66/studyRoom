@@ -44,4 +44,13 @@ public interface ShopService extends BaseService<ShopEntity> {
     FinalResponseDto<CouponInfoResponseDto> getCouponInfo(String couponCode,Long shopId);
 
     FinalResponseDto<List<SeatUsageStatsResponseDto>> getSeatUsageStats(Long shopId);
+
+
+    void calculateAndSaveshopUsageHourly();
+
+    void calculateAndSaveDailyOccupancy();
+
+    void calculateAndSaveSeatIdOccupancy();
+
+    void calculateAndSaveuserAvrUsage();
 }

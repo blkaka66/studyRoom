@@ -1,5 +1,6 @@
 package com.example.studyroom.service;
 
+import com.example.studyroom.dto.requestDto.PaymentHistoryDateRequestDto;
 import com.example.studyroom.dto.requestDto.ShopPayRequestDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.PeriodTicketPaymentHistoryDto;
@@ -93,9 +94,9 @@ public class TimeTicketServiceImpl extends BaseServiceImpl<TimeTicketEntity> imp
     }
 
     @Override
-    public List<TimeTicketPaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId) {
-        List<TimeTicketHistoryEntity> timeTicketHistoryList = timeTicketHistoryRepository.findByShop_IdAndMember_Id(shopId, customerId);
-
+    public List<TimeTicketPaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId , OffsetDateTime startDateTime,OffsetDateTime endDateTime) {
+        List<TimeTicketHistoryEntity> timeTicketHistoryList = timeTicketHistoryRepository.findByShop_IdAndMember_IdAndPaymentDateBetween(shopId, customerId ,startDateTime,endDateTime );
+        System.out.println("시간권기록"+timeTicketHistoryList.size());
         return timeTicketHistoryList.stream()
                 .map(entity -> TimeTicketPaymentHistoryDto.builder()
                         .ticketType(String.valueOf(TicketTypeEnum.TIME)) // 시간권, 기간권 설정

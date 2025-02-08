@@ -42,8 +42,9 @@ dependencies {
 
     //ModelMapper
     implementation group: 'org.modelmapper', name: 'modelmapper', version: '2.4.2'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
+    implementation 'org.springframework.boot:spring-boot-starter-quartz'
+    implementation 'org.springframework.boot:spring-boot-starter-batch'
 
     implementation 'org.springframework.boot:spring-boot-starter-security'
 

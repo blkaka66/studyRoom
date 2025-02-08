@@ -1,5 +1,6 @@
 package com.example.studyroom.service;
 
+import com.example.studyroom.dto.requestDto.PaymentHistoryDateRequestDto;
 import com.example.studyroom.dto.requestDto.ShopPayRequestDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.PaymentHistoryDto;
@@ -9,11 +10,13 @@ import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
 import com.example.studyroom.type.ApiResult;
 import jakarta.transaction.Transactional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -67,9 +70,13 @@ public class TicketServiceImpl extends BaseServiceImpl<TicketEntity> implements 
     }
 
     @Override
-    public FinalResponseDto<PaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId){
-        List<TimeTicketPaymentHistoryDto> timeTicketPaymentHistory = timeTicketService.getPaymentHistory(shopId,customerId);
-        List<PeriodTicketPaymentHistoryDto> periodTicketPaymentHistory = periodTicketService.getPaymentHistory(shopId,customerId);
+    public FinalResponseDto<PaymentHistoryDto> getPaymentHistory(PaymentHistoryDateRequestDto requestDto,Long shopId, Long customerId){
+        OffsetDateTime startDateTime = toOffsetDateTime(requestDto.getStartDate());
+        OffsetDateTime endDateTime = toOffsetDateTime(requestDto.getEndDate());
+        System.out.println("startDateTime"+startDateTime);
+        System.out.println("endDateTime"+endDateTime);
+        List<TimeTicketPaymentHistoryDto> timeTicketPaymentHistory = timeTicketService.getPaymentHistory(shopId,customerId , startDateTime,endDateTime);
+        List<PeriodTicketPaymentHistoryDto> periodTicketPaymentHistory = periodTicketService.getPaymentHistory(shopId,customerId ,startDateTime,endDateTime);
         if(timeTicketPaymentHistory.isEmpty() && periodTicketPaymentHistory.isEmpty()){
             //만약 결제기록이 단 하나도없으면
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
@@ -81,6 +88,8 @@ public class TicketServiceImpl extends BaseServiceImpl<TicketEntity> implements 
 
         return FinalResponseDto.successWithData(paymentHistoryListDto);
     }
-
+    public static OffsetDateTime toOffsetDateTime(LocalDate date) {
+        return date.atStartOfDay().atOffset(ZoneOffset.UTC); // UTC로 변환
+    }
 
 }

@@ -4,6 +4,8 @@ import com.example.studyroom.model.TimeTicketHistoryEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 public interface TimeTicketHistoryRepository extends TicketHistoryRepository<TimeTicketHistoryEntity> {
@@ -12,5 +14,5 @@ public interface TimeTicketHistoryRepository extends TicketHistoryRepository<Tim
     List<TimeTicketHistoryEntity> findByShopIdAndUserIdAndExpiredFalse(Long shopId, Long userId);
 
 
-    List<TimeTicketHistoryEntity> findByShop_IdAndMember_Id(Long shopId, Long userId);
+    List<TimeTicketHistoryEntity> findByShop_IdAndMember_IdAndPaymentDateBetween(Long shopId, Long userId , OffsetDateTime startDate , OffsetDateTime endDate);
 }
