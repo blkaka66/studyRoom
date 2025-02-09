@@ -72,7 +72,7 @@ public class TicketServiceImpl extends BaseServiceImpl<TicketEntity> implements 
     @Override
     public FinalResponseDto<PaymentHistoryDto> getPaymentHistory(PaymentHistoryDateRequestDto requestDto,Long shopId, Long customerId){
         OffsetDateTime startDateTime = toOffsetDateTime(requestDto.getStartDate());
-        OffsetDateTime endDateTime = toOffsetDateTime(requestDto.getEndDate());
+        OffsetDateTime endDateTime = toOffsetDateTime(requestDto.getEndDate().plusDays(1));
         System.out.println("startDateTime"+startDateTime);
         System.out.println("endDateTime"+endDateTime);
         List<TimeTicketPaymentHistoryDto> timeTicketPaymentHistory = timeTicketService.getPaymentHistory(shopId,customerId , startDateTime,endDateTime);
@@ -89,7 +89,8 @@ public class TicketServiceImpl extends BaseServiceImpl<TicketEntity> implements 
         return FinalResponseDto.successWithData(paymentHistoryListDto);
     }
     public static OffsetDateTime toOffsetDateTime(LocalDate date) {
-        return date.atStartOfDay().atOffset(ZoneOffset.UTC); // UTC로 변환
+        return date.atStartOfDay().atOffset(ZoneOffset.of("+09:00")); // UTC로 변환
+//        return date.atStartOfDay().atOffset(ZoneOffset.UTC);
     }
 
 }
