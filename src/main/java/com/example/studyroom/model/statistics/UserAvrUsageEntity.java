@@ -34,5 +34,5 @@ public class UserAvrUsageEntity extends BaseEntity {
     private int totalUsageUsers;
 
     @Column(nullable = false) // 평균 이용시간
-    private int averageUsageMinutes;
+    private double averageUsageMinutes;
 }

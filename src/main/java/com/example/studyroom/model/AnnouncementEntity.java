@@ -31,4 +31,9 @@ public class AnnouncementEntity extends BaseEntity {
 
     @Column(nullable = false)
     private boolean isActive = true;
+
+    @Enumerated(EnumType.STRING)  // Enum으로 ticket_type 지정
+    @Column(name = "announcement_type", nullable = false)
+    private AnnouncementEnum announcementType = AnnouncementEnum.GENERAL;
+
 }

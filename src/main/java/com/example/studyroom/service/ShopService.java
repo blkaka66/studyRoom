@@ -5,6 +5,7 @@ import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.EnterHistoryEntity;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
+import com.example.studyroom.model.statistics.SeatIdUsageEntity;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 
@@ -50,7 +51,13 @@ public interface ShopService extends BaseService<ShopEntity> {
 
     void calculateAndSaveDailyOccupancy();
 
-    void calculateAndSaveSeatIdOccupancy();
+    //void calculateDailySeatUsageRate();
 
-    void calculateAndSaveuserAvrUsage();
+    void calculateAndSaveUsageStatistics();
+
+    void calculateAndSaveShopDailyPayment();
+
+    void calculateAndSaveCustomerStats();
+
+    FinalResponseDto<SeatIdUsageResponseDto> getSeatUsageEntitiesByDateRange(SeatIdUsageRequestDto requestDto);
 }

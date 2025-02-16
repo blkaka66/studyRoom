@@ -14,4 +14,5 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
     MemberEntity findByPhoneAndPassword(String phone, String password);
     MemberEntity findByPhone(String phone);
     void deleteById(Long id);
+    int countByShop(ShopEntity shop);
 }

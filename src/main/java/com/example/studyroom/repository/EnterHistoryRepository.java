@@ -41,8 +41,15 @@ public interface EnterHistoryRepository extends JpaRepository<EnterHistoryEntity
     List<Long> findActiveOccupiedSeatIdsByShop(@Param("shopId") Long shopId);
 
 
+
+
     List<EnterHistoryEntity> findByShop_Id(Long shopId);
 
 
-    List<EnterHistoryEntity> findByShopAndEnterTimeBetween(ShopEntity shop, OffsetDateTime startTime, OffsetDateTime endTime);
+    // Shop과 ExitTime 사이에 해당하는 엔티티를 조회하는 메서드
+    List<EnterHistoryEntity> findByShopAndExitTimeBetween(
+            ShopEntity shop,
+            OffsetDateTime startExitTime,
+            OffsetDateTime endExitTime
+    );
 }

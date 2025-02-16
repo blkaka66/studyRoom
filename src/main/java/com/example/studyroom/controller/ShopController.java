@@ -2,12 +2,14 @@ package com.example.studyroom.controller;
 
 import com.example.studyroom.dto.CookieDto;
 import com.example.studyroom.dto.requestDto.CreateAnnouncementRequestDto;
+import com.example.studyroom.dto.requestDto.SeatIdUsageRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.EnterHistoryEntity;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
+import com.example.studyroom.model.statistics.SeatIdUsageEntity;
 import com.example.studyroom.security.JwtCookieUtil;
 import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.service.ShopService;
@@ -170,6 +172,12 @@ public class ShopController {
         Long id = JwtUtil.getMember().getShop().getId();
         return ResponseEntity.ok(this.shopService.getCouponInfo(couponCode,id));
     }
+
+    @PostMapping("/statistics/seatUsage")
+    public ResponseEntity<FinalResponseDto<SeatIdUsageResponseDto>> getSeatUsageEntitiesByDateRange(@RequestBody SeatIdUsageRequestDto dto) {
+        return ResponseEntity.ok(this.shopService.getSeatUsageEntitiesByDateRange(dto));
+    }
+
 }
 
 

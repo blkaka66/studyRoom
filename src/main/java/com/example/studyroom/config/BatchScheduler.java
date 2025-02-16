@@ -19,28 +19,20 @@ public class BatchScheduler {
     private final JobLauncher jobLauncher;
     private final Job shopUsageHourlyJob;
     private final Job shopUsageDailyJob;
-    private final Job seatIdUsageJob;
+    private final Job shopDailyPaymentJob;
     private final Job userAvrUsageJob;
+    private final Job saveCustomerStatsJob;
     public BatchScheduler(JobLauncher jobLauncher, Job shopUsageHourlyJob, Job shopUsageDailyJob,
-                          Job seatIdUsageJob, Job userAvrUsageJob) {
+                           Job userAvrUsageJob, Job shopDailyPaymentJob, Job saveCustomerStatsJob) {
         this.jobLauncher = jobLauncher;
         this.shopUsageHourlyJob = shopUsageHourlyJob;
         this.shopUsageDailyJob = shopUsageDailyJob;
-        this.seatIdUsageJob = seatIdUsageJob;
+        this.shopDailyPaymentJob = shopDailyPaymentJob;
         this.userAvrUsageJob = userAvrUsageJob;
+        this.saveCustomerStatsJob=saveCustomerStatsJob;
     }
 
-    // 매 시간 30초 전에 실행
-    @Scheduled(cron = "30 0 * * * ?") // 매 시간 정각 30초 전에 실행
-    public void runSeatIdUsageJob() throws Exception {
-        // UUID를 사용하여 고유한 JobParameters 생성
-        JobParameters jobParameters = new JobParametersBuilder()
-                .addString("jobId", UUID.randomUUID().toString())  // 고유 ID 생성
-                .addDate("date", new Date())  // 현재 시간 추가
-                .toJobParameters();
-        // 좌석 ID 작업 실행
-        jobLauncher.run(seatIdUsageJob, jobParameters);
-    }
+
 
     @Scheduled(cron = "0 0 * * * ?") // 매 시간 정각에 실행
     public void runShopHourlyUsageJob() throws Exception {
@@ -65,7 +57,8 @@ public class BatchScheduler {
         // 비동기 실행
         runShopUsageJobAsync(jobParameters);
         runUserAvrUsageJobAsync(jobParameters);
-
+        runShopDailyPaymentJobAsync(jobParameters);
+        saveCustomerStatsJobAsync(jobParameters);
     }
 
 
@@ -80,6 +73,16 @@ public class BatchScheduler {
     @Async
     public void runUserAvrUsageJobAsync(JobParameters jobParameters) throws Exception {
         jobLauncher.run(userAvrUsageJob, jobParameters);
+    }
+
+    @Async
+    public void runShopDailyPaymentJobAsync(JobParameters jobParameters) throws Exception {
+        jobLauncher.run(shopDailyPaymentJob, jobParameters);
+    }
+
+    @Async
+    public void saveCustomerStatsJobAsync(JobParameters jobParameters) throws Exception {
+        jobLauncher.run(saveCustomerStatsJob, jobParameters);
     }
 
 }

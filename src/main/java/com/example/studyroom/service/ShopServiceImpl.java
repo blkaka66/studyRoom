@@ -3,15 +3,9 @@ package com.example.studyroom.service;
 import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.*;
-import com.example.studyroom.model.statistics.SeatIdUsageEntity;
-import com.example.studyroom.model.statistics.ShopUsageDailyEntity;
-import com.example.studyroom.model.statistics.ShopUsageHourlyEntity;
-import com.example.studyroom.model.statistics.UserAvrUsageEntity;
+import com.example.studyroom.model.statistics.*;
 import com.example.studyroom.repository.*;
-import com.example.studyroom.repository.statistics.SeatIdUsageRepository;
-import com.example.studyroom.repository.statistics.ShopUsageDailyRepository;
-import com.example.studyroom.repository.statistics.ShopUsageHourlyRepository;
-import com.example.studyroom.repository.statistics.UserAvrUsageRepository;
+import com.example.studyroom.repository.statistics.*;
 import com.example.studyroom.security.JwtCookieUtil;
 import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.type.ApiResult;
@@ -36,7 +30,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     private final EnterHistoryRepository enterHistoryRepository;
     private final MemberRepository memberRepository;
     private final ShopRepository shopRepository;
-
+    private final TicketHistoryRepository ticketHistoryRepository;
     private final JwtUtil jwtUtil;
     private final PeriodTicketRepository periodTicketRepository;
     private final TimeTicketRepository timeTicketRepository;
@@ -47,19 +41,24 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     private final SeatIdUsageRepository seatIdUsageRepository;
     private final ShopUsageHourlyRepository shopUsageHourlyRepository;
     private final UserAvrUsageRepository userAvrUsageRepository;
-
-    public ShopServiceImpl(ShopRepository repository,  MemberService memberService, SeatRepository seatRepository,
+    private final TimeTicketHistoryRepository timeTicketHistoryRepository;
+    private final PeriodTicketHistoryRepository periodTicketHistoryRepository;
+    private final ShopDailyPaymentRepository shopDailyPaymentRepository;
+    private final CustomerChangeStatsRepository customerChangeStatsRepository;
+    public ShopServiceImpl(ShopRepository repository, MemberService memberService, SeatRepository seatRepository,
                            RoomRepository roomRepository, MemberServiceImpl memberServiceImpl
-                           ,RedisService redisService,
+                           , RedisService redisService,
                            EnterHistoryRepository enterHistoryRepository, MemberRepository memberRepository,
                            ShopRepository shopRepository, JwtUtil jwtUtil, PeriodTicketRepository periodTicketRepository,
                            TimeTicketRepository timeTicketRepository,
                            AnnouncementRepository announcementRepository,
-                             CouponRepository couponRepository,
+                           CouponRepository couponRepository,
                            ShopUsageHourlyRepository shopUsageHourlyRepository,
                            ShopUsageDailyRepository shopUsageDailyRepository,
                            SeatIdUsageRepository seatIdUsageRepository,
-                          UserAvrUsageRepository userAvrUsageRepository ) {
+                           UserAvrUsageRepository userAvrUsageRepository, TicketHistoryRepository ticketHistoryRepository,
+                           TimeTicketHistoryRepository timeTicketHistoryRepository, PeriodTicketHistoryRepository periodTicketHistoryRepository
+    , ShopDailyPaymentRepository shopDailyPaymentRepository, CustomerChangeStatsRepository customerChangeStatsRepository) {
         super(repository);
         this.repository = repository;
         this.memberService = memberService;
@@ -79,6 +78,11 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         this.seatIdUsageRepository = seatIdUsageRepository;
         this.shopUsageHourlyRepository = shopUsageHourlyRepository;
         this.userAvrUsageRepository = userAvrUsageRepository;
+        this.ticketHistoryRepository = ticketHistoryRepository;
+        this.timeTicketHistoryRepository = timeTicketHistoryRepository;
+        this.periodTicketHistoryRepository = periodTicketHistoryRepository;
+        this.shopDailyPaymentRepository = shopDailyPaymentRepository;
+        this.customerChangeStatsRepository = customerChangeStatsRepository;
     }
 
 
@@ -290,6 +294,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
                 .title(dto.getTitle())
                 .content(dto.getContent())
                 .createdAt(now)
+                .announcementType(dto.getAnnouncementType())
                 .isActive(true)
                 .build();
 
@@ -414,95 +419,221 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         }
     }
 
-    @Override
-    @Transactional
-    public void calculateAndSaveSeatIdOccupancy() {
-        LocalDateTime now = LocalDateTime.now();
-        int year = now.getYear();
-        int month = now.getMonthValue();
-        int day = now.getDayOfMonth();
-        DayOfWeek dayOfWeek = now.getDayOfWeek();
-        int hour = now.getHour();
-
-        // 전체 shopId 조회 (운영 중인 모든 매장)
-        List<ShopEntity> shops = shopRepository.findAll();
-        for (ShopEntity shop : shops) {
-            // 특정 shopId의 현재 이용 중인 좌석 ID 조회
-            List<Long> occupiedSeatIds = enterHistoryRepository.findActiveOccupiedSeatIdsByShop(shop.getId());
-
-            // 새로운 SeatIdUsageEntity 생성 (매장, 시간 정보, 활성 좌석 배열 등 저장)
-            SeatIdUsageEntity seatUsage = SeatIdUsageEntity.builder()
-                    .shop(shop)
-                    .year(year)
-                    .month(month)
-                    .day(day)
-                    .dayOfWeek(dayOfWeek)
-                    .hour(hour)
-                    .activeSeatIds(occupiedSeatIds)
-                    .build();
-
-            seatIdUsageRepository.save(seatUsage);
-        }
-    }
 
 
     @Override
     @Transactional
-    public void calculateAndSaveuserAvrUsage() {
-        // 현재 날짜를 구합니다.
-        OffsetDateTime today = OffsetDateTime.now();
+    public void calculateAndSaveUsageStatistics() {
+        // 현재 날짜와 시간을 구합니다.
+        OffsetDateTime now = OffsetDateTime.now();
+        // 오늘 00:00:00 (자정)
+        OffsetDateTime startOfToday = now.toLocalDate().atStartOfDay(now.getOffset()).toOffsetDateTime();
+
         // 모든 매장 조회
         List<ShopEntity> shops = shopRepository.findAll();
 
         // 각 매장별로 처리
         for (ShopEntity shop : shops) {
-            // 오늘 날짜에 해당하는 EnterHistory만 조회
-            List<EnterHistoryEntity> enterHistories = enterHistoryRepository.findByShopAndEnterTimeBetween(
+            // 오늘 00:00:00부터 현재 시간까지 퇴장한 사람들만 조회
+            List<EnterHistoryEntity> enterHistories = enterHistoryRepository.findByShopAndExitTimeBetween(
                     shop,
-                    today.toLocalDate().atStartOfDay(today.getOffset()).toOffsetDateTime(),  // 오늘 00:00:00 (OffsetDateTime으로 변환)
-                    today.withHour(23).withMinute(59).withSecond(59).withNano(999999999) // 오늘 23:59:59.999999999
+                    startOfToday,  // 오늘 00:00:00
+                    now  // 현재 시각
             );
-            // 매장에서의 총 이용 시간과 총 회원 수를 계산
-            int totalUsageMinutes= 0;
-            Set<Long> uniqueUsers = new HashSet<>(); // 중복된 회원을 피하기 위해 Set 사용
+
+            if (enterHistories.isEmpty()) {
+                continue;
+            }
+
+            // 총 이용 시간을 계산
+            int totalUsageMinutes = 0;
+
+            // 좌석 ID별 누적 시간을 계산하기 위한 맵
+            Map<Long, Integer> seatUsageDuration = new HashMap<>();
+
+            // 유니크한 memberId를 구하기 위한 Set (중복을 제거하여 사용자 수를 셈)
+            Set<Long> uniqueMemberIds = new HashSet<>();
 
             for (EnterHistoryEntity enterHistory : enterHistories) {
-                // exitTime이 null인 경우, 현재 시간을 exitTime으로 사용하여 이용 시간 계산
-                OffsetDateTime exitTime = enterHistory.getExitTime() != null ? enterHistory.getExitTime() : OffsetDateTime.now();
-
-                // 이용 시간 계산 (입장 시간과 퇴장 시간의 차이)
+                OffsetDateTime exitTime = enterHistory.getExitTime();
                 long usageTimeInMinutes = ChronoUnit.MINUTES.between(enterHistory.getEnterTime(), exitTime);
-                totalUsageMinutes += (int)usageTimeInMinutes; // 분을 시간으로 변환하여 누적
+                totalUsageMinutes += (int) usageTimeInMinutes; // 총 이용 시간 누적
+                SeatEntity seat = enterHistory.getSeat();
+                Long seatId = seat.getId();
+                seatUsageDuration.put(seatId, seatUsageDuration.getOrDefault(seatId, 0) + (int) usageTimeInMinutes);
 
-                // 회원을 Set에 추가하여 중복을 피함
+                // 유니크한 사용자 ID (memberId) 추가
                 if (enterHistory.getMember() != null) {
-                    uniqueUsers.add(enterHistory.getMember().getId());
+                    uniqueMemberIds.add(enterHistory.getMember().getId());
                 }
             }
 
-            // 총 회원 수 계산 (중복 없이)
-            int totalUsageUsers = uniqueUsers.size();
-
-            // 평균 이용 시간 계산 (총 이용 시간 / 총 회원 수)
-            int averageUsageMinutes = totalUsageUsers > 0 ? totalUsageMinutes / totalUsageUsers : 0;
+            // totalUsageUsers 계산 (유니크한 memberId 수)
+            int totalUsageUsers = uniqueMemberIds.size();
 
             // UserAvrUsageEntity 객체 생성 후 저장
             UserAvrUsageEntity userAvrUsageEntity = UserAvrUsageEntity.builder()
                     .shop(shop)  // 해당 매장
-                    .year(today.getYear())  // 현재 연도
-                    .month(today.getMonthValue())  // 현재 월
-                    .day(today.getDayOfMonth())  // 현재 일
+                    .year(now.getYear())  // 현재 연도
+                    .month(now.getMonthValue())  // 현재 월
+                    .day(now.getDayOfMonth())  // 현재 일
                     .totalUsageMinutes(totalUsageMinutes)  // 총 이용 시간
-                    .totalUsageUsers(totalUsageUsers)  // 총 회원 수
-                    .averageUsageMinutes(averageUsageMinutes)  // 평균 이용 시간
+                    .totalUsageUsers(totalUsageUsers)  // 총 이용 사용자 수
+                    .averageUsageMinutes((double) totalUsageMinutes / totalUsageUsers)
                     .build();
 
             // 계산된 데이터를 DB에 저장
             userAvrUsageRepository.save(userAvrUsageEntity);
+
+            // 좌석 ID별 누적 시간 처리
+            saveSeatUsageStatistics(shop, now, seatUsageDuration);
         }
     }
 
 
+    /**
+     * 좌석 ID별 누적 시간 처리 메서드
+     */
+    private void saveSeatUsageStatistics(ShopEntity shop, OffsetDateTime now, Map<Long, Integer> seatUsageDuration) {
+        // 좌석 사용 시간 기록을 DB에 저장하는 로직 추가
+        for (Map.Entry<Long, Integer> entry : seatUsageDuration.entrySet()) {
+            Long seatId = entry.getKey();
+            Integer usageDuration = entry.getValue();
 
+            // SeatIdUsageEntity 객체 생성
+            SeatIdUsageEntity seatIdUsageEntity = SeatIdUsageEntity.builder()
+                    .shop(shop)
+                    .year(now.getYear())
+                    .month(now.getMonthValue())
+                    .day(now.getDayOfMonth())
+                    .dayOfWeek(now.getDayOfWeek())
+                    .hour(now.getHour())
+                    .seatUsageDuration(Map.of(seatId, usageDuration)) // 좌석 ID와 사용 시간
+                    .build();
+
+            // 좌석 사용 시간 기록 저장
+            seatIdUsageRepository.save(seatIdUsageEntity);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void calculateAndSaveShopDailyPayment() {
+        OffsetDateTime now = OffsetDateTime.now(); // 현재 시각 (OffsetDateTime)
+        OffsetDateTime startOfToday = now.toLocalDate().atStartOfDay(now.getOffset()).toOffsetDateTime(); // 오늘 자정 (OffsetDateTime)
+        OffsetDateTime endOfToday = startOfToday.plusDays(1).minusSeconds(1); // 오늘 23:59:59 (OffsetDateTime)
+
+        // 모든 매장 조회
+        List<ShopEntity> shops = shopRepository.findAll();
+
+        for (ShopEntity shop : shops) {
+            // 오늘 날짜의 결제 기록 조회
+            List<TimeTicketHistoryEntity> timeTicketHistories = timeTicketHistoryRepository.findByShopAndPaymentDateBetween(shop, startOfToday, now);
+            List<PeriodTicketHistoryEntity> periodTicketHistories = periodTicketHistoryRepository.findByShopAndPaymentDateBetween(shop, startOfToday, now);
+
+            // 티켓 종류별 결제 금액 계산
+            int totalAmountForTimeTicket = 0;
+            int totalAmountForPeriodTicket = 0;
+
+            // 시간권 결제액 합산
+            for (TimeTicketHistoryEntity timeTicketHistory : timeTicketHistories) {
+                totalAmountForTimeTicket += timeTicketHistory.getTicket().getAmount();
+            }
+
+            // 기간권 결제액 합산
+            for (PeriodTicketHistoryEntity periodTicketHistory : periodTicketHistories) {
+                totalAmountForPeriodTicket += periodTicketHistory.getTicket().getAmount();
+            }
+
+            // ShopDailyPaymentEntity 객체 생성 후 저장 (시간권)
+            if (totalAmountForTimeTicket > 0) {
+                ShopDailyPaymentEntity shopDailyPaymentForTime = ShopDailyPaymentEntity.builder()
+                        .shop(shop) // 해당 매장
+                        .year(now.getYear()) // 연도
+                        .month(now.getMonthValue()) // 월
+                        .day(now.getDayOfMonth()) // 일
+                        .dayOfWeek(now.getDayOfWeek()) // 요일
+                        .totalAmount(totalAmountForTimeTicket) // 총 결제액
+                        .ticketType(TicketTypeEnum.TIME) // 티켓 종류: 시간권
+                        .build();
+                // 계산된 데이터를 DB에 저장
+                shopDailyPaymentRepository.save(shopDailyPaymentForTime);
+            }
+
+            // ShopDailyPaymentEntity 객체 생성 후 저장 (기간권)
+            if (totalAmountForPeriodTicket > 0) {
+                ShopDailyPaymentEntity shopDailyPaymentForPeriod = ShopDailyPaymentEntity.builder()
+                        .shop(shop) // 해당 매장
+                        .year(now.getYear()) // 연도
+                        .month(now.getMonthValue()) // 월
+                        .day(now.getDayOfMonth()) // 일
+                        .dayOfWeek(now.getDayOfWeek()) // 요일
+                        .totalAmount(totalAmountForPeriodTicket) // 총 결제액
+                        .ticketType(TicketTypeEnum.PERIOD) // 티켓 종류: 기간권
+                        .build();
+                // 계산된 데이터를 DB에 저장
+                shopDailyPaymentRepository.save(shopDailyPaymentForPeriod);
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    // 고객 수를 저장하는 함수
+    public void calculateAndSaveCustomerStats() {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        DayOfWeek dayOfWeek = now.getDayOfWeek();
+
+        // 각 Shop별 고객 수 조회
+        for (ShopEntity shop : shopRepository.findAll()) {
+            int totalCustomers = memberRepository.countByShop(shop);
+
+            // 해당 일자의 통계 저장
+            CustomerChangeStatsEntity statsEntity = CustomerChangeStatsEntity.builder()
+                    .year(now.getYear())
+                    .month(now.getMonthValue())
+                    .day(now.getDayOfMonth())
+                    .dayOfWeek(dayOfWeek)
+                    .totalCustomers(totalCustomers)
+                    .build();
+
+            customerChangeStatsRepository.save(statsEntity);
+        }
+    }
+
+    @Override
+// 기간에 맞는 SeatIdUsageEntity 목록 조회
+    public FinalResponseDto<SeatIdUsageResponseDto> getSeatUsageEntitiesByDateRange(SeatIdUsageRequestDto requestDto) {
+        OffsetDateTime startDate = requestDto.getStartDate(); // OffsetDateTime으로 받아온다.
+        OffsetDateTime endDate = requestDto.getEndDate(); // OffsetDateTime으로 받아온다.
+        System.out.println("startDate" + startDate);
+        System.out.println("endDate" + endDate);
+
+        // 연도, 월, 일로 분리하여 조회 (OffsetDateTime에서 연도, 월, 일 추출)
+        int startYear = startDate.getYear();
+        int endYear = endDate.getYear();
+        int startMonth = startDate.getMonthValue();
+        int endMonth = endDate.getMonthValue();
+        int startDay = startDate.getDayOfMonth();
+        int endDay = endDate.getDayOfMonth();
+
+        long shopId = requestDto.getShopId();
+        System.out.println("Start Date: " + startYear + "-" + startMonth + "-" + startDay);
+        System.out.println("End Date: " + endYear + "-" + endMonth + "-" + endDay);
+
+        // 기간에 맞는 SeatIdUsageEntity 목록 조회
+        List<SeatIdUsageEntity> seatIdUsageEntities = seatIdUsageRepository.findByShopIdAndYearBetweenAndMonthBetweenAndDayBetween(shopId, startYear, endYear, startMonth, endMonth, startDay, endDay);
+        SeatIdUsageResponseDto responseDto = SeatIdUsageResponseDto.builder()
+                .seatIdUsageEntityList(seatIdUsageEntities)
+                .build();
+
+        // 데이터가 없을 경우 처리
+        if (seatIdUsageEntities.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+
+        // 성공적으로 데이터를 반환
+        return FinalResponseDto.successWithData(responseDto);
+    }
 
 }

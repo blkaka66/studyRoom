@@ -80,33 +80,10 @@ public class ShopOccupancyBatchConfig {
 
 
 
-    /////////////
-    //시간대별 좌석id별 이용률
-    @Bean
-    public Job seatIdUsageJob(JobRepository jobRepository, Step seatIdUsageStep) {
-        return new JobBuilder("seatIdUsageStep", jobRepository)
-                .start(seatIdUsageStep)
-                .build();
-    }
-
-    @Bean
-    public Step seatIdUsageStep(JobRepository jobRepository, Tasklet seatIdUsageTasklet, PlatformTransactionManager transactionManager) {
-        return new StepBuilder("seatIdUsageStep", jobRepository)
-                .tasklet(seatIdUsageTasklet, transactionManager)
-                .build();
-    }
-
-    @Bean
-    public Tasklet seatIdUsageTasklet() {
-        return (contribution, chunkContext) -> {
-            shopService.calculateAndSaveSeatIdOccupancy();
-            return RepeatStatus.FINISHED;
-        };
-    }
 
 
     /////////////
-    //한사람당 평균 이용시간
+    //한사람당 평균 이용시간 & 하루당 좌석 id별 누적 이용시간
     @Bean
     public Job userAvrUsageJob(JobRepository jobRepository, Step userAvrUsageStep) {
         return new JobBuilder("userAvrUsageStep", jobRepository)
@@ -124,8 +101,60 @@ public class ShopOccupancyBatchConfig {
     @Bean
     public Tasklet userAvrUsageTasklet() {
         return (contribution, chunkContext) -> {
-            shopService.calculateAndSaveuserAvrUsage();
+            shopService.calculateAndSaveUsageStatistics();
             return RepeatStatus.FINISHED;
         };
     }
+
+
+    /////
+    //하루당 shopid별 총 결제액(시간권,기간권 별로 총 결제액 따로 보여줌)
+
+    @Bean
+    public Job shopDailyPaymentJob(JobRepository jobRepository, Step shopDailyPaymentStep) {
+        return new JobBuilder("ShopDailyPaymentStep", jobRepository)
+                .start(shopDailyPaymentStep)
+                .build();
+    }
+
+    @Bean
+    public Step shopDailyPaymentStep(JobRepository jobRepository, Tasklet shopDailyPaymentTasklet, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("ShopDailyPaymentStep", jobRepository)
+                .tasklet(shopDailyPaymentTasklet, transactionManager)
+                .build();
+    }
+
+    @Bean
+    public Tasklet shopDailyPaymentTasklet() {
+        return (contribution, chunkContext) -> {
+            shopService.calculateAndSaveShopDailyPayment();
+            return RepeatStatus.FINISHED;
+        };
+    }
+
+    /////
+    //shopid별 총 고객수
+
+    @Bean
+    public Job saveCustomerStatsJob(JobRepository jobRepository, Step saveCustomerStatsStep) {
+        return new JobBuilder("saveCustomerStatsStep", jobRepository)
+                .start(saveCustomerStatsStep)
+                .build();
+    }
+
+    @Bean
+    public Step saveCustomerStatsStep(JobRepository jobRepository, Tasklet saveCustomerStatsTasklet, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("saveCustomerStatsStep", jobRepository)
+                .tasklet(saveCustomerStatsTasklet, transactionManager)
+                .build();
+    }
+
+    @Bean
+    public Tasklet saveCustomerStatsTasklet() {
+        return (contribution, chunkContext) -> {
+            shopService.calculateAndSaveCustomerStats();
+            return RepeatStatus.FINISHED;
+        };
+    }
+
 }
