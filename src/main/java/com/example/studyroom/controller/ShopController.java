@@ -1,10 +1,7 @@
 package com.example.studyroom.controller;
 
 import com.example.studyroom.dto.CookieDto;
-import com.example.studyroom.dto.requestDto.CreateAnnouncementRequestDto;
-import com.example.studyroom.dto.requestDto.SeatIdUsageRequestDto;
-import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
-import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
+import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.EnterHistoryEntity;
 import com.example.studyroom.model.MemberEntity;
@@ -176,6 +173,26 @@ public class ShopController {
     @PostMapping("/statistics/seatUsage")
     public ResponseEntity<FinalResponseDto<SeatIdUsageResponseDto>> getSeatUsageEntitiesByDateRange(@RequestBody SeatIdUsageRequestDto dto) {
         return ResponseEntity.ok(this.shopService.getSeatUsageEntitiesByDateRange(dto));
+    }
+
+    @PostMapping("/statistics/payment")
+    public ResponseEntity<FinalResponseDto<List<ShopDailyPaymentResponseDto>>> getShopPaymentByDateRange(@RequestBody ShopPaymentRequestDto dto) {
+        return ResponseEntity.ok(this.shopService.getShopDailyPaymentsByDateRange(dto));
+    }
+
+    @PostMapping("/statistics/shopUsage")
+    public ResponseEntity<FinalResponseDto<List<ShopUsageResponseDto>>> getShopUsageByDateRange(@RequestBody ShopUsageRequestDto dto) {
+        return ResponseEntity.ok(this.shopService.getShopUsageByDateRange(dto));
+    }
+
+    @PostMapping("/statistics/userAvrUsage")
+    public ResponseEntity<FinalResponseDto<List<UserAvrUsageResponseDto>>> getUserAvrUsageByDateRange(@RequestBody UserAvrUsageRequestDto dto) {
+        return ResponseEntity.ok(this.shopService.getUserAvrUsageByDateRange(dto));
+    }
+
+    @PostMapping("/statistics/userChangeStats")
+    public ResponseEntity<FinalResponseDto<List<UserChangeStatsResponseDto>>> getUserChangeStatsByDateRange(@RequestBody UserChangeStatsRequestDto dto) {
+        return ResponseEntity.ok(this.shopService.getUserChangeStatsByDateRange(dto));
     }
 
 }

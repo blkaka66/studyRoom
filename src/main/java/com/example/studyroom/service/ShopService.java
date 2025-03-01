@@ -59,5 +59,14 @@ public interface ShopService extends BaseService<ShopEntity> {
 
     void calculateAndSaveCustomerStats();
 
+
     FinalResponseDto<SeatIdUsageResponseDto> getSeatUsageEntitiesByDateRange(SeatIdUsageRequestDto requestDto);
+
+    FinalResponseDto<List<ShopDailyPaymentResponseDto>> getShopDailyPaymentsByDateRange(ShopPaymentRequestDto requestDto);
+
+    FinalResponseDto<List<ShopUsageResponseDto>> getShopUsageByDateRange(ShopUsageRequestDto requestDto);
+
+    FinalResponseDto<List<UserAvrUsageResponseDto>> getUserAvrUsageByDateRange(UserAvrUsageRequestDto requestDto);
+
+    FinalResponseDto<List<UserChangeStatsResponseDto>> getUserChangeStatsByDateRange(UserChangeStatsRequestDto requestDto);
 }

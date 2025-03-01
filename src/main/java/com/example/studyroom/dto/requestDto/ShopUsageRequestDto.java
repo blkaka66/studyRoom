@@ -7,15 +7,14 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-
 @Getter
 @Setter
 @Builder
-
-public class SeatIdUsageRequestDto {
+public class ShopUsageRequestDto {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
     private long shopId;
+
 }

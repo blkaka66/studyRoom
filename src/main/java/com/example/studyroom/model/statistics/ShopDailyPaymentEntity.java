@@ -39,4 +39,6 @@ public class ShopDailyPaymentEntity  extends BaseEntity {
     @Enumerated(EnumType.STRING)  // Enum으로 ticket_type 지정
     @Column(name = "ticket_type", nullable = false) // insertable=false, updatable=false로 설정하여 서브클래스에서 중복 매핑을 방지
     private TicketTypeEnum ticketType; // PERIOD or TIME
+
+
 }

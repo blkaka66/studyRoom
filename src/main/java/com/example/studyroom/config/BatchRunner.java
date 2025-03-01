@@ -35,7 +35,9 @@
 //                       @Qualifier("shopUsageDailyJob") Job shopUsageDailyJob,
 //                       @Qualifier("shopDailyPaymentJob") Job shopDailyPaymentJob,
 //                       @Qualifier("userAvrUsageJob") Job userAvrUsageJob,
-//                       @Qualifier("saveCustomerStatsJob") Job saveCustomerStatsJob) {
+//                       @Qualifier("saveCustomerStatsJob") Job saveCustomerStatsJob
+//
+//    ) {
 //        this.jobLauncher = jobLauncher;
 //        this.shopUsageHourlyJob = shopUsageHourlyJob;
 //        this.shopUsageDailyJob = shopUsageDailyJob;

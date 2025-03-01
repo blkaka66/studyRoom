@@ -11,8 +11,7 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @Builder
-
-public class SeatIdUsageRequestDto {
+public class ShopPaymentRequestDto {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
     @JsonFormat(pattern = "yyyy-MM-dd")

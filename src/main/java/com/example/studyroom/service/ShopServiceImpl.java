@@ -10,15 +10,15 @@ import com.example.studyroom.security.JwtCookieUtil;
 import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.type.ApiResult;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.ObjectUtils;
 
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.example.studyroom.service.TicketServiceImpl.toOffsetDateTime;
 
 @Service
 public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements ShopService {
@@ -521,7 +521,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     public void calculateAndSaveShopDailyPayment() {
         OffsetDateTime now = OffsetDateTime.now(); // 현재 시각 (OffsetDateTime)
         OffsetDateTime startOfToday = now.toLocalDate().atStartOfDay(now.getOffset()).toOffsetDateTime(); // 오늘 자정 (OffsetDateTime)
-        OffsetDateTime endOfToday = startOfToday.plusDays(1).minusSeconds(1); // 오늘 23:59:59 (OffsetDateTime)
+
 
         // 모든 매장 조회
         List<ShopEntity> shops = shopRepository.findAll();
@@ -590,6 +590,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
             // 해당 일자의 통계 저장
             CustomerChangeStatsEntity statsEntity = CustomerChangeStatsEntity.builder()
+                    .shop(shop)
                     .year(now.getYear())
                     .month(now.getMonthValue())
                     .day(now.getDayOfMonth())
@@ -601,30 +602,40 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         }
     }
 
-    @Override
-// 기간에 맞는 SeatIdUsageEntity 목록 조회
-    public FinalResponseDto<SeatIdUsageResponseDto> getSeatUsageEntitiesByDateRange(SeatIdUsageRequestDto requestDto) {
-        OffsetDateTime startDate = requestDto.getStartDate(); // OffsetDateTime으로 받아온다.
-        OffsetDateTime endDate = requestDto.getEndDate(); // OffsetDateTime으로 받아온다.
-        System.out.println("startDate" + startDate);
-        System.out.println("endDate" + endDate);
 
-        // 연도, 월, 일로 분리하여 조회 (OffsetDateTime에서 연도, 월, 일 추출)
-        int startYear = startDate.getYear();
-        int endYear = endDate.getYear();
-        int startMonth = startDate.getMonthValue();
-        int endMonth = endDate.getMonthValue();
-        int startDay = startDate.getDayOfMonth();
-        int endDay = endDate.getDayOfMonth();
+
+    @Override
+    public FinalResponseDto<SeatIdUsageResponseDto> getSeatUsageEntitiesByDateRange(SeatIdUsageRequestDto requestDto) {
+        LocalDate localStartDate = requestDto.getStartDate();
+        LocalDate localEndDate = requestDto.getEndDate().plusDays(1); // EndDate +1일
+        // 연도, 월, 일로 분리하여 조회
+        int startYear = localStartDate.getYear();
+        int endYear = localEndDate.getYear();
+        int startMonth = localStartDate.getMonthValue();
+        int endMonth = localEndDate.getMonthValue();
+        int startDay = localStartDate.getDayOfMonth();
+        int endDay = localEndDate.getDayOfMonth();
 
         long shopId = requestDto.getShopId();
+        System.out.println("getSeatUsageEntitiesByDateRange");
         System.out.println("Start Date: " + startYear + "-" + startMonth + "-" + startDay);
         System.out.println("End Date: " + endYear + "-" + endMonth + "-" + endDay);
 
         // 기간에 맞는 SeatIdUsageEntity 목록 조회
         List<SeatIdUsageEntity> seatIdUsageEntities = seatIdUsageRepository.findByShopIdAndYearBetweenAndMonthBetweenAndDayBetween(shopId, startYear, endYear, startMonth, endMonth, startDay, endDay);
+
+        // SeatIdUsageEntity를 SeatIdUsageDto로 변환
+        List<SeatIdUsageResponseDto.SeatIdUsageDto> seatIdUsageDtoList = seatIdUsageEntities.stream()
+                .map(entity -> SeatIdUsageResponseDto.SeatIdUsageDto.builder()
+                        .id(entity.getId()) // SeatIdUsageEntity의 id
+                        .shopId(entity.getShop().getId()) // ShopEntity의 id
+                        .seatUsageDuration(entity.getSeatUsageDuration()) // 좌석 ID별 사용 시간
+                        .build())
+                .collect(Collectors.toList());
+
+        // 새로운 DTO로 응답 객체 생성
         SeatIdUsageResponseDto responseDto = SeatIdUsageResponseDto.builder()
-                .seatIdUsageEntityList(seatIdUsageEntities)
+                .seatIdUsageEntityList(seatIdUsageDtoList)
                 .build();
 
         // 데이터가 없을 경우 처리
@@ -634,6 +645,157 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
         // 성공적으로 데이터를 반환
         return FinalResponseDto.successWithData(responseDto);
+    }
+
+    @Override
+    public FinalResponseDto<List<ShopDailyPaymentResponseDto>> getShopDailyPaymentsByDateRange(ShopPaymentRequestDto requestDto) {
+
+        LocalDate localStartDate = requestDto.getStartDate();
+        LocalDate localEndDate = requestDto.getEndDate().plusDays(1); // EndDate +1일
+
+        // 연도, 월, 일로 분리하여 조회
+        int startYear = localStartDate.getYear();
+        int endYear = localEndDate.getYear();
+        int startMonth = localStartDate.getMonthValue();
+        int endMonth = localEndDate.getMonthValue();
+        int startDay = localStartDate.getDayOfMonth();
+        int endDay = localEndDate.getDayOfMonth();
+
+        long shopId = requestDto.getShopId();
+        System.out.println("getShopDailyPaymentsByDateRange");
+        System.out.println("Start Date: " + startYear + "-" + startMonth + "-" + startDay);
+        System.out.println("End Date: " + endYear + "-" + endMonth + "-" + endDay);
+
+        // 기간에 맞는 ShopDailyPaymentEntity 목록 조회
+        List<ShopDailyPaymentEntity> shopDailyPaymentEntities = shopDailyPaymentRepository
+                .findByShopIdAndYearBetweenAndMonthBetweenAndDayBetween(shopId, startYear, endYear, startMonth, endMonth, startDay, endDay);
+        System.out.println("shopDailyPaymentEntities: " + shopDailyPaymentEntities.size());
+
+        // 데이터가 없을 경우 처리
+        if (shopDailyPaymentEntities.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+
+        // ShopDailyPaymentEntity 목록을 ShopDailyPaymentResponseDto 목록으로 변환
+        List<ShopDailyPaymentResponseDto> responseDtos = shopDailyPaymentEntities.stream()
+                .map(ShopDailyPaymentResponseDto::fromEntity)
+                .collect(Collectors.toList());
+
+        // ShopDailyPaymentResponseDto를 포함한 응답 객체 반환
+        return FinalResponseDto.successWithData(responseDtos);
+    }
+
+    @Override
+    public FinalResponseDto<List<ShopUsageResponseDto>> getShopUsageByDateRange(ShopUsageRequestDto requestDto) {
+
+        LocalDate localStartDate = requestDto.getStartDate();
+        LocalDate localEndDate = requestDto.getEndDate().plusDays(1); // EndDate +1일
+
+        // 연도, 월, 일로 분리하여 조회
+        int startYear = localStartDate.getYear();
+        int endYear = localEndDate.getYear();
+        int startMonth = localStartDate.getMonthValue();
+        int endMonth = localEndDate.getMonthValue();
+        int startDay = localStartDate.getDayOfMonth();
+        int endDay = localEndDate.getDayOfMonth();
+
+        long shopId = requestDto.getShopId();
+        System.out.println("getShopUsageByDateRange");
+        System.out.println("Start Date: " + startYear + "-" + startMonth + "-" + startDay);
+        System.out.println("End Date: " + endYear + "-" + endMonth + "-" + endDay);
+
+        // 기간에 맞는 shopDailyUsageEntities 목록 조회
+        List<ShopUsageDailyEntity> shopDailyUsageEntities = shopUsageDailyRepository
+                .findByShopIdAndYearBetweenAndMonthBetweenAndDayBetween(shopId, startYear, endYear, startMonth, endMonth, startDay, endDay);
+        System.out.println("shopDailyPaymentEntities: " + shopDailyUsageEntities.size());
+
+        // 데이터가 없을 경우 처리
+        if (shopDailyUsageEntities.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+
+
+        List<ShopUsageResponseDto> responseDtos = shopDailyUsageEntities.stream()
+                .map(ShopUsageResponseDto::fromEntity)
+                .collect(Collectors.toList());
+
+
+        return FinalResponseDto.successWithData(responseDtos);
+    }
+
+    @Override
+    public FinalResponseDto<List<UserAvrUsageResponseDto>> getUserAvrUsageByDateRange(UserAvrUsageRequestDto requestDto) {
+
+        LocalDate localStartDate = requestDto.getStartDate();
+        LocalDate localEndDate = requestDto.getEndDate().plusDays(1); // EndDate +1일
+        // 연도, 월, 일로 분리하여 조회
+        int startYear = localStartDate.getYear();
+        int endYear = localEndDate.getYear();
+        int startMonth = localStartDate.getMonthValue();
+        int endMonth = localEndDate.getMonthValue();
+        int startDay = localStartDate.getDayOfMonth();
+        int endDay = localEndDate.getDayOfMonth();
+
+        long shopId = requestDto.getShopId();
+        System.out.println("getUserAvrUsageByDateRange");
+        System.out.println("Start Date: " + startYear + "-" + startMonth + "-" + startDay);
+        System.out.println("End Date: " + endYear + "-" + endMonth + "-" + endDay);
+
+        // 기간에 맞는 shopDailyUsageEntities 목록 조회
+        List<UserAvrUsageEntity> userAvrUsageEntities = userAvrUsageRepository
+                .findByShopIdAndYearBetweenAndMonthBetweenAndDayBetween(shopId, startYear, endYear, startMonth, endMonth, startDay, endDay);
+        System.out.println("userAvrUsageEntities: " + userAvrUsageEntities.size());
+
+        // 데이터가 없을 경우 처리
+        if (userAvrUsageEntities.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+
+
+        List<UserAvrUsageResponseDto> responseDtos = userAvrUsageEntities.stream()
+                .map(UserAvrUsageResponseDto::fromEntity)
+                .collect(Collectors.toList());
+
+
+        return FinalResponseDto.successWithData(responseDtos);
+    }
+
+    @Override
+    public FinalResponseDto<List<UserChangeStatsResponseDto>> getUserChangeStatsByDateRange(UserChangeStatsRequestDto requestDto) {
+
+        LocalDate localStartDate = requestDto.getStartDate();
+        LocalDate localEndDate = requestDto.getEndDate().plusDays(1); // EndDate +1일
+
+        // 연도, 월, 일로 분리하여 조회
+        int startYear = localStartDate.getYear();
+        int endYear = localEndDate.getYear();
+        int startMonth = localStartDate.getMonthValue();
+        int endMonth = localEndDate.getMonthValue();
+        int startDay = localStartDate.getDayOfMonth();
+        int endDay = localEndDate.getDayOfMonth();
+
+        long shopId = requestDto.getShopId();
+        System.out.println("getUserChangeStatsByDateRange");
+        System.out.println("Start Date: " + startYear + "-" + startMonth + "-" + startDay);
+        System.out.println("End Date: " + endYear + "-" + endMonth + "-" + endDay);
+
+        // 기간에 맞는 shopDailyUsageEntities 목록 조회
+        List<CustomerChangeStatsEntity> userChangeStatsEntities = customerChangeStatsRepository
+                .findByShopIdAndYearBetweenAndMonthBetweenAndDayBetween(shopId, startYear, endYear, startMonth, endMonth, startDay, endDay);
+        System.out.println("userChangeStatsEntities: " + userChangeStatsEntities.size());
+
+        // 데이터가 없을 경우 처리
+        if (userChangeStatsEntities.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+
+
+        List<UserChangeStatsResponseDto> responseDtos = userChangeStatsEntities.stream()
+                .map(UserChangeStatsResponseDto::fromEntity)
+                .collect(Collectors.toList());
+
+
+        return FinalResponseDto.successWithData(responseDtos);
     }
 
 }
