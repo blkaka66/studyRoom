@@ -553,6 +553,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
                         .month(now.getMonthValue()) // 월
                         .day(now.getDayOfMonth()) // 일
                         .dayOfWeek(now.getDayOfWeek()) // 요일
+                        .date(now.toLocalDate().toString())
                         .totalAmount(totalAmountForTimeTicket) // 총 결제액
                         .ticketType(TicketTypeEnum.TIME) // 티켓 종류: 시간권
                         .build();
@@ -568,6 +569,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
                         .month(now.getMonthValue()) // 월
                         .day(now.getDayOfMonth()) // 일
                         .dayOfWeek(now.getDayOfWeek()) // 요일
+                        .date(now.toLocalDate().toString())
                         .totalAmount(totalAmountForPeriodTicket) // 총 결제액
                         .ticketType(TicketTypeEnum.PERIOD) // 티켓 종류: 기간권
                         .build();
@@ -651,7 +653,8 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     public FinalResponseDto<List<ShopDailyPaymentResponseDto>> getShopDailyPaymentsByDateRange(ShopPaymentRequestDto requestDto) {
 
         LocalDate localStartDate = requestDto.getStartDate();
-        LocalDate localEndDate = requestDto.getEndDate().plusDays(1); // EndDate +1일
+//        LocalDate localEndDate = requestDto.getEndDate().plusDays(1); // EndDate +1일
+        LocalDate localEndDate = requestDto.getEndDate();
 
         // 연도, 월, 일로 분리하여 조회
         int startYear = localStartDate.getYear();
@@ -667,8 +670,9 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         System.out.println("End Date: " + endYear + "-" + endMonth + "-" + endDay);
 
         // 기간에 맞는 ShopDailyPaymentEntity 목록 조회
-        List<ShopDailyPaymentEntity> shopDailyPaymentEntities = shopDailyPaymentRepository
-                .findByShopIdAndYearBetweenAndMonthBetweenAndDayBetween(shopId, startYear, endYear, startMonth, endMonth, startDay, endDay);
+//        List<ShopDailyPaymentEntity> shopDailyPaymentEntities = shopDailyPaymentRepository
+//                .findByShopIdAndYearBetweenAndMonthBetweenAndDayBetween(shopId, startYear, endYear, startMonth, endMonth, startDay, endDay);
+        List<ShopDailyPaymentEntity> shopDailyPaymentEntities = shopDailyPaymentRepository.findByShopIdAndStartDateAndEndDate(shopId, localStartDate.toString(), localEndDate.toString());
         System.out.println("shopDailyPaymentEntities: " + shopDailyPaymentEntities.size());
 
         // 데이터가 없을 경우 처리

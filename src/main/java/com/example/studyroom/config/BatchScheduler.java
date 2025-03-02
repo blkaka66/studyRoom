@@ -3,17 +3,17 @@ package com.example.studyroom.config;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.util.Date;
 import java.util.UUID;
 
 @Configuration
-@EnableScheduling
+@EnableBatchProcessing
 public class BatchScheduler {
 
     private final JobLauncher jobLauncher;
@@ -34,7 +34,7 @@ public class BatchScheduler {
 
 
 
-    @Scheduled(cron = "0 0 * * * ?") // 매 시간 정각에 실행
+    @Scheduled(cron = "0 41 * * * ?") // 매 시간 정각에 실행
     public void runShopHourlyUsageJob() throws Exception {
         // UUID를 사용하여 고유한 JobParameters 생성
         JobParameters jobParameters = new JobParametersBuilder()

@@ -21,6 +21,9 @@ public class ShopDailyPaymentEntity  extends BaseEntity {
     @JoinColumn(name = "shop_id", foreignKey = @ForeignKey(name = "fk_shop_id"), nullable = false)
     private ShopEntity shop;
 
+    @Column
+    private String date;
+
     @Column(nullable = false)
     private int year;
 
