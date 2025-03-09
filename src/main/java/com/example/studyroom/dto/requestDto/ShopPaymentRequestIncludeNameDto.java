@@ -11,11 +11,12 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @Builder
-public class ShopPaymentRequestDto {
+public class ShopPaymentRequestIncludeNameDto {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
     private long shopId;
-    
+    private String userName;
+
 }

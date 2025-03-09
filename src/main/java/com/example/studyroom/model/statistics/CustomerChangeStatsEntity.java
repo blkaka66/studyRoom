@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -34,4 +35,7 @@ public class CustomerChangeStatsEntity extends BaseEntity {
 
     @Column(nullable = false)
     private int totalCustomers;
+
+    @Column(nullable = false) // 날짜 컬럼 추가
+    private LocalDate usageDate;  // 추가된 날짜 컬럼
 }

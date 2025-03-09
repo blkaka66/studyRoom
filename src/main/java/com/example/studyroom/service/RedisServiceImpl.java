@@ -5,9 +5,18 @@ import com.example.studyroom.dto.responseDto.RemainTicketInfoResponseDto;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import com.example.studyroom.type.ApiResult;
+
+import java.io.FileInputStream;
 import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.IOException;
 
 @Service
 public class RedisServiceImpl implements RedisService {
@@ -55,8 +64,7 @@ public class RedisServiceImpl implements RedisService {
 
 
     public void sendNotification(Long userId, String message) {
-        // WebSocket을 통해 클라이언트에게 알림 발송
-       // webSocketService.sendNotification(userId, message);
+
     }
 
     @Override

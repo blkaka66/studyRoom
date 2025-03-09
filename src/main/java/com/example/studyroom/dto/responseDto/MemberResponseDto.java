@@ -11,13 +11,15 @@ import java.util.stream.Collectors;
 @Getter
 @Setter
 public class MemberResponseDto {
+    private long userId;
     private String phoneNumber;
     private String name;
 
     @Builder
-    public MemberResponseDto(String phone, String name) {
+    public MemberResponseDto(String phone, String name , long userId) {
         this.phoneNumber = phone;
         this.name = name;
+        this.userId = userId;
     }
 
     public static List<MemberResponseDto> of(List<MemberEntity> memberEntities) {
@@ -25,6 +27,7 @@ public class MemberResponseDto {
                 .map( x -> MemberResponseDto.builder()
                         .name(x.getName())
                         .phone(x.getPhone())
+                        .userId(x.getId())
                         .build()
                 )
                 .collect(Collectors.toList());

@@ -178,7 +178,6 @@ public class MemberController {
     public ResponseEntity<FinalResponseDto<PaymentHistoryDto>> getPaymentHistory(@RequestBody PaymentHistoryDateRequestDto requestDto) {
         MemberEntity member = JwtUtil.getMember();
         FinalResponseDto<PaymentHistoryDto> response = this.ticketService.getPaymentHistory(requestDto,member.getShop().getId(), member.getId());
-
         return ResponseEntity.ok(response);
     }
 

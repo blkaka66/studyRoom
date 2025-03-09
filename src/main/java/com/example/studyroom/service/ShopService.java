@@ -37,6 +37,7 @@ public interface ShopService extends BaseService<ShopEntity> {
 
     FinalResponseDto <String> createAnnounement(Long shopId, CreateAnnouncementRequestDto dto);
 
+    FinalResponseDto <String> forceDeleteUser( ForceDeleteUserRequestDto dto);
 
     FinalResponseDto<List<AnnouncementResponseDto>> getAnnouncementList(Long shopId);
 
@@ -63,6 +64,8 @@ public interface ShopService extends BaseService<ShopEntity> {
     FinalResponseDto<SeatIdUsageResponseDto> getSeatUsageEntitiesByDateRange(SeatIdUsageRequestDto requestDto);
 
     FinalResponseDto<List<ShopDailyPaymentResponseDto>> getShopDailyPaymentsByDateRange(ShopPaymentRequestDto requestDto);
+
+    FinalResponseDto<PaymentHistoryDto> getShopDailyPaymentsByDateRangeAndByName(ShopPaymentRequestIncludeNameDto requestDto);
 
     FinalResponseDto<List<ShopUsageResponseDto>> getShopUsageByDateRange(ShopUsageRequestDto requestDto);
 

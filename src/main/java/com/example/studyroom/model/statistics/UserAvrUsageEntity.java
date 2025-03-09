@@ -5,6 +5,8 @@ import com.example.studyroom.model.ShopEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @Builder
@@ -35,4 +37,7 @@ public class UserAvrUsageEntity extends BaseEntity {
 
     @Column(nullable = false) // 평균 이용시간
     private double averageUsageMinutes;
+
+    @Column(nullable = false) // 날짜 컬럼 추가
+    private LocalDate usageDate;  // 추가된 날짜 컬럼
 }

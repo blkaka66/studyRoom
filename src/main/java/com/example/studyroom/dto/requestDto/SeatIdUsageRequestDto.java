@@ -18,4 +18,5 @@ public class SeatIdUsageRequestDto {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
     private long shopId;
+
 }

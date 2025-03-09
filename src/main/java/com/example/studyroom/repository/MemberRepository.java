@@ -11,6 +11,8 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
     List<MemberEntity> findByShop(ShopEntity shop);
     MemberEntity findByNameAndPassword(String name, String password);
 
+    MemberEntity findByNameAndShopId(String Name, Long shopId);
+
     MemberEntity findByPhoneAndPassword(String phone, String password);
     MemberEntity findByPhone(String phone);
     void deleteById(Long id);

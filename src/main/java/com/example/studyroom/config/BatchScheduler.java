@@ -34,7 +34,7 @@ public class BatchScheduler {
 
 
 
-    @Scheduled(cron = "0 41 * * * ?") // 매 시간 정각에 실행
+    @Scheduled(cron = "0 0 * * * ?") // 매 시간 정각에 실행
     public void runShopHourlyUsageJob() throws Exception {
         // UUID를 사용하여 고유한 JobParameters 생성
         JobParameters jobParameters = new JobParametersBuilder()
@@ -46,8 +46,8 @@ public class BatchScheduler {
     }
 
 
-    // 매일 23시 59분에 실행
-    @Scheduled(cron = "0 59 23 * * ?")
+    // 매일 0시 0분 1초에 실행
+    @Scheduled(cron = "1 0 0 * * ?")
     public void runShopDailyUsageJob() throws Exception {
         // UUID를 사용하여 고유한 JobParameters 생성
         JobParameters jobParameters = new JobParametersBuilder()

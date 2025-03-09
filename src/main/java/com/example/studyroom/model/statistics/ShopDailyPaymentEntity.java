@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -20,9 +21,6 @@ public class ShopDailyPaymentEntity  extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shop_id", foreignKey = @ForeignKey(name = "fk_shop_id"), nullable = false)
     private ShopEntity shop;
-
-    @Column
-    private String date;
 
     @Column(nullable = false)
     private int year;
@@ -43,5 +41,6 @@ public class ShopDailyPaymentEntity  extends BaseEntity {
     @Column(name = "ticket_type", nullable = false) // insertable=false, updatable=false로 설정하여 서브클래스에서 중복 매핑을 방지
     private TicketTypeEnum ticketType; // PERIOD or TIME
 
-
+    @Column(nullable = false) // 날짜 컬럼 추가
+    private LocalDate usageDate;  // 추가된 날짜 컬럼
 }

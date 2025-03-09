@@ -5,6 +5,7 @@ import com.example.studyroom.model.ShopEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 @Getter
@@ -38,6 +39,9 @@ public class ShopUsageHourlyEntity extends BaseEntity {
     @Column(nullable = false)
     private int occupancyCount;
 
+    @Column(nullable = false) // 날짜 컬럼 추가
+    private LocalDate usageDate;  // 추가된 날짜 컬럼
+
     public static ShopUsageHourlyEntity from(ShopEntity shop, OffsetDateTime dateTime, int occupancyCount) {
         return ShopUsageHourlyEntity.builder()
                 .shop(shop)
@@ -46,7 +50,9 @@ public class ShopUsageHourlyEntity extends BaseEntity {
                 .day(dateTime.getDayOfMonth())
                 .dayOfWeek(dateTime.getDayOfWeek())
                 .hour(dateTime.getHour())
+                .usageDate(dateTime.toLocalDate())
                 .occupancyCount(occupancyCount)
                 .build();
     }
+
 }

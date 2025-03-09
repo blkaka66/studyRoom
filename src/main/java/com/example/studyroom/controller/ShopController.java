@@ -82,12 +82,12 @@ public class ShopController {
     @GetMapping("/member-list/{shop_id}")
     public ResponseEntity<FinalResponseDto<List<MemberResponseDto>>> memberList(@PathVariable("shop_id") Long shopId) {
 
-        // TODO: MemberResponseDto.of 관련 제거 (서비스 안쪽으로 로직 이동)
-//        FinalResponseDto<List<MemberResponseDto>> memberDtos = this.shopService.getMemberList(shopId);
-//
-//        return ResponseEntity.ok(memberDtos);
-
         return ResponseEntity.ok(this.shopService.getMemberList(shopId));
+    }
+
+    @PostMapping("/member/force-delete")
+    public ResponseEntity<FinalResponseDto<String>> forceDeleteUser(@RequestBody ForceDeleteUserRequestDto dto) {
+        return ResponseEntity.ok(this.shopService.forceDeleteUser(dto));
     }
 
     @GetMapping("/seat-usage/{shop_id}")
@@ -180,6 +180,11 @@ public class ShopController {
         return ResponseEntity.ok(this.shopService.getShopDailyPaymentsByDateRange(dto));
     }
 
+    @PostMapping("/statistics/payment-by-name")
+    public ResponseEntity<FinalResponseDto<PaymentHistoryDto>> getShopPaymentByDateRangeAndByName(@RequestBody ShopPaymentRequestIncludeNameDto dto) {
+        return ResponseEntity.ok(this.shopService.getShopDailyPaymentsByDateRangeAndByName(dto));
+    }
+
     @PostMapping("/statistics/shopUsage")
     public ResponseEntity<FinalResponseDto<List<ShopUsageResponseDto>>> getShopUsageByDateRange(@RequestBody ShopUsageRequestDto dto) {
         return ResponseEntity.ok(this.shopService.getShopUsageByDateRange(dto));
@@ -194,6 +199,8 @@ public class ShopController {
     public ResponseEntity<FinalResponseDto<List<UserChangeStatsResponseDto>>> getUserChangeStatsByDateRange(@RequestBody UserChangeStatsRequestDto dto) {
         return ResponseEntity.ok(this.shopService.getUserChangeStatsByDateRange(dto));
     }
+
+
 
 }
 

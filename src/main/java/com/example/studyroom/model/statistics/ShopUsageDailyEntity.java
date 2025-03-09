@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 //시간대별 이용률
 
@@ -36,6 +37,9 @@ public class ShopUsageDailyEntity extends BaseEntity {
     @Column(nullable = false)
     private int occupancyCount;
 
+    @Column(nullable = false) // 날짜 컬럼 추가
+    private LocalDate usageDate;  // 추가된 날짜 컬럼
+
     public static ShopUsageDailyEntity from(ShopEntity shop, OffsetDateTime dateTime, int occupancyCount) {
         return ShopUsageDailyEntity.builder()
                 .shop(shop)
@@ -43,6 +47,7 @@ public class ShopUsageDailyEntity extends BaseEntity {
                 .month(dateTime.getMonthValue())
                 .day(dateTime.getDayOfMonth())
                 .dayOfWeek(dateTime.getDayOfWeek())
+                .usageDate(dateTime.toLocalDate())
                 .occupancyCount(occupancyCount)
                 .build();
     }

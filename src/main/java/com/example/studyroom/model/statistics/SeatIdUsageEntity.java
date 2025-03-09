@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.Map;
 
 @Getter
@@ -35,6 +36,9 @@ public class SeatIdUsageEntity extends BaseEntity {
 
     @Column(nullable = false)
     private int hour;
+
+    @Column(nullable = false) // 날짜 컬럼 추가
+    private LocalDate usageDate;  // 추가된 날짜 컬럼
 
     // 좌석 ID별 사용 시간 (분 단위)
     @ElementCollection

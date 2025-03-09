@@ -533,6 +533,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         MemberResponseDto responseDto = MemberResponseDto.builder()
                 .name(member.get().getName())
                 .phone(member.get().getPhone())
+                .userId(member.get().getId())
                 .build();
         return FinalResponseDto.successWithData(responseDto);
     }

@@ -4,14 +4,10 @@ import com.example.studyroom.model.statistics.CustomerChangeStatsEntity;
 import com.example.studyroom.model.statistics.ShopDailyPaymentEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface CustomerChangeStatsRepository extends JpaRepository<CustomerChangeStatsEntity, Long> {
 
-    List<CustomerChangeStatsEntity> findByShopIdAndYearBetweenAndMonthBetweenAndDayBetween(
-            long shopId,
-            int startYear, int endYear,
-            int startMonth, int endMonth,
-            int startDay, int endDay
-    );
+    List<CustomerChangeStatsEntity> findByShopIdAndUsageDateBetween(long shopId, LocalDate startDate, LocalDate endDate);
 }
