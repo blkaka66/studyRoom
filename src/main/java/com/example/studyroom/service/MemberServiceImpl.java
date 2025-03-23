@@ -211,8 +211,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         enterHistoryRepository.save(enterHistory);
     }
     @Override
+    @Transactional
     public boolean updateSeatAvailability(SeatEntity seat) {
-        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(seat.getSeatCode(), seat.getRoom().getId());
+        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_IdWithPessimisticLock(seat.getSeatCode(), seat.getRoom().getId());
         if (seatOpt.isPresent()) {
             SeatEntity updatedSeat = seatOpt.get();
             updatedSeat.setAvailable(true);
@@ -306,7 +307,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         if(roomOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.ROOM_NOT_FOUND);
 
         Long roomId = roomOpt.get().getId();
-        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_Id(requestDto.getSeatCode(), roomId);//자리체크
+        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_IdWithPessimisticLock(requestDto.getSeatCode(), roomId);//자리체크
         if(seatOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
 
         SeatEntity seat = seatOpt.get();
@@ -395,6 +396,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
     @Override
+    @Transactional
     public FinalResponseDto<String> moveAndHandleTicket(MemberEntity member, MemberMoveRequestDto requestDto) {
         EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(member.getId());
         if (enterHistory == null) {
@@ -402,10 +404,10 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         }
 
         // 현재 자리와 새 자리 유효성 검사
-        Optional<SeatEntity> currentSeatOpt = seatRepository.findBySeatCodeAndRoom_Id(
+        Optional<SeatEntity> currentSeatOpt = seatRepository.findBySeatCodeAndRoom_IdWithPessimisticLock(
                 enterHistory.getSeat().getSeatCode(), enterHistory.getSeat().getRoom().getId()
         );
-        Optional<SeatEntity> newSeatOpt = seatRepository.findBySeatCodeAndRoom_Id(
+        Optional<SeatEntity> newSeatOpt = seatRepository.findBySeatCodeAndRoom_IdWithPessimisticLock(
                 requestDto.getSeatCode(), requestDto.getRoomId()
         );
 
