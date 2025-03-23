@@ -95,16 +95,30 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     }
 
     @Override
-    public FinalResponseDto<List<MemberResponseDto>> getMemberList(Long shopId) {
+    public FinalResponseDto<List<MemberResponseDto>> getMemberListAndInfo(Long shopId) {
         Optional<ShopEntity> shop = this.findById(shopId);
-        if(shop.isEmpty()){
-            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
-        }
-        else {
-            return FinalResponseDto.successWithData(MemberResponseDto.of(shop.get().getMembers()));
-        }
 
+        if (shop.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        } else {
+            List<MemberEntity> members = shop.get().getMembers();
+
+            List<MemberResponseDto> responseDtos = members.stream()
+                    .map(member -> MemberResponseDto.builder()
+                            .name(member.getName())
+                            .phone(member.getPhone())
+                            .userId(member.getId())
+                            .createdAt(member.getCreatedAt())
+                            .lastEnterTime(member.getLastEnterTime())
+                            .build()
+                    )
+                    .collect(Collectors.toList());
+
+            return FinalResponseDto.successWithData(responseDtos);
+        }
     }
+
+
 
     @Override //지점목록 가져오기
     public FinalResponseDto<List<ShopEntity>> getShopList() {//shopId가 안들어오면 모든 리스트를 보내고 shopid가 들어오면 해당 shop리스트만 보내고
@@ -680,7 +694,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     public FinalResponseDto<PaymentHistoryDto> getShopDailyPaymentsByDateRangeAndByName(ShopPaymentRequestIncludeNameDto requestDto) {
         // ShopPaymentRequestIncludeNameDto에서 startDate와 endDate를 추출하여 PaymentHistoryDateRequestDto 객체 생성
         PaymentHistoryDateRequestDto paymentHistoryDateRequestDto = PaymentHistoryDateRequestDto.fromShopPaymentRequestIncludeNameDto(requestDto);
-
+        System.out.println("requestDto^^"+requestDto);
         // 이후 paymentHistoryDateRequestDto를 사용하여 결제 내역을 조회
         LocalDate localStartDate = paymentHistoryDateRequestDto.getStartDate();
         LocalDate localEndDate = paymentHistoryDateRequestDto.getEndDate();

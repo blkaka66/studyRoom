@@ -175,9 +175,11 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                 .name(member.getName())
                 .password(passwordEncoder.encode(member.getPassword()))
                 .shop(shopOptional.get())
+                .createdAt(OffsetDateTime.now())
                 .build();
         //createdMember.setShop(shopOptional.get());
         repository.save(createdMember);
+
         return FinalResponseDto.successWithData(createdMember);
     }
 
@@ -312,6 +314,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
         Optional<MemberEntity> memberOpt = repository.findById(member.getId());
         if(memberOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+
         return handleTicketOccupation(member, seat);
 
     }
@@ -344,6 +347,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
             EnterHistoryEntity enterHistory = EnterHistoryEntity.builder().member(member).seat(seat).enterTime(now).shop(member.getShop()).build();
             enterHistoryRepository.save(enterHistory);
+            member.updateLastEnterTime();
+            memberRepository.save(member);
             return FinalResponseDto.success();
         } else {
             return FinalResponseDto.failure(ApiResult.EXPIRED_TICKET);
@@ -363,6 +368,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         OffsetDateTime now = OffsetDateTime.now();
         EnterHistoryEntity enterHistory = EnterHistoryEntity.builder().member(member).seat(seat).enterTime(now).shop(member.getShop()).build();
         enterHistoryRepository.save(enterHistory);
+        member.updateLastEnterTime();
+        memberRepository.save(member);
+
         return FinalResponseDto.success();
     }
 

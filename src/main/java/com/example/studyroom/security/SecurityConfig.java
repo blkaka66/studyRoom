@@ -90,10 +90,13 @@ public class SecurityConfig  {
         // 권한 규칙 작성
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(AUTH_WHITELIST).permitAll()
-                        //@PreAuthrization을 사용할 것이기 때문에 모든 경로에 대한 인증처리는 Pass
-//                        .anyRequest().permitAll()
+                        .requestMatchers("/ws/**").permitAll()  // ✅ WebSocket 엔드포인트 인증 없이 허용
+                        .requestMatchers("/chat/**").authenticated()  // ✅ 채팅 API는 인증 필요
                         .anyRequest().authenticated()
         );
+
+
+
 
         return http.build();
     }

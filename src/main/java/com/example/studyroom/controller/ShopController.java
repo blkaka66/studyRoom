@@ -82,7 +82,7 @@ public class ShopController {
     @GetMapping("/member-list/{shop_id}")
     public ResponseEntity<FinalResponseDto<List<MemberResponseDto>>> memberList(@PathVariable("shop_id") Long shopId) {
 
-        return ResponseEntity.ok(this.shopService.getMemberList(shopId));
+        return ResponseEntity.ok(this.shopService.getMemberListAndInfo(shopId));
     }
 
     @PostMapping("/member/force-delete")
@@ -189,6 +189,8 @@ public class ShopController {
     public ResponseEntity<FinalResponseDto<List<ShopUsageResponseDto>>> getShopUsageByDateRange(@RequestBody ShopUsageRequestDto dto) {
         return ResponseEntity.ok(this.shopService.getShopUsageByDateRange(dto));
     }
+
+
 
     @PostMapping("/statistics/userAvrUsage")
     public ResponseEntity<FinalResponseDto<List<UserAvrUsageResponseDto>>> getUserAvrUsageByDateRange(@RequestBody UserAvrUsageRequestDto dto) {

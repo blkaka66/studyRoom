@@ -14,7 +14,7 @@ import java.util.List;
 public interface ShopService extends BaseService<ShopEntity> {
     boolean existsByEmail(String email);
    // List<MemberEntity> getMemberList(Long shopId);
-   FinalResponseDto<List<MemberResponseDto>> getMemberList(Long shopId);
+   FinalResponseDto<List<MemberResponseDto>> getMemberListAndInfo(Long shopId);
     //List<ShopEntity> getShopList();
     FinalResponseDto getShopList();
 //    List<ShopListResponseDto> getShopListResponseDto(Long shopId);
@@ -66,6 +66,8 @@ public interface ShopService extends BaseService<ShopEntity> {
     FinalResponseDto<List<ShopDailyPaymentResponseDto>> getShopDailyPaymentsByDateRange(ShopPaymentRequestDto requestDto);
 
     FinalResponseDto<PaymentHistoryDto> getShopDailyPaymentsByDateRangeAndByName(ShopPaymentRequestIncludeNameDto requestDto);
+
+
 
     FinalResponseDto<List<ShopUsageResponseDto>> getShopUsageByDateRange(ShopUsageRequestDto requestDto);
 
