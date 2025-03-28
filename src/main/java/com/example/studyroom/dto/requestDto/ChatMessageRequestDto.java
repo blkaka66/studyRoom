@@ -6,6 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ChatMessageRequestDto {
+    private Long roomId;
     private Long senderId;         // 보낸 사람 ID
     private String senderType;     // 보낸 사람 타입 (user or admin)
     private Long receiverId;       // 받는 사람 ID

@@ -152,10 +152,9 @@ public class ShopController {
     }
 
 
-    @GetMapping("/announcement")
-    public ResponseEntity<FinalResponseDto<List<AnnouncementResponseDto>>> getAnnouncementList() {
-        Long id = JwtUtil.getMember().getShop().getId();
-        return ResponseEntity.ok(this.shopService.getAnnouncementList(id));
+    @GetMapping("/announcement-list/{id}")
+    public ResponseEntity<FinalResponseDto<List<AnnouncementResponseDto>>> getAnnouncementList(@PathVariable("id") Long shopId) {
+        return ResponseEntity.ok(this.shopService.getAnnouncementList(shopId));
     }
 
     @GetMapping("/announcement/{id}")
