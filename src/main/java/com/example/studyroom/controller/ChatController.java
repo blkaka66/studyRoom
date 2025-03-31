@@ -59,6 +59,7 @@ public class ChatController {
 
     // 채팅방 ID로 채팅방 사람 정보 조회
     @GetMapping("/chat/room/{roomId}")
+    @ResponseBody
     public FinalResponseDto<ChatRoomResponseDto> getRoomInfo(@PathVariable Long roomId) {
 
         return chatService.getRoomInfoById(roomId);

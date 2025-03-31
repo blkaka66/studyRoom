@@ -84,6 +84,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         try {
             ChatRoomEntity room = getOrCreateRoom(chatMessage);
             String messageJson = objectMapper.writeValueAsString(chatMessage);
+            log.info("메시지: {}", messageJson);
             kafkaProducerService.sendChatMessage("chat-messages", messageJson);
             messagingTemplate.convertAndSend("/topic/room/" + room.getId(), chatMessage);
         } catch (Exception e) {

@@ -57,7 +57,7 @@ public class SecurityConfig  {
 //        }
 
         //CSRF, CORS
-        http.csrf((csrf) -> csrf.disable());
+        http.csrf(AbstractHttpConfigurer::disable);
         //http.cors(Customizer.withDefaults());
         http.cors(cors -> cors.configurationSource(request -> {
             var corsConfig = new org.springframework.web.cors.CorsConfiguration();
@@ -94,9 +94,6 @@ public class SecurityConfig  {
                         .requestMatchers("/chat/**").authenticated()  // ✅ 채팅 API는 인증 필요
                         .anyRequest().authenticated()
         );
-
-
-
 
         return http.build();
     }
