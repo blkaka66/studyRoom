@@ -35,7 +35,7 @@ public interface MemberService extends BaseService<MemberEntity> {
 
     void updateExitTime(EnterHistoryEntity enterHistory);
 
-    boolean updateSeatAvailability(SeatEntity seat);
+    //boolean updateSeatAvailability(SeatEntity seat);
 
     FinalResponseDto<String> moveAndHandleTicket(MemberEntity member,MemberMoveRequestDto requestDto);//자리이동
 

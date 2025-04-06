@@ -12,6 +12,7 @@ public class ChatRoomResponseDto {
     private Long userId;
     private String userType;
     private Long partnerId;
+    private int unreadCount;
     private String partnerType;
     private String lastMessage;
     private String lastTimestamp;

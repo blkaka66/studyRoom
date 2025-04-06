@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -56,7 +57,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
     @Override
     public ChatRoomEntity getOrCreateRoom(Long userId, String userType, Long partnerId, String partnerType) {
         return chatRoomRepository
-                .findByUserIdAndUserTypeAndPartnerIdAndPartnerType(userId, userType, partnerId, partnerType)
+                .findChatRoomBidirectional(userId, userType, partnerId, partnerType)
                 .orElseGet(() -> {
                     ChatRoomEntity newRoom = new ChatRoomEntity();
                     newRoom.setUserId(userId);
@@ -87,6 +88,17 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
             log.info("메시지: {}", messageJson);
             kafkaProducerService.sendChatMessage("chat-messages", messageJson);
             messagingTemplate.convertAndSend("/topic/room/" + room.getId(), chatMessage);
+
+            String unreadKey = "chat:unread:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId() + ":room:" + room.getId();
+            String readingKey = unreadKey + ":reading";
+
+            Boolean isReading = redisTemplate.hasKey(readingKey);
+            if (Boolean.TRUE.equals(isReading)) {
+                log.info("상대방이 현재 방을 보고 있어 unread count 증가 생략");
+            } else {
+                redisTemplate.opsForValue().increment(unreadKey);
+            }
+
         } catch (Exception e) {
             log.error("채팅 메시지 처리 중 오류 발생: {}", e.getMessage());
         }
@@ -108,8 +120,6 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         List<ChatRoomEntity> rooms = chatRoomRepository.findRoomsByUserOrPartner(userId, userType);
 
         List<ChatRoomResponseDto> myRooms = rooms.stream().map(room -> {
-
-
             ChatRoomResponseDto.ChatRoomResponseDtoBuilder builder = ChatRoomResponseDto.builder()
                     .roomId(room.getId())
                     .userId(room.getUserId())
@@ -117,18 +127,20 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
                     .partnerId(room.getPartnerId())
                     .partnerType(room.getPartnerType());
 
-
             chatRepository.findTopByRoomOrderByTimestampDesc(room).ifPresent(lastMessage -> {
                 builder.lastMessage(lastMessage.getMessage());
                 builder.lastTimestamp(lastMessage.getTimestamp().toString());
             });
+
+            String unreadKey = "chat:unread:" + userType + ":" + userId + ":room:" + room.getId();
+            String unreadCount = redisTemplate.opsForValue().get(unreadKey);
+            builder.unreadCount(unreadCount != null ? Integer.parseInt(unreadCount) : 0);
 
             return builder.build();
         }).collect(Collectors.toList());
 
         return FinalResponseDto.successWithData(myRooms);
     }
-
 
     @Override
     public FinalResponseDto<List<ChatMessageResponseDto>> getChatHistoryPaged(ChatHistoryPageRequestDto dto) {
@@ -137,14 +149,17 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
 
-        Pageable pageable = PageRequest.of(dto.getPage(), dto.getSize(), Sort.by("timestamp").descending());
-        Page<ChatMessageEntity> page = chatRepository.findByRoom(roomOpt.get(), pageable);
+        int size = dto.getSize() <= 0 ? 20 : dto.getSize();
+        int page = dto.getPage() < 0 ? 0 : dto.getPage();
 
-        if (page.isEmpty()) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("timestamp").descending());
+        Page<ChatMessageEntity> resultPage = chatRepository.findByRoom(roomOpt.get(), pageable);
+
+        if (resultPage.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
 
-        List<ChatMessageResponseDto> messages = page.getContent().stream()
+        List<ChatMessageResponseDto> messages = resultPage.getContent().stream()
                 .map(e -> ChatMessageResponseDto.builder()
                         .senderId(e.getSenderId())
                         .senderType(e.getSenderType())
@@ -158,8 +173,6 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         return FinalResponseDto.successWithData(messages);
     }
 
-
-    // roomId 기준으로 채팅방 정보 조회
     @Override
     public FinalResponseDto<ChatRoomResponseDto> getRoomInfoById(Long roomId) {
         Optional<ChatRoomEntity> optionalRoom = chatRoomRepository.findById(roomId);
@@ -169,7 +182,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         }
 
         ChatRoomEntity room = optionalRoom.get();
-        log.info(room.getPartnerType()+room.getPartnerId()+"room!!");
+        log.info(room.getPartnerType() + room.getPartnerId() + "room!!");
         ChatRoomResponseDto dto = ChatRoomResponseDto.builder()
                 .roomId(room.getId())
                 .userId(room.getUserId())
@@ -181,4 +194,15 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         return FinalResponseDto.successWithData(dto);
     }
 
+    @Override
+    public void markMessagesAsRead(Long roomId, String userType, Long userId) {
+        String unreadKey = "chat:unread:" + userType + ":" + userId + ":room:" + roomId;
+        redisTemplate.delete(unreadKey);
+    }
+
+    @Override
+    public void markReadingStatus(Long roomId, String userType, Long userId) {
+        String readingKey = "chat:unread:" + userType + ":" + userId + ":room:" + roomId + ":reading";
+        redisTemplate.opsForValue().set(readingKey, "1", 10, TimeUnit.MINUTES);
+    }
 }

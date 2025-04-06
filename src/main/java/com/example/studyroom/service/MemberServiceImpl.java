@@ -13,6 +13,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,7 +30,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
-
+@Slf4j
 @Service
 public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements MemberService {
 
@@ -54,6 +55,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     private final PeriodTicketServiceImpl periodTicketServiceImpl;
     private final PasswordEncoder passwordEncoder;
+    private final SeatService seatService;
 
     public MemberServiceImpl(MemberRepository repository,
                             EnterHistoryRepository enterHistoryRepository,
@@ -66,7 +68,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                              DeleteMemberRepository deleteMemberRepository,
                              RemainTimeTicketRepository remainTimeTicketRepository, JwtUtil jwtUtil,
                              PeriodTicketServiceImpl periodTicketServiceImpl
-                            , PasswordEncoder passwordEncoder) {
+                            , PasswordEncoder passwordEncoder,SeatService seatService) {
         super(repository);
         this.repository = repository;
         this.enterHistoryRepository = enterHistoryRepository;
@@ -85,6 +87,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         this.deleteMemberRepository = deleteMemberRepository;
         this.periodTicketServiceImpl = periodTicketServiceImpl;
         this.passwordEncoder = passwordEncoder;
+        this.seatService = seatService;
     }
 
 
@@ -191,7 +194,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         }
 
         updateExitTime(enterHistory);
-        boolean isUpdateSeatAvailability = updateSeatAvailability(enterHistory.getSeat());
+        boolean isUpdateSeatAvailability = seatService.updateSeatAvailability(enterHistory.getSeat().getId());
 
         if(!isUpdateSeatAvailability){
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
@@ -210,19 +213,20 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         enterHistory.setExitTime(OffsetDateTime.now());
         enterHistoryRepository.save(enterHistory);
     }
-    @Override
-    @Transactional
-    public boolean updateSeatAvailability(SeatEntity seat) {
-        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_IdWithPessimisticLock(seat.getSeatCode(), seat.getRoom().getId());
-        if (seatOpt.isPresent()) {
-            SeatEntity updatedSeat = seatOpt.get();
-            updatedSeat.setAvailable(true);
-            seatRepository.save(updatedSeat);
-            return true;
-        } else {
-            return false;
-        }
-    }
+
+//    @Override
+//    @Transactional
+//    public boolean updateSeatAvailability(SeatEntity seat) {
+//        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_IdWithPessimisticLock(seat.getSeatCode(), seat.getRoom().getId());
+//        if (seatOpt.isPresent()) {
+//            SeatEntity updatedSeat = seatOpt.get();
+//            updatedSeat.setAvailable(true);
+//            seatRepository.save(updatedSeat);
+//            return true;
+//        } else {
+//            return false;
+//        }
+//    }
 
     private boolean handleTicketExit(Long userId) {
         if (handlePeriodTicket(userId)) { //기간권먼저체크
@@ -381,9 +385,12 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
         String matchingKey = redisService.getUsingTicketCategoryInfoByUserId(userId);
         if(matchingKey==null){
+            log.info("matchingKey없음");
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
+
         String ticketCategory = matchingKey.substring(0, matchingKey.indexOf(':'));
+        log.info("ticketCategory"+ticketCategory);
         if(ticketCategory.equals("timeSeat")){//현재 시간권 사용하면
             RemainTicketInfoResponseDto result = redisService.getReaminTimeInfoByUserId(matchingKey,ticketCategory);
             return FinalResponseDto.successWithData(result);
@@ -391,6 +398,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             RemainTicketInfoResponseDto result =  periodTicketServiceImpl.getEndDate(shopId,userId,ticketCategory);
             return FinalResponseDto.successWithData(result);
         }
+        log.info("티켓이없음");
         return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
 
     }

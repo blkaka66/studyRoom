@@ -22,18 +22,20 @@ public class RedisExpirationListener implements MessageListener {
     private final SeatRepository seatRepository;
     private final MemberService memberService;
     private final EnterHistoryRepository enterHistoryRepository;
+    private final SeatService seatService;
     @Autowired
     public RedisExpirationListener(RemainPeriodTicketRepository remainPeriodTicketRepository
     , RemainTimeTicketRepository remainTimeTicketRepository,
     RemainTimeTicketService remainTimeTicketService,
     SeatRepository seatRepository , MemberService memberService
-    , EnterHistoryRepository enterHistoryRepository) {
+    , EnterHistoryRepository enterHistoryRepository , SeatService seatService) {
         this.remainPeriodTicketRepository = remainPeriodTicketRepository;
         this.remainTimeTicketRepository = remainTimeTicketRepository;
         this.remainTimeTicketService = remainTimeTicketService;
         this.seatRepository = seatRepository;
         this.memberService = memberService;
         this.enterHistoryRepository = enterHistoryRepository;
+        this.seatService = seatService;
     }
 
     @Transactional
@@ -56,7 +58,7 @@ public class RedisExpirationListener implements MessageListener {
 //                .orElseThrow(() -> new IllegalArgumentException("Seat not found for id: " + seatId));
 
         EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
-        boolean isUpdateSeatAvailability= memberService.updateSeatAvailability(enterHistory.getSeat());
+        boolean isUpdateSeatAvailability= seatService.updateSeatAvailability(enterHistory.getSeat().getId());
         if(!isUpdateSeatAvailability){
             System.out.println("존재하지 않는 좌석: " + expiredKey);
         }

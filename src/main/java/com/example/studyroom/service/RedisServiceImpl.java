@@ -96,11 +96,22 @@ public class RedisServiceImpl implements RedisService {
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));  // 키 존재 여부 확인
     }
 
+//    @Override
+//    public String getUsingTicketCategoryInfoByUserId(Long userId) {
+//        String pattern = "*:user:" + userId + ":*";
+//        return findMatchingKey(pattern);
+//    }
+
     @Override
     public String getUsingTicketCategoryInfoByUserId(Long userId) {
-        String pattern = "*:user:" + userId + ":*";
-        return findMatchingKey(pattern);
+        String timeKey = findMatchingKey("timeSeat:*:user:" + userId + ":*");
+        if (timeKey != null) {
+            return timeKey;
+        }
+
+        return findMatchingKey("periodSeat:*:user:" + userId + ":*");
     }
+
 
     @Override
     public RemainTicketInfoResponseDto getReaminTimeInfoByUserId(String matchingKey, String ticketCategory) {

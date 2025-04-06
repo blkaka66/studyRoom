@@ -3,6 +3,7 @@ package com.example.studyroom.controller;
 import com.example.studyroom.dto.requestDto.ChatHistoryPageRequestDto;
 import com.example.studyroom.dto.requestDto.ChatMessageRequestDto;
 import com.example.studyroom.dto.requestDto.EnterChatRoomRequestDto;
+import com.example.studyroom.dto.requestDto.MarkAsReadRequestDto;
 import com.example.studyroom.dto.responseDto.ChatMessageResponseDto;
 import com.example.studyroom.dto.responseDto.ChatRoomResponseDto;
 import com.example.studyroom.dto.responseDto.FinalResponseDto;
@@ -33,7 +34,21 @@ public class ChatController {
     @ResponseBody
     public FinalResponseDto<Long> enterChatRoom(@RequestBody EnterChatRoomRequestDto dto) {
         Long roomId = chatService.enterChatRoom(dto);
+
         return FinalResponseDto.successWithData(roomId);
+    }
+
+    @PostMapping("/chat/reading")
+    @ResponseBody
+    public FinalResponseDto<String> markReadingStatus(@RequestBody MarkAsReadRequestDto dto) {
+        chatService.markReadingStatus(dto.getRoomId(), dto.getUserType(), dto.getUserId());
+        return FinalResponseDto.successWithData("읽고 있는 상태 갱신");
+    }
+
+    @PostMapping("/chat/read")
+    @ResponseBody
+    public void markAsRead(@RequestBody MarkAsReadRequestDto dto) {
+        chatService.markMessagesAsRead(dto.getRoomId(), dto.getUserType(), dto.getUserId());
     }
 
     // 내가 속한 채팅방 목록 조회

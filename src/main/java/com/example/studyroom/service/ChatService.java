@@ -39,5 +39,9 @@ public interface ChatService extends BaseService<ChatMessageEntity> {
     //채팅방 입장시 정보조회
     FinalResponseDto<ChatRoomResponseDto> getRoomInfoById(Long roomId);
 
+    //안읽은 메시지 읽었다고 알려주기
+    void markMessagesAsRead(Long roomId, String userType, Long userId);
 
+    //채팅방에 입장중인거 알려주기
+    void markReadingStatus(Long roomId, String userType, Long userId);
 }

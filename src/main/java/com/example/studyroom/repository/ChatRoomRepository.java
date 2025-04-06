@@ -18,4 +18,13 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoomEntity, Long> 
     List<ChatRoomEntity> findRoomsByUserOrPartner(@Param("id") Long id, @Param("type") String type);
 
 
+
+
+    //두 사용자 조합으로 중복 체크
+    @Query("SELECT r FROM ChatRoomEntity r " +
+            "WHERE (r.userId = :userId AND r.userType = :userType AND r.partnerId = :partnerId AND r.partnerType = :partnerType) " +
+            "   OR (r.userId = :partnerId AND r.userType = :partnerType AND r.partnerId = :userId AND r.partnerType = :userType)")
+    Optional<ChatRoomEntity> findChatRoomBidirectional(Long userId, String userType, Long partnerId, String partnerType);
+
+
 }
