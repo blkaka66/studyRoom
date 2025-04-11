@@ -9,8 +9,8 @@ import lombok.Setter;
 @Builder
 public class ChatRoomResponseDto {
     private Long roomId;
-    private Long userId;
-    private String userType;
+    private Long senderId;
+    private String senderType;
     private Long partnerId;
     private int unreadCount;
     private String partnerType;

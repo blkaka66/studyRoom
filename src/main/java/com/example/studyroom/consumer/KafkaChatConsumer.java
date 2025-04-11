@@ -22,9 +22,7 @@ public class KafkaChatConsumer {
     private final ObjectMapper objectMapper;
     private final ChatRepository chatRepository;
     private final ChatRoomRepository chatRoomRepository;
-    private final ChatService chatService;
 
-    // Kafka 메시지 수신 및 DB 저장 처리
     @KafkaListener(topics = "chat-messages", groupId = "chat-group")
     public void consume(String messageJson) {
         log.info("Kafka 메시지 수신: {}", messageJson);
@@ -32,12 +30,19 @@ public class KafkaChatConsumer {
         try {
             ChatMessageRequestDto chatMessage = objectMapper.readValue(messageJson, ChatMessageRequestDto.class);
 
-            ChatRoomEntity room = chatService.getOrCreateRoom(
-                    chatMessage.getSenderId(),
-                    chatMessage.getSenderType(),
-                    chatMessage.getReceiverId(),
-                    chatMessage.getReceiverType()
-            );
+            // 기존 방 찾기
+            ChatRoomEntity room = chatRoomRepository
+                    .findLatestActiveRoomBidirectional(
+                            chatMessage.getSenderId(),
+                            chatMessage.getSenderType(),
+                            chatMessage.getReceiverId(),
+                            chatMessage.getReceiverType()
+                    )
+                    .orElseThrow(() -> {
+                        log.error("채팅방이 존재하지 않음: sender {} → receiver {}", chatMessage.getSenderId(), chatMessage.getReceiverId());
+
+                        return new IllegalStateException("채팅방 없음");
+                    });
 
             ChatMessageEntity entity = new ChatMessageEntity();
             entity.setRoom(room);
@@ -47,13 +52,14 @@ public class KafkaChatConsumer {
             entity.setReceiverType(chatMessage.getReceiverType());
             entity.setMessage(chatMessage.getMessage());
 
-            LocalDateTime timestamp = LocalDateTime.parse(chatMessage.getTimestamp());
-            entity.setTimestamp(timestamp);
+            entity.setTimestamp(LocalDateTime.parse(chatMessage.getTimestamp()));
 
             chatRepository.save(entity);
             log.info("Kafka 메시지 저장 완료");
+
         } catch (Exception e) {
             log.error("Kafka 메시지 처리 실패: {}", e.getMessage());
         }
     }
 }
+

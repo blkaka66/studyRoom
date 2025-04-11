@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class EnterChatRoomRequestDto {
+public class CreateChatRoomRequestDto {
     private Long requesterId;
     private String requesterType;
     private Long partnerId;

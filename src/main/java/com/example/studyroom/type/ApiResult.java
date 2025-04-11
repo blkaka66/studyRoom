@@ -19,7 +19,10 @@ public enum ApiResult {
     DATA_NOT_FOUND("3000", "데이터가없음"),
     TIMEOUT_EXCEEDED("3001", "유효시간초과"),
     TICKET_NOT_FOUND("3002", "구매한티켓없음"),
-    EXPIRED_TICKET("3003", "만료된 티켓");
+    EXPIRED_TICKET("3003", "만료된 티켓"),
+    ALREADY_EXIST_ROOM("3004", "채팅방이 이미 존재합니다"),
+    ALREADY_CLOSED_ROOM("3005", "닫힌 채팅방입니다"),
+    ;
     private String code;
     private String message;
 

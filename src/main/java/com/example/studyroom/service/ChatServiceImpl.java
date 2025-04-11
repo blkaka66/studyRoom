@@ -1,11 +1,7 @@
 package com.example.studyroom.service;
 
-import com.example.studyroom.dto.requestDto.ChatHistoryPageRequestDto;
-import com.example.studyroom.dto.requestDto.ChatMessageRequestDto;
-import com.example.studyroom.dto.requestDto.EnterChatRoomRequestDto;
-import com.example.studyroom.dto.responseDto.ChatMessageResponseDto;
-import com.example.studyroom.dto.responseDto.ChatRoomResponseDto;
-import com.example.studyroom.dto.responseDto.FinalResponseDto;
+import com.example.studyroom.dto.requestDto.*;
+import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.ChatMessageEntity;
 import com.example.studyroom.model.ChatRoomEntity;
 import com.example.studyroom.repository.ChatRepository;
@@ -28,138 +24,312 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
+@Slf4j
 public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implements ChatService {
 
-    private final KafkaProducerService kafkaProducerService;
-    private final ChatRepository chatRepository;
     private final ChatRoomRepository chatRoomRepository;
+    private final ChatRepository chatRepository;
+    private final KafkaProducerService kafkaProducerService;
+    private final SimpMessagingTemplate messagingTemplate;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
-    private final SimpMessagingTemplate messagingTemplate;
 
     public ChatServiceImpl(JpaRepository<ChatMessageEntity, Long> repository,
-                           ChatRepository chatRepository,
                            ChatRoomRepository chatRoomRepository,
-                           StringRedisTemplate redisTemplate,
+                           ChatRepository chatRepository,
+                           KafkaProducerService kafkaProducerService,
                            SimpMessagingTemplate messagingTemplate,
-                           KafkaProducerService kafkaProducerService) {
+                           StringRedisTemplate redisTemplate) {
         super(repository);
-        this.chatRepository = chatRepository;
         this.chatRoomRepository = chatRoomRepository;
-        this.redisTemplate = redisTemplate;
-        this.messagingTemplate = messagingTemplate;
-        this.objectMapper = new ObjectMapper();
+        this.chatRepository = chatRepository;
         this.kafkaProducerService = kafkaProducerService;
+        this.messagingTemplate = messagingTemplate;
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = new ObjectMapper();
     }
 
-    @Override
-    public ChatRoomEntity getOrCreateRoom(Long userId, String userType, Long partnerId, String partnerType) {
-        return chatRoomRepository
-                .findChatRoomBidirectional(userId, userType, partnerId, partnerType)
-                .orElseGet(() -> {
-                    ChatRoomEntity newRoom = new ChatRoomEntity();
-                    newRoom.setUserId(userId);
-                    newRoom.setUserType(userType);
-                    newRoom.setPartnerId(partnerId);
-                    newRoom.setPartnerType(partnerType);
-                    newRoom.setCreatedAt(LocalDateTime.now());
-                    return chatRoomRepository.save(newRoom);
-                });
-    }
+    // 채팅방 생성 (이미 존재하면 예외)
 
     @Override
-    public ChatRoomEntity getOrCreateRoom(ChatMessageRequestDto dto) {
-        return getOrCreateRoom(dto.getSenderId(), dto.getSenderType(), dto.getReceiverId(), dto.getReceiverType());
-    }
+    public FinalResponseDto<CreateChatRoomResponseDto> createChatRoom(CreateChatRoomRequestDto dto) {
+        Optional<ChatRoomEntity> existingOpt = chatRoomRepository.findLatestActiveRoomBidirectional(
+                dto.getRequesterId(), dto.getRequesterType(),
+                dto.getPartnerId(), dto.getPartnerType()
+        );
 
-    @Override
-    public Long enterChatRoom(EnterChatRoomRequestDto dto) {
-        ChatRoomEntity room = getOrCreateRoom(dto.getUserId(), dto.getUserType(), dto.getPartnerId(), dto.getPartnerType());
-        return room.getId();
-    }
+        if (existingOpt.isPresent()) {
+            ChatRoomEntity existing = existingOpt.get();
 
-    @Override
-    public void handleMessage(ChatMessageRequestDto chatMessage) {
-        try {
-            ChatRoomEntity room = getOrCreateRoom(chatMessage);
-            String messageJson = objectMapper.writeValueAsString(chatMessage);
-            log.info("메시지: {}", messageJson);
-            kafkaProducerService.sendChatMessage("chat-messages", messageJson);
-            messagingTemplate.convertAndSend("/topic/room/" + room.getId(), chatMessage);
+            boolean requesterIsUser = existing.getSenderId().equals(dto.getRequesterId())
+                    && existing.getSenderType().equals(dto.getRequesterType());
 
-            String unreadKey = "chat:unread:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId() + ":room:" + room.getId();
-            String readingKey = unreadKey + ":reading";
+            boolean requesterClosed = requesterIsUser
+                    ? Boolean.TRUE.equals(existing.getSenderClosed())
+                    : Boolean.TRUE.equals(existing.getPartnerClosed());
 
-            Boolean isReading = redisTemplate.hasKey(readingKey);
-            if (Boolean.TRUE.equals(isReading)) {
-                log.info("상대방이 현재 방을 보고 있어 unread count 증가 생략");
-            } else {
-                redisTemplate.opsForValue().increment(unreadKey);
+            boolean partnerClosed = requesterIsUser
+                    ? Boolean.TRUE.equals(existing.getPartnerClosed())
+                    : Boolean.TRUE.equals(existing.getSenderClosed());
+
+            // 둘 중 하나라도 나갔으면 새 방 생성
+            if (!requesterClosed && !partnerClosed) {
+                return FinalResponseDto.failure(ApiResult.ALREADY_EXIST_ROOM);
             }
-
-        } catch (Exception e) {
-            log.error("채팅 메시지 처리 중 오류 발생: {}", e.getMessage());
         }
+
+        ChatRoomEntity room = new ChatRoomEntity();
+        room.setSenderId(dto.getRequesterId());
+        room.setSenderType(dto.getRequesterType());
+        room.setPartnerId(dto.getPartnerId());
+        room.setPartnerType(dto.getPartnerType());
+        room.setCreatedAt(LocalDateTime.now());
+        room.setSenderClosed(false);
+        room.setPartnerClosed(false);
+
+        chatRoomRepository.save(room);
+
+        CreateChatRoomResponseDto response = CreateChatRoomResponseDto.builder()
+                .chatRoomId(room.getId())
+                .build();
+
+        return FinalResponseDto.successWithData(response);
     }
 
+
+
     @Override
-    public void publishChatMessage(ChatMessageRequestDto chatMessage) {
-        try {
-            String messageJson = objectMapper.writeValueAsString(chatMessage);
-            kafkaProducerService.sendChatMessage("chat-messages", messageJson);
-            messagingTemplate.convertAndSend("/topic/room/" + chatMessage.getRoomId(), chatMessage);
-        } catch (Exception e) {
-            log.error("Kafka 메시지 전송 실패: {}", e.getMessage());
+    public FinalResponseDto<ChatRoomResponseDto> getLatestActiveRoom(GetLatestActiveRoomRequestDto dto ) {
+        Optional<ChatRoomEntity> existing = chatRoomRepository.findLatestActiveRoomBidirectional(dto.getRequesterId(), dto.getRequesterType(), dto.getPartnerId(), dto.getPartnerType());
+
+
+        if (existing.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
+
+        ChatRoomEntity room = existing.get();
+
+        // 양쪽 모두 나가지 않은 상태여야 함
+        boolean requesterIsUser = room.getSenderId().equals(dto.getRequesterId()) && room.getSenderType().equals(dto.getRequesterType());
+        boolean requesterClosed = requesterIsUser ? Boolean.TRUE.equals(room.getSenderClosed()) : Boolean.TRUE.equals(room.getPartnerClosed());
+        boolean partnerClosed = requesterIsUser ? Boolean.TRUE.equals(room.getPartnerClosed()) : Boolean.TRUE.equals(room.getSenderClosed());
+
+        if (requesterClosed || partnerClosed) {
+            return FinalResponseDto.failure(ApiResult.ALREADY_CLOSED_ROOM);
+        }
+
+        ChatRoomResponseDto result = ChatRoomResponseDto.builder()
+                .roomId(room.getId())
+                .senderId(room.getSenderId())
+                .senderType(room.getSenderType())
+                .partnerId(room.getPartnerId())
+                .partnerType(room.getPartnerType())
+                .build();
+
+        return FinalResponseDto.successWithData(result);
     }
 
+
+    // 채팅방 입장 (입장 기록 갱신, 나간 경우 입장 불가)
     @Override
-    public FinalResponseDto<List<ChatRoomResponseDto>> getMyChatRooms(Long userId, String userType) {
-        List<ChatRoomEntity> rooms = chatRoomRepository.findRoomsByUserOrPartner(userId, userType);
+    public  FinalResponseDto<EnterChatRoomResponseDto> enterChatRoom(EnterChatRoomRequestDto dto) {
+        Optional<ChatRoomEntity> optionalRoom = chatRoomRepository.findLatestActiveRoomBidirectional(
+                dto.getRequesterId(), dto.getRequesterType(), dto.getPartnerId(), dto.getPartnerType());
 
-        List<ChatRoomResponseDto> myRooms = rooms.stream().map(room -> {
-            ChatRoomResponseDto.ChatRoomResponseDtoBuilder builder = ChatRoomResponseDto.builder()
-                    .roomId(room.getId())
-                    .userId(room.getUserId())
-                    .userType(room.getUserType())
-                    .partnerId(room.getPartnerId())
-                    .partnerType(room.getPartnerType());
+        if (optionalRoom.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
 
-            chatRepository.findTopByRoomOrderByTimestampDesc(room).ifPresent(lastMessage -> {
-                builder.lastMessage(lastMessage.getMessage());
-                builder.lastTimestamp(lastMessage.getTimestamp().toString());
-            });
+        ChatRoomEntity room = optionalRoom.get();
 
-            String unreadKey = "chat:unread:" + userType + ":" + userId + ":room:" + room.getId();
-            String unreadCount = redisTemplate.opsForValue().get(unreadKey);
-            builder.unreadCount(unreadCount != null ? Integer.parseInt(unreadCount) : 0);
+        boolean isUser = room.getSenderId().equals(dto.getRequesterId()) && room.getSenderType().equals(dto.getRequesterType());
+        boolean isClosed = isUser ? Boolean.TRUE.equals(room.getSenderClosed()) : Boolean.TRUE.equals(room.getPartnerClosed());
 
-            return builder.build();
-        }).collect(Collectors.toList());
+        if (isClosed) {
+            return FinalResponseDto.failure(ApiResult.ALREADY_CLOSED_ROOM);
+        }
 
-        return FinalResponseDto.successWithData(myRooms);
+
+        chatRoomRepository.save(room);
+        markMessagesAsRead(room.getId(), dto.getRequesterType(), dto.getRequesterId());
+        markReadingStatus(room.getId(), dto.getRequesterType(), dto.getRequesterId());
+
+        EnterChatRoomResponseDto response = EnterChatRoomResponseDto.builder()
+                .chatRoomId(room.getId())
+                .build();
+
+        return FinalResponseDto.successWithData(response);
     }
 
+    // 퇴장 처리
     @Override
-    public FinalResponseDto<List<ChatMessageResponseDto>> getChatHistoryPaged(ChatHistoryPageRequestDto dto) {
+    public FinalResponseDto<LeaveChatRoomResponseDto> leaveChatRoom(LeaveChatRoomRequestDto dto) {
         Optional<ChatRoomEntity> roomOpt = chatRoomRepository.findById(dto.getRoomId());
         if (roomOpt.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
 
-        int size = dto.getSize() <= 0 ? 20 : dto.getSize();
-        int page = dto.getPage() < 0 ? 0 : dto.getPage();
+        ChatRoomEntity room = roomOpt.get();
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("timestamp").descending());
-        Page<ChatMessageEntity> resultPage = chatRepository.findByRoom(roomOpt.get(), pageable);
+        boolean isUser = room.getSenderId().equals(dto.getRequesterId()) && room.getSenderType().equals(dto.getRequesterType());
 
-        if (resultPage.isEmpty()) {
-            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        if (isUser) {
+            room.setSenderClosed(true);
+        } else {
+            room.setPartnerClosed(true);
         }
 
-        List<ChatMessageResponseDto> messages = resultPage.getContent().stream()
+        chatRoomRepository.save(room);
+
+        LeaveChatRoomResponseDto response = LeaveChatRoomResponseDto.builder()
+                .chatRoomId(room.getId())
+                .build();
+
+        return FinalResponseDto.successWithData(response);
+    }
+
+    // 메세지 처리
+    @Override
+    public void handleMessage(ChatMessageRequestDto chatMessage) {
+        try {
+            ChatRoomEntity room = chatRoomRepository.findById(chatMessage.getRoomId())
+                    .orElseThrow(() -> new IllegalArgumentException("채팅방 없음"));
+
+            String messageJson = objectMapper.writeValueAsString(chatMessage);
+            kafkaProducerService.sendChatMessage("chat-messages", messageJson);
+            messagingTemplate.convertAndSend("/topic/room/" + room.getId(), chatMessage);
+
+            // 읽음 처리
+            String unreadKey = "chat:unread:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId() + ":room:" + room.getId();
+            String readingKey = unreadKey + ":reading";
+            Boolean isReading = redisTemplate.hasKey(readingKey);
+
+            if (Boolean.TRUE.equals(isReading)) {
+                log.info("상대방이 방 안에 있어 unread 증가 생략");
+            } else {
+                redisTemplate.opsForValue().increment(unreadKey);
+            }
+        } catch (Exception e) {
+            log.error("메시지 처리 오류", e);
+        }
+    }
+
+    @Override
+    public FinalResponseDto<List<ChatRoomResponseDto>> getMyChatRooms(Long requesterId, String requesterType) {
+        List<ChatRoomEntity> rooms = chatRoomRepository.findRoomsBySenderOrPartner(requesterId, requesterType);
+
+        List<ChatRoomResponseDto> myRooms = rooms.stream()
+                .filter(room -> {
+                    if (room.getSenderId().equals(requesterId) && room.getSenderType().equals(requesterType)) {
+                        return !Boolean.TRUE.equals(room.getSenderClosed());
+                    } else {
+                        return !Boolean.TRUE.equals(room.getPartnerClosed());
+                    }
+                })
+                .map(room -> {
+                    ChatRoomResponseDto.ChatRoomResponseDtoBuilder builder = ChatRoomResponseDto.builder()
+                            .roomId(room.getId())
+                            .senderId(room.getSenderId())
+                            .senderType(room.getSenderType())
+                            .partnerId(room.getPartnerId())
+                            .partnerType(room.getPartnerType());
+
+                    chatRepository.findTopByRoomOrderByTimestampDesc(room)
+                            .ifPresent(msg -> {
+                                builder.lastMessage(msg.getMessage());
+                                builder.lastTimestamp(msg.getTimestamp().toString());
+                            });
+
+                    String unreadKey = "chat:unread:" + requesterType + ":" + requesterId + ":room:" + room.getId();
+                    String unreadCount = redisTemplate.opsForValue().get(unreadKey);
+                    builder.unreadCount(unreadCount != null ? Integer.parseInt(unreadCount) : 0);
+
+                    return builder.build();
+                })
+                .collect(Collectors.toList());
+
+        return FinalResponseDto.successWithData(myRooms);
+    }
+
+    @Override
+    public FinalResponseDto<String> markMessagesAsRead(Long roomId, String userType, Long userId) {
+        String unreadKey = "chat:unread:" + userType + ":" + userId + ":room:" + roomId;
+        redisTemplate.delete(unreadKey);
+        return FinalResponseDto.success();
+    }
+
+    @Override
+    public FinalResponseDto<String> markReadingStatus(Long roomId, String userType, Long userId) {
+        String readingKey = "chat:unread:" + userType + ":" + userId + ":room:" + roomId + ":reading";
+        redisTemplate.opsForValue().set(readingKey, "1");
+        return FinalResponseDto.success();
+    }
+
+    @Override
+    public FinalResponseDto<String> clearReadingStatus(Long roomId, String userType, Long userId) {
+        String key = "chat:unread:" + userType + ":" + userId + ":room:" + roomId + ":reading";
+        redisTemplate.delete(key);
+        return FinalResponseDto.success();
+    }
+
+    @Override
+    public FinalResponseDto<String> markLastReadTime(Long roomId, String userType, Long userId) {
+        String key = "chat:lastRead:" + roomId + ":" + userType + ":" + userId;
+        String timestamp = LocalDateTime.now().toString();
+        redisTemplate.opsForValue().set(key, timestamp);
+        return FinalResponseDto.success();
+    }
+
+    @Override
+    public FinalResponseDto<GetOpponentLastReadTimeResponseDto> getOpponentLastReadTime(Long roomId, String myType, Long myId) {
+        ChatRoomEntity room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("채팅방 없음"));
+
+        String opponentType;
+        Long opponentId;
+
+        if (room.getSenderId().equals(myId) && room.getSenderType().equals(myType)) {
+            opponentId = room.getPartnerId();
+            opponentType = room.getPartnerType();
+        } else {
+            opponentId = room.getSenderId();
+            opponentType = room.getSenderType();
+        }
+
+        String key = "chat:lastRead:" + roomId + ":" + opponentType + ":" + opponentId;
+        String lastReadTimestamp = redisTemplate.opsForValue().get(key);
+        GetOpponentLastReadTimeResponseDto response = GetOpponentLastReadTimeResponseDto.builder()
+                .lastReadTimestamp(lastReadTimestamp)
+                .build();
+
+        return FinalResponseDto.successWithData(response);
+    }
+
+
+    @Override
+    public FinalResponseDto<ChatRoomResponseDto> getRoomInfoById(Long roomId) {
+        ChatRoomEntity room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("채팅방 없음"));
+
+        return FinalResponseDto.successWithData(ChatRoomResponseDto.builder()
+                .roomId(room.getId())
+                .senderId(room.getSenderId())
+                .senderType(room.getSenderType())
+                .partnerId(room.getPartnerId())
+                .partnerType(room.getPartnerType())
+                .build());
+    }
+
+    @Override
+    public FinalResponseDto<List<ChatMessageResponseDto>> getChatHistoryPaged(ChatHistoryPageRequestDto dto) {
+        ChatRoomEntity room = chatRoomRepository.findById(dto.getRoomId())
+                .orElseThrow(() -> new IllegalArgumentException("채팅방 없음"));
+
+        Pageable pageable = PageRequest.of(Math.max(0, dto.getPage()), Math.max(1, dto.getSize()), Sort.by("timestamp").descending());
+        Page<ChatMessageEntity> page = chatRepository.findByRoom(room, pageable);
+
+        List<ChatMessageResponseDto> messages = page.getContent().stream()
                 .map(e -> ChatMessageResponseDto.builder()
                         .senderId(e.getSenderId())
                         .senderType(e.getSenderType())
@@ -171,38 +341,5 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
                 .collect(Collectors.toList());
 
         return FinalResponseDto.successWithData(messages);
-    }
-
-    @Override
-    public FinalResponseDto<ChatRoomResponseDto> getRoomInfoById(Long roomId) {
-        Optional<ChatRoomEntity> optionalRoom = chatRoomRepository.findById(roomId);
-
-        if (optionalRoom.isEmpty()) {
-            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
-        }
-
-        ChatRoomEntity room = optionalRoom.get();
-        log.info(room.getPartnerType() + room.getPartnerId() + "room!!");
-        ChatRoomResponseDto dto = ChatRoomResponseDto.builder()
-                .roomId(room.getId())
-                .userId(room.getUserId())
-                .userType(room.getUserType())
-                .partnerId(room.getPartnerId())
-                .partnerType(room.getPartnerType())
-                .build();
-
-        return FinalResponseDto.successWithData(dto);
-    }
-
-    @Override
-    public void markMessagesAsRead(Long roomId, String userType, Long userId) {
-        String unreadKey = "chat:unread:" + userType + ":" + userId + ":room:" + roomId;
-        redisTemplate.delete(unreadKey);
-    }
-
-    @Override
-    public void markReadingStatus(Long roomId, String userType, Long userId) {
-        String readingKey = "chat:unread:" + userType + ":" + userId + ":room:" + roomId + ":reading";
-        redisTemplate.opsForValue().set(readingKey, "1", 10, TimeUnit.MINUTES);
     }
 }
