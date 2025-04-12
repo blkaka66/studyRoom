@@ -157,8 +157,8 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
 
         chatRoomRepository.save(room);
-        markMessagesAsRead(room.getId(), dto.getRequesterType(), dto.getRequesterId());
-        markReadingStatus(room.getId(), dto.getRequesterType(), dto.getRequesterId());
+//        markMessagesAsRead(room.getId(), dto.getRequesterType(), dto.getRequesterId());
+//        markReadingStatus(room.getId(), dto.getRequesterType(), dto.getRequesterId());
 
 
         EnterChatRoomResponseDto response = EnterChatRoomResponseDto.builder()
