@@ -90,8 +90,9 @@ public class SecurityConfig  {
         // 권한 규칙 작성
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(AUTH_WHITELIST).permitAll()
-                        .requestMatchers("/ws/**").permitAll()  // ✅ WebSocket 엔드포인트 인증 없이 허용
-                        .requestMatchers("/chat/**").authenticated()  // ✅ 채팅 API는 인증 필요
+                        .requestMatchers("/ws/**").permitAll()  //WebSocket 엔드포인트 인증 없이 허용
+                .requestMatchers("/fcm-test").permitAll()
+                        .requestMatchers("/chat/**").authenticated()  // 채팅 API는 인증 필요
                         .anyRequest().authenticated()
         );
 

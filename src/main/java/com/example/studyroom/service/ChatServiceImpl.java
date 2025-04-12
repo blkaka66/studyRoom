@@ -34,13 +34,17 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
     private final SimpMessagingTemplate messagingTemplate;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final ChatSubscribeService chatSubscribeService;
+    private final FcmTokenService fcmTokenService;
 
     public ChatServiceImpl(JpaRepository<ChatMessageEntity, Long> repository,
                            ChatRoomRepository chatRoomRepository,
                            ChatRepository chatRepository,
                            KafkaProducerService kafkaProducerService,
                            SimpMessagingTemplate messagingTemplate,
-                           StringRedisTemplate redisTemplate) {
+                           StringRedisTemplate redisTemplate,
+                           ChatSubscribeService chatSubscribeService,
+                           FcmTokenService fcmTokenService) {
         super(repository);
         this.chatRoomRepository = chatRoomRepository;
         this.chatRepository = chatRepository;
@@ -48,6 +52,8 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         this.messagingTemplate = messagingTemplate;
         this.redisTemplate = redisTemplate;
         this.objectMapper = new ObjectMapper();
+        this.chatSubscribeService = chatSubscribeService;
+        this.fcmTokenService = fcmTokenService;
     }
 
     // 채팅방 생성 (이미 존재하면 예외)
@@ -89,7 +95,6 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         room.setPartnerClosed(false);
 
         chatRoomRepository.save(room);
-
         CreateChatRoomResponseDto response = CreateChatRoomResponseDto.builder()
                 .chatRoomId(room.getId())
                 .build();
@@ -98,9 +103,8 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
     }
 
 
-
     @Override
-    public FinalResponseDto<ChatRoomResponseDto> getLatestActiveRoom(GetLatestActiveRoomRequestDto dto ) {
+    public FinalResponseDto<ChatRoomResponseDto> getLatestActiveRoom(GetLatestActiveRoomRequestDto dto) {
         Optional<ChatRoomEntity> existing = chatRoomRepository.findLatestActiveRoomBidirectional(dto.getRequesterId(), dto.getRequesterType(), dto.getPartnerId(), dto.getPartnerType());
 
 
@@ -133,7 +137,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
     // 채팅방 입장 (입장 기록 갱신, 나간 경우 입장 불가)
     @Override
-    public  FinalResponseDto<EnterChatRoomResponseDto> enterChatRoom(EnterChatRoomRequestDto dto) {
+    public FinalResponseDto<EnterChatRoomResponseDto> enterChatRoom(EnterChatRoomRequestDto dto) {
         Optional<ChatRoomEntity> optionalRoom = chatRoomRepository.findLatestActiveRoomBidirectional(
                 dto.getRequesterId(), dto.getRequesterType(), dto.getPartnerId(), dto.getPartnerType());
 
@@ -147,6 +151,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         boolean isClosed = isUser ? Boolean.TRUE.equals(room.getSenderClosed()) : Boolean.TRUE.equals(room.getPartnerClosed());
 
         if (isClosed) {
+            log.info("입장 실패: 이미 방에서 퇴장한 사용자");
             return FinalResponseDto.failure(ApiResult.ALREADY_CLOSED_ROOM);
         }
 
@@ -154,6 +159,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         chatRoomRepository.save(room);
         markMessagesAsRead(room.getId(), dto.getRequesterType(), dto.getRequesterId());
         markReadingStatus(room.getId(), dto.getRequesterType(), dto.getRequesterId());
+
 
         EnterChatRoomResponseDto response = EnterChatRoomResponseDto.builder()
                 .chatRoomId(room.getId())
@@ -181,6 +187,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         }
 
         chatRoomRepository.save(room);
+        chatSubscribeService.unsubscribe(dto.getRequesterId(), dto.getRoomId());
 
         LeaveChatRoomResponseDto response = LeaveChatRoomResponseDto.builder()
                 .chatRoomId(room.getId())
@@ -200,6 +207,16 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
             kafkaProducerService.sendChatMessage("chat-messages", messageJson);
             messagingTemplate.convertAndSend("/topic/room/" + room.getId(), chatMessage);
 
+            boolean isSubscribed = chatSubscribeService.isSubscribed(
+                    chatMessage.getReceiverId(), chatMessage.getRoomId());
+        
+            if (!isSubscribed) {
+                fcmTokenService.sendChatNotification(
+                        chatMessage.getReceiverId(),
+                        chatMessage.getReceiverType(),
+                        chatMessage.getMessage() // 실제 메시지 내용
+                );
+            }
             // 읽음 처리
             String unreadKey = "chat:unread:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId() + ":room:" + room.getId();
             String readingKey = unreadKey + ":reading";
@@ -263,6 +280,8 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
     public FinalResponseDto<String> markReadingStatus(Long roomId, String userType, Long userId) {
         String readingKey = "chat:unread:" + userType + ":" + userId + ":room:" + roomId + ":reading";
         redisTemplate.opsForValue().set(readingKey, "1");
+        // 구독 상태도 같이 저장
+        chatSubscribeService.subscribe(userId, roomId);
         return FinalResponseDto.success();
     }
 

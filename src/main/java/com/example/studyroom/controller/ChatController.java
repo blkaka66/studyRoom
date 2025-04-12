@@ -44,7 +44,7 @@ public class ChatController {
     //  채팅방 퇴장
     @PostMapping("/chat/leave")
     @ResponseBody
-    public  FinalResponseDto<LeaveChatRoomResponseDto> leaveChatRoom(@RequestBody LeaveChatRoomRequestDto dto) {
+    public FinalResponseDto<LeaveChatRoomResponseDto> leaveChatRoom(@RequestBody LeaveChatRoomRequestDto dto) {
         return chatService.leaveChatRoom(dto);
 
 
@@ -56,9 +56,9 @@ public class ChatController {
     @ResponseBody
     public FinalResponseDto<ChatRoomResponseDto> getLatestActiveRoom(
             @RequestBody GetLatestActiveRoomRequestDto dto
-            ) {
+    ) {
 
-        return chatService.getLatestActiveRoom( dto);
+        return chatService.getLatestActiveRoom(dto);
 
     }
 
@@ -66,20 +66,20 @@ public class ChatController {
     @PostMapping("/chat/reading")
     @ResponseBody
     public FinalResponseDto<String> markReadingStatus(@RequestBody MarkAsReadRequestDto dto) {
-       return  chatService.markReadingStatus(dto.getRoomId(), dto.getUserType(), dto.getUserId());
+        return chatService.markReadingStatus(dto.getRoomId(), dto.getUserType(), dto.getUserId());
 
     }
 
     @PostMapping("/chat/read")
     @ResponseBody
     public FinalResponseDto<String> markAsRead(@RequestBody MarkAsReadRequestDto dto) {
-       return chatService.markMessagesAsRead(dto.getRoomId(), dto.getUserType(), dto.getUserId());
+        return chatService.markMessagesAsRead(dto.getRoomId(), dto.getUserType(), dto.getUserId());
     }
 
     @PostMapping("/chat/reading-status/clear")
     @ResponseBody
     public FinalResponseDto<String> clearReadingStatus(@RequestBody ReadingStatusClearRequestDto dto) {
-       return chatService.clearReadingStatus(dto.getRoomId(), dto.getUserType(), dto.getUserId());
+        return chatService.clearReadingStatus(dto.getRoomId(), dto.getUserType(), dto.getUserId());
 
     }
 
@@ -93,7 +93,7 @@ public class ChatController {
     //  채팅 메시지 전송 (WebSocket)
     @MessageMapping("/chat/send/{roomId}")
     public void sendPrivateMessage(@DestinationVariable Long roomId, ChatMessageRequestDto chatMessage) {
-         chatService.handleMessage(chatMessage);
+        chatService.handleMessage(chatMessage);
     }
 
     //  채팅 기록 페이징 조회
@@ -113,8 +113,8 @@ public class ChatController {
     }
 
 
-
     @PostMapping("/chat/read-status/opponent")
+    @ResponseBody
     public FinalResponseDto<GetOpponentLastReadTimeResponseDto> getOpponentReadTime(
             @RequestBody GetOpponentLastReadTimeRequestDto dto) {
 
@@ -124,10 +124,11 @@ public class ChatController {
     }
 
     @PostMapping("/chat/read-status/mark")
+    @ResponseBody
     public FinalResponseDto<String> markLastReadTime(
             @RequestBody MarkLastReadTimeRequestDto dto) {
 
-       return chatService.markLastReadTime(dto.getRoomId(), dto.getUserType(), dto.getUserId());
+        return chatService.markLastReadTime(dto.getRoomId(), dto.getUserType(), dto.getUserId());
 
     }
 
