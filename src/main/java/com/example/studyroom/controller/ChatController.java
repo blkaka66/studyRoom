@@ -3,6 +3,7 @@ package com.example.studyroom.controller;
 import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.service.ChatService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -35,8 +36,8 @@ public class ChatController {
     //  채팅방 입장
     @PostMapping("/chat/enter")
     @ResponseBody
-    public FinalResponseDto<EnterChatRoomResponseDto> enterChatRoom(@RequestBody EnterChatRoomRequestDto dto) {
-        return chatService.enterChatRoom(dto);
+    public FinalResponseDto<EnterChatRoomResponseDto> enterChatRoom(@RequestBody EnterChatRoomRequestDto dto, HttpServletRequest request) {
+        return chatService.enterChatRoom(dto, request);
 
 
     }

@@ -3,28 +3,28 @@ package com.example.studyroom.service;
 import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.ChatMessageEntity;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
 
 public interface ChatService extends BaseService<ChatMessageEntity> {
     //채팅방생성
-    FinalResponseDto<CreateChatRoomResponseDto>createChatRoom(CreateChatRoomRequestDto dto);
+    FinalResponseDto<CreateChatRoomResponseDto> createChatRoom(CreateChatRoomRequestDto dto);
 
     //채팅방 퇴장
     FinalResponseDto<LeaveChatRoomResponseDto> leaveChatRoom(LeaveChatRoomRequestDto dto);
 
 
     //현재 진행중인 채팅방 반환(채팅방 입장처리를안하기때문에 enterChatRoom과 비슷하지만 용도가 다름)
-    FinalResponseDto<ChatRoomResponseDto> getLatestActiveRoom(GetLatestActiveRoomRequestDto dto );
+    FinalResponseDto<ChatRoomResponseDto> getLatestActiveRoom(GetLatestActiveRoomRequestDto dto);
 
 
     // 채팅 입장 처리용 (roomId 반환)
-    FinalResponseDto<EnterChatRoomResponseDto> enterChatRoom(EnterChatRoomRequestDto dto);
+    FinalResponseDto<EnterChatRoomResponseDto> enterChatRoom(EnterChatRoomRequestDto dto, HttpServletRequest request);
 
     // WebSocket/STOMP 메시지 수신 처리
     void handleMessage(ChatMessageRequestDto chatMessage);
-
 
 
     // 내가 참여 중인 채팅방 목록 조회

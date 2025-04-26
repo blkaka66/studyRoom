@@ -43,8 +43,8 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         // '/shop/refreshToken' 경로로 들어오는 요청은 만료검증을 제외(jwt토큰을 refresh하는 요청은 당연히 토큰이 만료돼있을테니까)
         String requestURI = request.getRequestURI();
-        System.out.println("requestURI"+requestURI);
-        if(requestURI.equals("/shop/refreshToken")){
+        System.out.println("requestURI" + requestURI);
+        if (requestURI.equals("/shop/refreshToken")) {
             System.out.println("필터건너뜀");
             UsernamePasswordAuthenticationToken authenticationToken = null;
             authenticationToken = new UsernamePasswordAuthenticationToken(new MemberEntity(), "", getAuthorities("CUSTOMER"));
@@ -58,12 +58,12 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        System.out.println("리퀘스트 !!!!"+request);
+        System.out.println("리퀘스트 !!!!" + request);
         String authorizationHeader = request.getHeader("Authorization");
-        System.out.println("헤더헤더 !!!!"+authorizationHeader);
+        System.out.println("헤더헤더 !!!!" + authorizationHeader);
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String token = authorizationHeader.substring(7);
-            System.out.println("필터토큰 !!!!"+token);
+            System.out.println("필터토큰 !!!!" + token);
             JwtUtil.TokenStatus tokenStatus = jwtUtil.validateToken(token);
 
             if (tokenStatus == JwtUtil.TokenStatus.VALID) {
@@ -93,12 +93,25 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
     }
 
     private boolean isTokenBlacklisted(String token) {
-        String blacklistKey = "blacklist:accessToken:" + jwtUtil.getCustomerUserId(token);  // 블랙리스트 키를 액세스 토큰으로 설정
-        if(redisService.isKeyPresent(blacklistKey)) {
-            return redisService.getValues(blacklistKey).equals(token);
+        String role = jwtUtil.getRole(token);
+        String key;
+
+        if ("SHOP".equals(role)) {
+            Long shopId = jwtUtil.getShopId(token);
+            key = "blacklist:accessToken:shop:" + shopId;
+        } else if ("CUSTOMER".equals(role)) {
+            Long userId = jwtUtil.getCustomerUserId(token);
+            key = "blacklist:accessToken:member:" + userId;
+        } else {
+            return false;
+        }
+
+        if (redisService.isKeyPresent(key)) {
+            return redisService.getValues(key).equals(token);
         }
         return false;
     }
+
 
     private void authenticateUser(String token) {
         System.out.println("authenticateUser!!!");
@@ -108,19 +121,19 @@ public class JwtAuthFilter extends OncePerRequestFilter { // OncePerRequestFilte
         if (role.equals("SHOP")) {
             String email = jwtUtil.getShopEmail(token);
             ShopEntity shop = shopRepository.findByEmail(email);
-            System.out.println("shop은"+shop);
+            System.out.println("shop은" + shop);
             authenticationToken = new UsernamePasswordAuthenticationToken(shop, "", getAuthorities(role));
 
         } else if (role.equals("CUSTOMER")) {
             Long userId = jwtUtil.getCustomerUserId(token);
             MemberEntity member = memberRepository.findById(userId).orElse(null);
             if (member != null) {
-                System.out.println("member"+member);
+                System.out.println("member" + member);
                 authenticationToken = new UsernamePasswordAuthenticationToken(member, "", getAuthorities(role));
             }
         }
         if (authenticationToken != null) {
-            System.out.println("수고요");
+            System.out.println("토큰이 검증됨");
             SecurityContextHolder.getContext().setAuthentication(authenticationToken);
         }
     }

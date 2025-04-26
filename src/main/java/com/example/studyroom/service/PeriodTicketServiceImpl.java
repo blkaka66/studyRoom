@@ -25,10 +25,11 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
     private final MemberRepository memberRepository;
     private final RemainPeriodTicketRepository remainPeriodTicketRepository;
     private final CouponRepository couponRepository;
-    public PeriodTicketServiceImpl(JpaRepository<PeriodTicketEntity, Long> repository , PeriodTicketRepository periodTicketRepository,
+
+    public PeriodTicketServiceImpl(JpaRepository<PeriodTicketEntity, Long> repository, PeriodTicketRepository periodTicketRepository,
                                    PeriodTicketHistoryRepository periodTicketHistoryRepository, ShopRepository shopRepository
-                                    , MemberRepository memberRepository,
-                                   RemainPeriodTicketRepository remainPeriodTicketRepository , CouponRepository couponRepository) {
+            , MemberRepository memberRepository,
+                                   RemainPeriodTicketRepository remainPeriodTicketRepository, CouponRepository couponRepository) {
         super(repository);
         this.periodTicketRepository = periodTicketRepository;
         this.periodTicketHistoryRepository = periodTicketHistoryRepository;
@@ -45,29 +46,41 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
         Optional<ShopEntity> optionalShop = shopRepository.findById(shopId);
         Optional<MemberEntity> optionalMember = memberRepository.findById(customerId);
 
-        if(optionalTicket.isPresent() && optionalMember.isPresent() && optionalShop.isPresent()){
+        if (optionalTicket.isPresent() && optionalMember.isPresent() && optionalShop.isPresent()) {
             PeriodTicketEntity ticket = optionalTicket.get();
             MemberEntity member = optionalMember.get();
-            ShopEntity shop =  optionalShop.get();
-            recordTicketHistory(shop,ticket,member,product.getCouponId());
-            addEndDate(ticket , shopId, customerId,shop,member);
+            ShopEntity shop = optionalShop.get();
+            recordTicketHistory(shop, ticket, member, product.getCouponId());
+            addEndDate(ticket, shopId, customerId, shop, member);
 
-        }else{
+        } else {
             FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
         return FinalResponseDto.success();
     }
 
-    private void addEndDate (PeriodTicketEntity ticket, Long shopId , Long customerId , ShopEntity shop,MemberEntity member){ //기존 시간권이 있는경우 시간을더해줌
-        Optional<RemainPeriodTicketEntity> optionalPeriodTicket= remainPeriodTicketRepository.findByShopIdAndMemberId(shopId,customerId);
-        if(optionalPeriodTicket.isPresent()){//기존 기간권이 있다면
+    private void addEndDate(PeriodTicketEntity ticket, Long shopId, Long customerId, ShopEntity shop, MemberEntity member) { //기존 시간권이 있는경우 시간을더해줌
+        Optional<RemainPeriodTicketEntity> optionalPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberId(shopId, customerId);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime newEndDate = now.plusDays(ticket.getDays());
+
+        if (optionalPeriodTicket.isPresent()) {//기존 기간권이 있다면
+//            RemainPeriodTicketEntity timeTicket = optionalPeriodTicket.get();
+//            timeTicket.setEndDate(timeTicket.getEndDate().plusDays(ticket.getDays()));
             RemainPeriodTicketEntity timeTicket = optionalPeriodTicket.get();
-            timeTicket.setEndDate(timeTicket.getEndDate().plusDays(ticket.getDays()));
-        }else{ //기존 기간권이없다면
+            OffsetDateTime existingEndDate = timeTicket.getEndDate();
+
+            if (existingEndDate.isAfter(now)) {
+                // 아직 남은 시간이 있으면 기존 endDate에 연장
+                timeTicket.setEndDate(existingEndDate.plusDays(ticket.getDays()));
+            } else {
+                // 이미 만료되었으면 now 기준으로 새로 시작
+                timeTicket.setEndDate(newEndDate);
+            }
+        } else { //기존 기간권이없다면
             RemainPeriodTicketEntity periodTicket = new RemainPeriodTicketEntity();
             periodTicket.setMember(member);
             periodTicket.setShop(shop);
-            OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
             Duration period = Duration.ofDays(ticket.getDays());//현재시간 + 기간 ex3일)
             OffsetDateTime endDate = now.plus(period);
             periodTicket.setEndDate(endDate);
@@ -76,7 +89,7 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
 
     }
 
-    private void recordTicketHistory (ShopEntity shop, PeriodTicketEntity ticket, MemberEntity member,Long couponId){
+    private void recordTicketHistory(ShopEntity shop, PeriodTicketEntity ticket, MemberEntity member, Long couponId) {
         PeriodTicketHistoryEntity ticketHistory = new PeriodTicketHistoryEntity();
         ticketHistory.setMember(member);
         ticketHistory.setShop(shop);
@@ -91,9 +104,9 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
     }
 
     @Override
-    public List<PeriodTicketPaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId, OffsetDateTime startDateTime,OffsetDateTime endDateTime) {
-        List<PeriodTicketHistoryEntity> periodTicketHistoryList = periodTicketHistoryRepository.findByShop_IdAndMember_IdAndPaymentDateBetween(shopId,customerId,startDateTime,endDateTime);
-        System.out.println("기간권권기록"+periodTicketHistoryList.size());
+    public List<PeriodTicketPaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId, OffsetDateTime startDateTime, OffsetDateTime endDateTime) {
+        List<PeriodTicketHistoryEntity> periodTicketHistoryList = periodTicketHistoryRepository.findByShop_IdAndMember_IdAndPaymentDateBetween(shopId, customerId, startDateTime, endDateTime);
+        System.out.println("기간권권기록" + periodTicketHistoryList.size());
         return periodTicketHistoryList.stream()
                 .map(entity -> PeriodTicketPaymentHistoryDto.builder()
 //                        .ticketType(String.valueOf(entity.getTicket().getTicketType()))  // 기간권, 시간권 설정
@@ -117,7 +130,7 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
 
     @Override
     public RemainTicketInfoResponseDto getEndDate(Long shopId, Long customerId, String ticketCategory) {
-        Optional<RemainPeriodTicketEntity> RemainPeriodTicketEntity= remainPeriodTicketRepository.findByShopIdAndMemberId(shopId,customerId);
+        Optional<RemainPeriodTicketEntity> RemainPeriodTicketEntity = remainPeriodTicketRepository.findByShopIdAndMemberId(shopId, customerId);
         return RemainPeriodTicketEntity.map(remainPeriodTicketEntity -> RemainTicketInfoResponseDto.builder()
                 .seatType(ticketCategory)
                 .endDate(remainPeriodTicketEntity.getEndDate())

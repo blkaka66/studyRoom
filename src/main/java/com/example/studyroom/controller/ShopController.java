@@ -57,10 +57,21 @@ public class ShopController {
 
     @PostMapping("/login")
     public ResponseEntity<FinalResponseDto<String>> login(@RequestBody ShopSignInRequestDto shop, HttpServletResponse response) {
-        FinalResponseDto<String> token = shopService.login(shop,response);
+        FinalResponseDto<String> token = shopService.login(shop, response);
         return ResponseEntity.ok(token);
     }
 
+    @PostMapping("/logOut")
+    public ResponseEntity<FinalResponseDto<String>> logout(@RequestHeader("Authorization") String authorizationHeader) {
+
+        ShopEntity shop = JwtUtil.getShop();
+        String accessToken = null;
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            accessToken = authorizationHeader.substring(7); // "Bearer "를 제외한 토큰만 추출
+        }
+        FinalResponseDto<String> response = this.shopService.logout(shop, accessToken);
+        return ResponseEntity.ok(response);
+    }
 
 
     private static final Logger logger = LoggerFactory.getLogger(ShopController.class);
@@ -134,7 +145,6 @@ public class ShopController {
     }
 
 
-
     @GetMapping("/{shopId}/getProductInfo")
     public ResponseEntity<FinalResponseDto<ProductResponseDto>> getProductListByShopId(@PathVariable("shopId") Long shopId) {
 //        FinalResponseDto<List<ProductResponseDto>> productList = this.shopService.getProductList(shopId, type);
@@ -148,7 +158,7 @@ public class ShopController {
 
         Long id = JwtUtil.getMember().getShop().getId();
 
-        return ResponseEntity.ok(this.shopService.createAnnounement(id,dto));
+        return ResponseEntity.ok(this.shopService.createAnnounement(id, dto));
     }
 
 
@@ -166,7 +176,7 @@ public class ShopController {
     @GetMapping("/couponInfo/{couponCode}")
     public ResponseEntity<FinalResponseDto<CouponInfoResponseDto>> getCouponInfo(@PathVariable("couponCode") String couponCode) {
         Long id = JwtUtil.getMember().getShop().getId();
-        return ResponseEntity.ok(this.shopService.getCouponInfo(couponCode,id));
+        return ResponseEntity.ok(this.shopService.getCouponInfo(couponCode, id));
     }
 
     @PostMapping("/statistics/seatUsage")
@@ -190,7 +200,6 @@ public class ShopController {
     }
 
 
-
     @PostMapping("/statistics/userAvrUsage")
     public ResponseEntity<FinalResponseDto<List<UserAvrUsageResponseDto>>> getUserAvrUsageByDateRange(@RequestBody UserAvrUsageRequestDto dto) {
         return ResponseEntity.ok(this.shopService.getUserAvrUsageByDateRange(dto));
@@ -200,7 +209,6 @@ public class ShopController {
     public ResponseEntity<FinalResponseDto<List<UserChangeStatsResponseDto>>> getUserChangeStatsByDateRange(@RequestBody UserChangeStatsRequestDto dto) {
         return ResponseEntity.ok(this.shopService.getUserChangeStatsByDateRange(dto));
     }
-
 
 
 }

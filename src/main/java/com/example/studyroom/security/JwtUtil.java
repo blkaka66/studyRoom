@@ -1,4 +1,5 @@
 package com.example.studyroom.security;
+
 import com.example.studyroom.dto.requestDto.MemberSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignInRequestDto;
 import com.example.studyroom.dto.requestDto.ShopSignUpRequestDto;
@@ -74,6 +75,7 @@ public class JwtUtil {
 
     /**
      * Access Token 생성
+     *
      * @param shop
      * @return Access Token String
      */
@@ -83,11 +85,9 @@ public class JwtUtil {
     }
 
 
-
-
-
     /**
      * Access Token 생성
+     *
      * @param member
      * @return Access Token String
      */
@@ -96,20 +96,17 @@ public class JwtUtil {
     }
 
 
-
-
-
-
     /**
      * JWT 생성
+     *
      * @param shop
      * @param expireTime
      * @return JWT String
      */
     //ShopSignInRequestDto 또는 MemberSignInRequestDto에 기반하여 실제 JWT 토큰을 생성
     private String createToken(ShopSignInRequestDto shop, long expireTime) {
-        ShopEntity existingShop = shopRepository.findByEmailAndPassword(shop.getEmail(),shop.getPassword());
-        if(existingShop != null) {
+        ShopEntity existingShop = shopRepository.findByEmailAndPassword(shop.getEmail(), shop.getPassword());
+        if (existingShop != null) {
             Claims claims = Jwts.claims();
             claims.put("email", shop.getEmail());
             claims.put("role", "SHOP");
@@ -124,44 +121,45 @@ public class JwtUtil {
                     .setExpiration(Date.from(tokenValidity.toInstant()))
                     .signWith(key, SignatureAlgorithm.HS256)
                     .compact();
-        }else{
+        } else {
             return null;//여기선 굳이 FinalResponseDto할필요 없겠지?
         }
 
     }
+
     public String reCreateToken(ShopEntity shop, long expireTime) {
-            Claims claims = Jwts.claims();
-            claims.put("email", shop.getEmail());
-            claims.put("role", "SHOP");
-            claims.put("shopId", shop.getId());
+        Claims claims = Jwts.claims();
+        claims.put("email", shop.getEmail());
+        claims.put("role", "SHOP");
+        claims.put("shopId", shop.getId());
 
-            ZonedDateTime now = ZonedDateTime.now();
-            ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
+        ZonedDateTime now = ZonedDateTime.now();
+        ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
 
 
-            return Jwts.builder()
-                    .setClaims(claims)
-                    .setExpiration(Date.from(tokenValidity.toInstant()))
-                    .signWith(key, SignatureAlgorithm.HS256)
-                    .compact();
+        return Jwts.builder()
+                .setClaims(claims)
+                .setExpiration(Date.from(tokenValidity.toInstant()))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
 
     }
 
 
-
     /**
      * JWT 생성
+     *
      * @param member
      * @param expireTime
      * @return JWT String
      */
     private String createToken(MemberEntity member, long expireTime) {
         //MemberEntity existingMember = memberRepository.findByPhoneAndPassword(member.getPhoneNumber(),member.getPassword());
-        System.out.println("existingMember"+member.getName());
+        System.out.println("existingMember" + member.getName());
         Claims claims = Jwts.claims();
         claims.put("role", "CUSTOMER");
-        claims.put("userId",member.getId());
-        claims.put("shopId",member.getShop().getId());
+        claims.put("userId", member.getId());
+        claims.put("shopId", member.getShop().getId());
         ZonedDateTime now = ZonedDateTime.now();
         ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
 
@@ -180,8 +178,8 @@ public class JwtUtil {
 
         Claims claims = Jwts.claims();
         claims.put("role", "CUSTOMER");
-        claims.put("userId",member.getId());
-        claims.put("shopId",member.getShop().getId());
+        claims.put("userId", member.getId());
+        claims.put("shopId", member.getShop().getId());
 
         ZonedDateTime now = ZonedDateTime.now();
         ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
@@ -196,21 +194,20 @@ public class JwtUtil {
     }
 
     public void createRefreshToken(MemberEntity member) {
-        long Id = member.getId();
+        long id = member.getId();
         String refreshToken = createRefToken(refreshTokenExpTime);
         if (refreshToken != null) {
-            String key = "refreshToken:" + Id;  // UUID로 key 생성
-            redisService.setValuesWithTTL(key, refreshToken, refreshTokenExpTime);  // Redis에 저장
+            String key = "refreshToken:member:" + id;
+            redisService.setValuesWithTTL(key, refreshToken, refreshTokenExpTime);
         }
-
     }
 
     public void createRefreshToken(ShopEntity shop) {
-        long Id = shop.getId();
+        long id = shop.getId();
         String refreshToken = createRefToken(refreshTokenExpTime);
         if (refreshToken != null) {
-            String key = "refreshToken:" + Id;  // UUID로 key 생성
-            redisService.setValuesWithTTL(key, refreshToken, refreshTokenExpTime); // Redis에 저장
+            String key = "refreshToken:shop:" + id;
+            redisService.setValuesWithTTL(key, refreshToken, refreshTokenExpTime);
         }
     }
 
@@ -228,13 +225,15 @@ public class JwtUtil {
     public enum TokenStatus { //토큰의 상태
         VALID, EXPIRED, INVALID
     }
+
     /**
      * JWT 검증
+     *
      * @param token
      * @return IsValidate
      */
     public TokenStatus validateToken(String token) {
-        System.out.println("토큰!!!!!"+token);
+        System.out.println("토큰!!!!!" + token);
 
         try {
             Jwts.parserBuilder()
@@ -256,7 +255,7 @@ public class JwtUtil {
     }
 
 
-    public void handleExpiredAccessToken(String token,HttpServletResponse response) throws IOException {
+    public void handleExpiredAccessToken(String token, HttpServletResponse response) throws IOException {
         String role = getRole(token);
 
 
@@ -268,11 +267,11 @@ public class JwtUtil {
             ShopEntity shop = shopRepository.findByEmail(email);
             id = String.valueOf(shop.getId());
             Long ttl = redisService.getTTL(id);
-            if(ttl>0){
-                newAccessToken= reCreateToken(shop,accessTokenExpTime);
+            if (ttl > 0) {
+                newAccessToken = reCreateToken(shop, accessTokenExpTime);
                 redisService.deleteValue(String.valueOf(shop.getId()));
                 createRefreshToken(shop);
-            } else{
+            } else {
                 //로그아웃처리
             }
 
@@ -280,14 +279,14 @@ public class JwtUtil {
             Long userId = getCustomerUserId(token);
             MemberEntity member = memberRepository.findById(userId).orElse(null);
 
-            if(member!=null){
+            if (member != null) {
                 id = String.valueOf(member.getId());
                 Long ttl = redisService.getTTL(id);
-                if(ttl>0){
-                    newAccessToken = reCreateToken(member,accessTokenExpTime);
+                if (ttl > 0) {
+                    newAccessToken = reCreateToken(member, accessTokenExpTime);
                     redisService.deleteValue(String.valueOf(member.getId()));
                     createRefreshToken(member);
-                }else{
+                } else {
                     //로그아웃처리
                 }
 
@@ -300,6 +299,7 @@ public class JwtUtil {
 
     /**
      * Token에서 Role 추출      // 1번
+     *
      * @param token
      * @return Email Address
      */
@@ -310,6 +310,7 @@ public class JwtUtil {
 
     /**
      * Token에서 Email 추출
+     *
      * @param token
      * @return Email Address
      */
@@ -319,6 +320,7 @@ public class JwtUtil {
 
     /**
      * Token에서 PhoneNumber 추출
+     *
      * @param token
      * @return Email Address
      */
@@ -330,12 +332,32 @@ public class JwtUtil {
         return parseClaims(token).get("userId", Long.class);
     }
 
+    public Long getShopId(String token) {
+        return parseClaims(token).get("shopId", Long.class);
+    }
+
+
     public static MemberEntity getMember() {
         return (MemberEntity) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
+    public static ShopEntity getShop() {
+        return (ShopEntity) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
+
+    //토큰추출
+    public String extractAccessToken(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            return header.substring(7);
+        }
+        throw new RuntimeException("Authorization 헤더가 없거나 형식이 올바르지 않습니다.");
+    }
+
+
     /**
      * JWT Claims 추출
+     *
      * @param accessToken
      * @return JWT Claims
      */

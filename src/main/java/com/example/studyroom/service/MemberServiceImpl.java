@@ -2,6 +2,7 @@ package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
+import com.example.studyroom.kafka.producer.SeatAlertProducer;
 import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
 
@@ -15,6 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.crossstore.ChangeSetPersister;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
+
 @Slf4j
 @Service
 public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements MemberService {
@@ -48,7 +51,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     private final RedisService redisService;
 
     private static final String AUTH_CODE_PREFIX = "EMAIL_VERIFICATION_KEY:";
-    private static final long authCodeExpirationMillis = 60*60*1000;
+    private static final long authCodeExpirationMillis = 60 * 60 * 1000;
     private final RemainPeriodTicketRepository remainPeriodTicketRepository;
     private final RemainTimeTicketRepository remainTimeTicketRepository;
     private final DeleteMemberRepository deleteMemberRepository;
@@ -56,9 +59,14 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     private final PeriodTicketServiceImpl periodTicketServiceImpl;
     private final PasswordEncoder passwordEncoder;
     private final SeatService seatService;
+    private final ChatSubscribeService chatSubscribeService;
+    private final RedisTemplate<String, String> redisTemplate;
+
+    private final SeatAlertProducer seatAlertProducer;
+    private final SeatExpirationAlertRepository seatExpirationAlertRepository;
 
     public MemberServiceImpl(MemberRepository repository,
-                            EnterHistoryRepository enterHistoryRepository,
+                             EnterHistoryRepository enterHistoryRepository,
                              SeatRepository seatRepository,
 
                              ShopRepository shopRepository,
@@ -68,7 +76,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                              DeleteMemberRepository deleteMemberRepository,
                              RemainTimeTicketRepository remainTimeTicketRepository, JwtUtil jwtUtil,
                              PeriodTicketServiceImpl periodTicketServiceImpl
-                            , PasswordEncoder passwordEncoder,SeatService seatService) {
+            , PasswordEncoder passwordEncoder, SeatService seatService, ChatSubscribeService chatSubscribeService, RedisTemplate redisTemplate
+            , SeatAlertProducer seatAlertProducer, SeatExpirationAlertRepository seatExpirationAlertRepository) {
         super(repository);
         this.repository = repository;
         this.enterHistoryRepository = enterHistoryRepository;
@@ -88,6 +97,10 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         this.periodTicketServiceImpl = periodTicketServiceImpl;
         this.passwordEncoder = passwordEncoder;
         this.seatService = seatService;
+        this.chatSubscribeService = chatSubscribeService;
+        this.redisTemplate = redisTemplate;
+        this.seatAlertProducer = seatAlertProducer;
+        this.seatExpirationAlertRepository = seatExpirationAlertRepository;
     }
 
 
@@ -134,33 +147,41 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
 
-    @Override //로그아웃
-    public FinalResponseDto<String> outAndlogout(MemberEntity member ,String accessToken) {
-
+    @Override
+    public FinalResponseDto<String> outAndlogout(MemberEntity member, String accessToken) {
+        // 자리 퇴장 처리
         EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(member.getId());
-        if(enterHistory != null && enterHistory.getExitTime()==null) { //따로 자리퇴장요청을 하지않고 바로 로그아웃했을땐 자리를 빼야하니까
-
-            FinalResponseDto<String> outResponse = out(member.getId()); // out 메서드를 호출하여 좌석 퇴장 처리
-
+        if (enterHistory != null && enterHistory.getExitTime() == null) {
+            FinalResponseDto<String> outResponse = out(member.getId());
             if (outResponse.getMessage().equals(ApiResult.DATA_NOT_FOUND.name())) {
-
                 return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
             }
         }
-        //redis에 남아있던 리프레시토큰 제거
-        String refreshTokenKey = "refreshToken:" + member.getId();  // 해당 사용자에 해당하는 refreshToken Redis 키
-        FinalResponseDto<String> deleteResponse=  redisService.deleteValue(refreshTokenKey);
-        if(deleteResponse.getMessage().equals(ApiResult.FAIL.name())){
+
+        // Refresh 토큰 제거
+        String refreshTokenKey = "refreshToken:member:" + member.getId();
+        FinalResponseDto<String> deleteResponse = redisService.deleteValue(refreshTokenKey);
+        if (deleteResponse.getMessage().equals(ApiResult.FAIL.name())) {
             return FinalResponseDto.failure(ApiResult.FAIL);
         }
-        //액세스토큰의 남은 유효기간만큼 redis에서 블랙리스트에 저장
-        String accessTokenKey = "blacklist:accessToken:" + member.getId();
+
+        // 채팅 구독 전체 해제
+        String userType = "user";
+        Long userId = member.getId();
+        chatSubscribeService.unsubscribeAll(userType, userId);
+
+        // FCM 토큰 제거
+        log.info("FCM 삭제 대상 key: fcm:{}:{}", userType, userId);
+        Boolean deleted = redisTemplate.delete("fcm:" + userType + ":" + userId);
+
+        log.info("FCM 토큰 삭제됨 여부: {}", deleted);
+
+        // Access 토큰 블랙리스트 등록
+        String accessTokenKey = "blacklist:accessToken:member:" + member.getId();
         jwtUtil.setAccessTokenWithRemainingTTL(accessTokenKey, accessToken);
 
-        return FinalResponseDto.success(); // 로그아웃 성공
-
+        return FinalResponseDto.success();
     }
-
 
 
     @Override
@@ -169,10 +190,10 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
             return FinalResponseDto.failure(ApiResult.ALREADY_EXIST_PHONE);
         }
         Optional<ShopEntity> shopOptional = shopRepository.findById(member.getShopId());
-        if(shopOptional.isEmpty()) {
+        if (shopOptional.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
         }
-        System.out.println("회원가입때 비밀번호"+passwordEncoder.encode(member.getPassword()));
+        System.out.println("회원가입때 비밀번호" + passwordEncoder.encode(member.getPassword()));
         MemberEntity createdMember = MemberEntity.builder()
                 .phone(member.getPhone())
                 .name(member.getName())
@@ -196,10 +217,12 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         updateExitTime(enterHistory);
         boolean isUpdateSeatAvailability = seatService.updateSeatAvailability(enterHistory.getSeat().getId());
 
-        if(!isUpdateSeatAvailability){
+        if (!isUpdateSeatAvailability) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
 
+        //  10분 알림 예약 삭제 (보내지 않은 것만)
+        seatExpirationAlertRepository.deleteByMemberIdAndSentFalse(userId);
         boolean ticketHandled = handleTicketExit(userId);
         if (!ticketHandled) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
@@ -251,10 +274,10 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         if (timeRedisKey != null) {
             long remainingSeconds = redisService.getTTL(timeRedisKey);
             if (remainingSeconds > 0) {
-               boolean isUpdateRemainTimeTicket = updateRemainTimeTicket(userId, remainingSeconds);
-               if (!isUpdateRemainTimeTicket) {
-                   return false;
-               }
+                boolean isUpdateRemainTimeTicket = updateRemainTimeTicket(userId, remainingSeconds);
+                if (!isUpdateRemainTimeTicket) {
+                    return false;
+                }
             }
             redisService.deleteValue(timeRedisKey);
             return true;
@@ -277,8 +300,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     @Override
     // TODO: Get Seat ID... 현재 유저가 자리하는 곳 반환
     public FinalResponseDto<MySeatInfoResponseDto> getSeatId(Long userId) {
-        EnterHistoryEntity enterHistory= enterHistoryRepository.findActiveByCustomerId(userId);
-        if(enterHistory==null){
+        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
+        if (enterHistory == null) {
             return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
         }
         Long id = enterHistory.getSeatId();
@@ -300,25 +323,24 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
 
-
     @Override
     @Transactional
-    public FinalResponseDto<String> occupySeatAndHandleTicket( MemberEntity member,OccupySeatRequestDto requestDto) {
+    public FinalResponseDto<String> occupySeatAndHandleTicket(MemberEntity member, OccupySeatRequestDto requestDto) {
         Optional<ShopEntity> shopOpt = (shopRepository.findById(member.getShop().getId()));
-        if(shopOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
+        if (shopOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
 
         Optional<RoomEntity> roomOpt = roomRepository.findById(requestDto.getRoomId());//룸체크
-        if(roomOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.ROOM_NOT_FOUND);
+        if (roomOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.ROOM_NOT_FOUND);
 
         Long roomId = roomOpt.get().getId();
         Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_IdWithPessimisticLock(requestDto.getSeatCode(), roomId);//자리체크
-        if(seatOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
+        if (seatOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
 
         SeatEntity seat = seatOpt.get();
-        if(!seat.getAvailable()) return FinalResponseDto.failure(ApiResult.SEAT_ALREADY_OCCUPIED);
+        if (!seat.getAvailable()) return FinalResponseDto.failure(ApiResult.SEAT_ALREADY_OCCUPIED);
 
         Optional<MemberEntity> memberOpt = repository.findById(member.getId());
-        if(memberOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        if (memberOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
 
         return handleTicketOccupation(member, seat);
 
@@ -344,8 +366,24 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         long ttlSeconds = Duration.between(now, endDate).getSeconds();
 
         if (ttlSeconds > 0) {
+
             String redisKey = "periodSeat:" + seat.getId() + ":user:" + member.getId() + ":shop:" + member.getShop().getId();
             redisService.setValuesWithTTL(redisKey, "occupied", ttlSeconds);
+
+            // seat_expiration_alert 저장
+            OffsetDateTime sendTime = endDate.minusMinutes(10);
+            SeatExpirationAlertEntity alert = SeatExpirationAlertEntity.builder()
+                    .memberId(member.getId())
+                    .seatId(seat.getId())
+                    .shopId(member.getShop().getId())
+                    .ticketType("PERIOD")
+                    .sendTime(sendTime)
+                    .sent(false)
+                    .createdAt(now)
+                    .build();
+
+            seatExpirationAlertRepository.save(alert);
+
 
             seat.setAvailable(false);
             seatRepository.save(seat);
@@ -364,13 +402,32 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         Duration remainTime = remainTimeTicket.getRemainTime();
         long millis = remainTime.toMillis();
 
+
         seat.setAvailable(false);
         seatRepository.save(seat);
 
         String redisKey = "timeSeat:" + seat.getId() + ":user:" + member.getId() + ":shop:" + member.getShop().getId();
         redisService.setValues(redisKey, "occupied", Duration.ofMillis(millis));
-
         OffsetDateTime now = OffsetDateTime.now();
+
+
+        //  종료 시각 계산 및 sendTime 생성 (얘는 남은시간만 있기때문에 이렇게 sendtime을구해야함)
+        OffsetDateTime endTime = now.plus(remainTime);
+        OffsetDateTime sendTime = endTime.minusMinutes(10);
+
+        //  알림 예약 엔티티 저장
+        SeatExpirationAlertEntity alert = SeatExpirationAlertEntity.builder()
+                .memberId(member.getId())
+                .seatId(seat.getId())
+                .shopId(member.getShop().getId())
+                .ticketType("TIME")
+                .sendTime(sendTime)
+                .sent(false)
+                .createdAt(now)
+                .build();
+        seatExpirationAlertRepository.save(alert);
+
+
         EnterHistoryEntity enterHistory = EnterHistoryEntity.builder().member(member).seat(seat).enterTime(now).shop(member.getShop()).build();
         enterHistoryRepository.save(enterHistory);
         member.updateLastEnterTime();
@@ -384,18 +441,18 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     public FinalResponseDto<RemainTicketInfoResponseDto> getRemainTime(Long shopId, Long userId) {
 
         String matchingKey = redisService.getUsingTicketCategoryInfoByUserId(userId);
-        if(matchingKey==null){
+        if (matchingKey == null) {
             log.info("matchingKey없음");
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
 
         String ticketCategory = matchingKey.substring(0, matchingKey.indexOf(':'));
-        log.info("ticketCategory"+ticketCategory);
-        if(ticketCategory.equals("timeSeat")){//현재 시간권 사용하면
-            RemainTicketInfoResponseDto result = redisService.getReaminTimeInfoByUserId(matchingKey,ticketCategory);
+        log.info("ticketCategory" + ticketCategory);
+        if (ticketCategory.equals("timeSeat")) {//현재 시간권 사용하면
+            RemainTicketInfoResponseDto result = redisService.getReaminTimeInfoByUserId(matchingKey, ticketCategory);
             return FinalResponseDto.successWithData(result);
-        }else if(ticketCategory.equals("periodSeat")){
-            RemainTicketInfoResponseDto result =  periodTicketServiceImpl.getEndDate(shopId,userId,ticketCategory);
+        } else if (ticketCategory.equals("periodSeat")) {
+            RemainTicketInfoResponseDto result = periodTicketServiceImpl.getEndDate(shopId, userId, ticketCategory);
             return FinalResponseDto.successWithData(result);
         }
         log.info("티켓이없음");
@@ -423,7 +480,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         if (!validationResponse.getMessage().matches(FinalResponseDto.success().getMessage())) {
             return validationResponse;
         }
-        if(currentSeatOpt.isEmpty() || newSeatOpt.isEmpty()){
+        if (currentSeatOpt.isEmpty() || newSeatOpt.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
 
@@ -467,22 +524,19 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
 
-
-
-
     @Override
-    public FinalResponseDto<String> resetPwAndLogout(MemberEntity tokenMember, ResetPwRequestDto requestDto , String accessToken) {
+    public FinalResponseDto<String> resetPwAndLogout(MemberEntity tokenMember, ResetPwRequestDto requestDto, String accessToken) {
 //        MemberEntity member = memberRepository.findById(tokenMember.getId()).orElseThrow(() -> new RuntimeException(ApiResult.DATA_NOT_FOUND.getCode()));
 
         MemberEntity member = memberRepository.findById(tokenMember.getId()).orElse(null);
-        if(member == null) {
+        if (member == null) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
 
-        System.out.println("재설정 비밀번호"+passwordEncoder.encode(requestDto.getNewPassword()));
-        System.out.println("기존 비밀번호"+passwordEncoder.encode(requestDto.getPassword()));
+        System.out.println("재설정 비밀번호" + passwordEncoder.encode(requestDto.getNewPassword()));
+        System.out.println("기존 비밀번호" + passwordEncoder.encode(requestDto.getPassword()));
         System.out.println(passwordEncoder.matches(requestDto.getPassword(), member.getPassword()));
-        if(!passwordEncoder.matches(requestDto.getPassword(), member.getPassword())) {
+        if (!passwordEncoder.matches(requestDto.getPassword(), member.getPassword())) {
             return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);
         }
         member.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
@@ -490,6 +544,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         memberRepository.save(member);
         return FinalResponseDto.success();
     }
+
     ///
     //fixme:이메일기능에서 이 밑에함수들이 필요한가?
     public void sendCodeToEmail(String toEmail) {//이 함수는 뭘뜻하는지 잘모르겠다..
@@ -498,10 +553,10 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         String title = " 이메일 인증 번호";
         String authCode = this.createCode();
         // 이메일 인증 요청 시 인증 번호 Redis에 저장 ( key = "AuthCode " + Email / value = AuthCode )
-        if(authCode != null){
+        if (authCode != null) {
             redisService.setValues(AUTH_CODE_PREFIX + toEmail, authCode, Duration.ofMillis(authCodeExpirationMillis));
             mailService.sendEmail(toEmail, title, authCode);
-        }else{
+        } else {
 
         }
 
@@ -512,7 +567,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         boolean isMemberExist = shopRepository.existsByEmail(email);
         if (isMemberExist) {
             return FinalResponseDto.failure(ApiResult.ALREADY_EXIST_EMAIL);
-        }else{
+        } else {
             return FinalResponseDto.success();
         }
     }
@@ -534,7 +589,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     public FinalResponseDto<Object> verifiedCode(String email, String authCode) {
         this.checkDuplicatedEmail(email);
         String redisAuthCode = redisService.getValues(AUTH_CODE_PREFIX + email);
-        if(redisAuthCode == null) {
+        if (redisAuthCode == null) {
             //return 유효시간 초과 에러 -->
             return FinalResponseDto.failure(ApiResult.TIMEOUT_EXCEEDED);
         }
@@ -543,9 +598,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         return FinalResponseDto.successWithData(authResult);
     }
 
-    public FinalResponseDto<MemberResponseDto> getMemberInfo(Long userId){
+    public FinalResponseDto<MemberResponseDto> getMemberInfo(Long userId) {
         Optional<MemberEntity> member = memberRepository.findById(userId);
-        if(member.isEmpty()){
+        if (member.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
         MemberResponseDto responseDto = MemberResponseDto.builder()
@@ -558,9 +613,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     @Override
     @Transactional
-    public FinalResponseDto<String> deleteMemberAndLogout(MemberEntity memberEntity ,String accessToken){
+    public FinalResponseDto<String> deleteMemberAndLogout(MemberEntity memberEntity, String accessToken) {
         Optional<MemberEntity> member = memberRepository.findById(memberEntity.getId());
-        if(member.isEmpty()){
+        if (member.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
         this.outAndlogout(memberEntity, accessToken);

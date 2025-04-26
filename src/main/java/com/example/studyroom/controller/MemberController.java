@@ -3,6 +3,7 @@ package com.example.studyroom.controller;
 import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
 
+import com.example.studyroom.model.EnterHistoryEntity;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.repository.MemberRepository;
@@ -33,15 +34,15 @@ public class MemberController {
     private final MemberRepository memberRepository;
 
     public MemberController(
-           MemberService memberService,
+            MemberService memberService,
             MailService mailService,
-           ShopService shopService,
-           TicketService ticketService,
-           MemberRepository memberRepository) {
+            ShopService shopService,
+            TicketService ticketService,
+            MemberRepository memberRepository) {
         this.memberService = memberService;
         this.mailService = mailService;
         this.shopService = shopService;
-        this.ticketService=ticketService;
+        this.ticketService = ticketService;
         this.memberRepository = memberRepository;
     }
 
@@ -54,14 +55,14 @@ public class MemberController {
 
     @PostMapping("/login")
     public ResponseEntity<FinalResponseDto<String>> login(@RequestBody MemberSignInRequestDto member, HttpServletResponse response) {
-        FinalResponseDto<String> token = memberService.login(member,response);
+        FinalResponseDto<String> token = memberService.login(member, response);
         return ResponseEntity.ok(token);
     }
 
     @PostMapping("/occupy-seat")
     public ResponseEntity<FinalResponseDto<String>> occupySeat(@RequestBody OccupySeatRequestDto requestDto) {
         System.out.println("^^^");
-       // MemberEntity member = SecurityUtil.getMemberInfo();
+        // MemberEntity member = SecurityUtil.getMemberInfo();
         MemberEntity member = JwtUtil.getMember();
         return ResponseEntity.ok(memberService.occupySeatAndHandleTicket(member, requestDto));
     }
@@ -105,13 +106,13 @@ public class MemberController {
 //
 
 
-
     @PostMapping("/out")
     public FinalResponseDto<String> out() {
         MemberEntity member = JwtUtil.getMember();
         return this.memberService.out(member.getId());
     }
-//
+
+    //
     @PostMapping("/move")
     public FinalResponseDto move(@RequestBody MemberMoveRequestDto requestDto) {
         //TODO: 쿠키에서 userid, customerId 추출하는 메서드추가
@@ -121,6 +122,7 @@ public class MemberController {
                 requestDto
         );
     }
+
     @GetMapping("/getUserInfo")
     public ResponseEntity<FinalResponseDto<MemberResponseDto>> getMemberInfo() {
         MemberEntity member = JwtUtil.getMember();
@@ -137,15 +139,14 @@ public class MemberController {
             accessToken = authorizationHeader.substring(7); // "Bearer "를 제외한 토큰만 추출
         }
         MemberEntity member = JwtUtil.getMember();
-        return this.memberService.deleteMemberAndLogout(member,accessToken);
+        return this.memberService.deleteMemberAndLogout(member, accessToken);
     }
-
 
 
     @GetMapping("/getRemainTime")
     public ResponseEntity<FinalResponseDto<RemainTicketInfoResponseDto>> getRemainTime(Long userId) {
         MemberEntity member = JwtUtil.getMember();
-        FinalResponseDto<RemainTicketInfoResponseDto> response = this.memberService.getRemainTime(member.getShop().getId(),member.getId());
+        FinalResponseDto<RemainTicketInfoResponseDto> response = this.memberService.getRemainTime(member.getShop().getId(), member.getId());
         return ResponseEntity.ok(response);
     }
 
@@ -156,20 +157,19 @@ public class MemberController {
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             accessToken = authorizationHeader.substring(7); // "Bearer "를 제외한 토큰만 추출
         }
-        FinalResponseDto<String> response = this.memberService.outAndlogout(member , accessToken);
+        FinalResponseDto<String> response = this.memberService.outAndlogout(member, accessToken);
         return ResponseEntity.ok(response);
     }
 
 
-
     @PostMapping("/reset/pw")
-    public ResponseEntity<FinalResponseDto<String>> resetPw(@RequestBody ResetPwRequestDto requestDto ,@RequestHeader("Authorization") String authorizationHeader) {
+    public ResponseEntity<FinalResponseDto<String>> resetPw(@RequestBody ResetPwRequestDto requestDto, @RequestHeader("Authorization") String authorizationHeader) {
         MemberEntity member = JwtUtil.getMember();
         String accessToken = null;
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             accessToken = authorizationHeader.substring(7); // "Bearer "를 제외한 토큰만 추출
         }
-        FinalResponseDto<String> response = this.memberService.resetPwAndLogout(member,requestDto,accessToken);
+        FinalResponseDto<String> response = this.memberService.resetPwAndLogout(member, requestDto, accessToken);
 
         return ResponseEntity.ok(response);
     }
@@ -177,7 +177,7 @@ public class MemberController {
     @PostMapping("/pay-info")
     public ResponseEntity<FinalResponseDto<PaymentHistoryDto>> getPaymentHistory(@RequestBody PaymentHistoryDateRequestDto requestDto) {
         MemberEntity member = JwtUtil.getMember();
-        FinalResponseDto<PaymentHistoryDto> response = this.ticketService.getPaymentHistory(requestDto,member.getShop().getId(), member.getId());
+        FinalResponseDto<PaymentHistoryDto> response = this.ticketService.getPaymentHistory(requestDto, member.getShop().getId(), member.getId());
         return ResponseEntity.ok(response);
     }
 
@@ -188,5 +188,5 @@ public class MemberController {
         return ResponseEntity.ok(response);
     }
 }
- //TODO: 자리 점유 요청
+//TODO: 자리 점유 요청
 //회원 회원가입 , 로그인,회원정보 가져오기 , 회원탈퇴요청,로그아웃

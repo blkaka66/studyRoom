@@ -4,10 +4,13 @@ import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.ChatMessageEntity;
 import com.example.studyroom.model.ChatRoomEntity;
+import com.example.studyroom.kafka.producer.KafkaProducerService;
 import com.example.studyroom.repository.ChatRepository;
 import com.example.studyroom.repository.ChatRoomRepository;
+import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.type.ApiResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,7 +24,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,7 +37,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final ChatSubscribeService chatSubscribeService;
-    private final FcmTokenService fcmTokenService;
+    private final FirebaseService firebaseService;
 
     public ChatServiceImpl(JpaRepository<ChatMessageEntity, Long> repository,
                            ChatRoomRepository chatRoomRepository,
@@ -44,7 +46,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
                            SimpMessagingTemplate messagingTemplate,
                            StringRedisTemplate redisTemplate,
                            ChatSubscribeService chatSubscribeService,
-                           FcmTokenService fcmTokenService) {
+                           FcmTokenService fcmTokenService, JwtUtil jwtUtil, FirebaseService firebaseService) {
         super(repository);
         this.chatRoomRepository = chatRoomRepository;
         this.chatRepository = chatRepository;
@@ -53,7 +55,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         this.redisTemplate = redisTemplate;
         this.objectMapper = new ObjectMapper();
         this.chatSubscribeService = chatSubscribeService;
-        this.fcmTokenService = fcmTokenService;
+        this.firebaseService = firebaseService;
     }
 
     // 채팅방 생성 (이미 존재하면 예외)
@@ -137,7 +139,9 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
     // 채팅방 입장 (입장 기록 갱신, 나간 경우 입장 불가)
     @Override
-    public FinalResponseDto<EnterChatRoomResponseDto> enterChatRoom(EnterChatRoomRequestDto dto) {
+    public FinalResponseDto<EnterChatRoomResponseDto> enterChatRoom(EnterChatRoomRequestDto dto, HttpServletRequest request) {
+
+
         Optional<ChatRoomEntity> optionalRoom = chatRoomRepository.findLatestActiveRoomBidirectional(
                 dto.getRequesterId(), dto.getRequesterType(), dto.getPartnerId(), dto.getPartnerType());
 
@@ -157,8 +161,6 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
 
         chatRoomRepository.save(room);
-//        markMessagesAsRead(room.getId(), dto.getRequesterType(), dto.getRequesterId());
-//        markReadingStatus(room.getId(), dto.getRequesterType(), dto.getRequesterId());
 
 
         EnterChatRoomResponseDto response = EnterChatRoomResponseDto.builder()
@@ -178,7 +180,8 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
         ChatRoomEntity room = roomOpt.get();
 
-        boolean isUser = room.getSenderId().equals(dto.getRequesterId()) && room.getSenderType().equals(dto.getRequesterType());
+        boolean isUser = room.getSenderId().equals(dto.getRequesterId()) &&
+                room.getSenderType().equals(dto.getRequesterType());
 
         if (isUser) {
             room.setSenderClosed(true);
@@ -187,7 +190,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         }
 
         chatRoomRepository.save(room);
-        chatSubscribeService.unsubscribe(dto.getRequesterId(), dto.getRoomId());
+        chatSubscribeService.unsubscribe(dto.getRequesterType(), dto.getRequesterId(), dto.getRoomId());
 
         LeaveChatRoomResponseDto response = LeaveChatRoomResponseDto.builder()
                 .chatRoomId(room.getId())
@@ -195,6 +198,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
         return FinalResponseDto.successWithData(response);
     }
+
 
     // 메세지 처리
     @Override
@@ -207,18 +211,35 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
             kafkaProducerService.sendChatMessage("chat-messages", messageJson);
             messagingTemplate.convertAndSend("/topic/room/" + room.getId(), chatMessage);
 
+            ChatListUpdateResponseDto payload = ChatListUpdateResponseDto.builder()
+                    .roomId(chatMessage.getRoomId())
+                    .message(chatMessage.getMessage())
+                    .timestamp(chatMessage.getTimestamp())
+                    .build();
+
+            messagingTemplate.convertAndSend(
+                    "/topic/chat-list/user/" + chatMessage.getReceiverId(),
+                    payload
+            );
+
+
             boolean isSubscribed = chatSubscribeService.isSubscribed(
-                    chatMessage.getReceiverId(), chatMessage.getRoomId());
-        
+                    chatMessage.getReceiverType(), chatMessage.getReceiverId(), chatMessage.getRoomId()); // 수정됨
+
             if (!isSubscribed) {
-                fcmTokenService.sendChatNotification(
-                        chatMessage.getReceiverId(),
-                        chatMessage.getReceiverType(),
-                        chatMessage.getMessage() // 실제 메시지 내용
-                );
+                String fcmToken = redisTemplate.opsForValue().get("fcm:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId());
+                if (fcmToken != null) {
+                    firebaseService.sendMessageToToken(
+                            fcmToken,
+                            "새 메시지 도착",
+                            chatMessage.getMessage(),
+                            null
+                    );
+                }
             }
-            // 읽음 처리
-            String unreadKey = "chat:unread:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId() + ":room:" + room.getId();
+
+            String unreadKey = "chat:unread:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId()
+                    + ":room:" + room.getId();
             String readingKey = unreadKey + ":reading";
             Boolean isReading = redisTemplate.hasKey(readingKey);
 
@@ -227,6 +248,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
             } else {
                 redisTemplate.opsForValue().increment(unreadKey);
             }
+
         } catch (Exception e) {
             log.error("메시지 처리 오류", e);
         }
@@ -279,9 +301,9 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
     @Override
     public FinalResponseDto<String> markReadingStatus(Long roomId, String userType, Long userId) {
         String readingKey = "chat:unread:" + userType + ":" + userId + ":room:" + roomId + ":reading";
+
         redisTemplate.opsForValue().set(readingKey, "1");
-        // 구독 상태도 같이 저장
-        chatSubscribeService.subscribe(userId, roomId);
+        chatSubscribeService.subscribe(userType, userId, roomId);
         return FinalResponseDto.success();
     }
 
@@ -289,6 +311,8 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
     public FinalResponseDto<String> clearReadingStatus(Long roomId, String userType, Long userId) {
         String key = "chat:unread:" + userType + ":" + userId + ":room:" + roomId + ":reading";
         redisTemplate.delete(key);
+        // 구독 상태도 해제
+        chatSubscribeService.unsubscribe(userType, userId, roomId);
         return FinalResponseDto.success();
     }
 
@@ -297,6 +321,17 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         String key = "chat:lastRead:" + roomId + ":" + userType + ":" + userId;
         String timestamp = LocalDateTime.now().toString();
         redisTemplate.opsForValue().set(key, timestamp);
+
+        // 여기서 WebSocket으로 상대방에게 알림 전송
+        ChatLastReadTimeResponseDto payload = ChatLastReadTimeResponseDto.builder()
+                .userId(userId)
+                .userType(userType)
+                .timestamp(timestamp)
+                .build();
+
+        // 브로드캐스트 추가
+        messagingTemplate.convertAndSend("/topic/chat-read/" + roomId, payload);
+
         return FinalResponseDto.success();
     }
 
@@ -307,16 +342,18 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
         String opponentType;
         Long opponentId;
-
-        if (room.getSenderId().equals(myId) && room.getSenderType().equals(myType)) {
-            opponentId = room.getPartnerId();
-            opponentType = room.getPartnerType();
-        } else {
+        log.info("getOpponentLastReadTime Dto :{} ,:{} , :{}", roomId, myType, myId);
+        if ("shop".equals(myType)) {
             opponentId = room.getSenderId();
-            opponentType = room.getSenderType();
+            opponentType = "user";
+        } else {
+            opponentId = room.getPartnerId();
+            opponentType = "shop";
         }
 
+
         String key = "chat:lastRead:" + roomId + ":" + opponentType + ":" + opponentId;
+        log.info("getOpponentLastReadTime key :{}", key);
         String lastReadTimestamp = redisTemplate.opsForValue().get(key);
         GetOpponentLastReadTimeResponseDto response = GetOpponentLastReadTimeResponseDto.builder()
                 .lastReadTimestamp(lastReadTimestamp)
@@ -361,4 +398,6 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
         return FinalResponseDto.successWithData(messages);
     }
+
+
 }

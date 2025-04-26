@@ -1,10 +1,12 @@
 package com.example.studyroom.service;
 
 public interface ChatSubscribeService {
-    
-    void subscribe(Long userId, Long roomId);
 
-    void unsubscribe(Long userId, Long roomId);
+    void subscribe(String userType, Long userId, Long roomId);
 
-    boolean isSubscribed(Long userId, Long roomId);
+    void unsubscribe(String userType, Long userId, Long roomId);
+
+    boolean isSubscribed(String userType, Long userId, Long roomId);
+
+    void unsubscribeAll(String userType, Long userId);
 }
