@@ -4,6 +4,7 @@ import com.example.studyroom.dto.responseDto.FinalResponseDto;
 import com.example.studyroom.dto.responseDto.RemainTicketInfoResponseDto;
 
 import java.time.Duration;
+import java.util.Set;
 
 public interface RedisService {
     void setValues(String key, String value, Duration duration);
@@ -17,4 +18,9 @@ public interface RedisService {
 
     String getUsingTicketCategoryInfoByUserId(Long userId);
     RemainTicketInfoResponseDto getReaminTimeInfoByUserId(String matchingKey, String ticketCategory);
+
+
+    Set<String> getKeysByPattern(String pattern);
+    Boolean deleteByPattern(String pattern);
+    Boolean deleteByKey(String key);
 }

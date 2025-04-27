@@ -171,8 +171,10 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         chatSubscribeService.unsubscribeAll(userType, userId);
 
         // FCM 토큰 제거
+//        log.info("all keys: {}", redisTemplate.keys("*"));
         log.info("FCM 삭제 대상 key: fcm:{}:{}", userType, userId);
-        Boolean deleted = redisTemplate.delete("fcm:" + userType + ":" + userId);
+        log.info("FCM 삭제 대상 check: fcm:{}:{}, data: {}", userType, userId, redisService.getValues("fcm:" + userType + ":" + userId));
+        Boolean deleted = redisService.deleteByKey("fcm:" + userType + ":" + userId);
 
         log.info("FCM 토큰 삭제됨 여부: {}", deleted);
 

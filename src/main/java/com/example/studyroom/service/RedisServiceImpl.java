@@ -130,5 +130,26 @@ public class RedisServiceImpl implements RedisService {
         return null; // 매칭되는 키가 없는 경우
     }
 
+    @Override
+    public Set<String> getKeysByPattern(String pattern) {
+        return redisTemplate.keys(pattern);
+    }
+
+    @Override
+    public Boolean deleteByPattern(String pattern) {
+        Set<String> keys = redisTemplate.keys(pattern);
+        if (keys != null && !keys.isEmpty()) {
+            for (String key : keys) {
+                redisTemplate.delete(key);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public Boolean deleteByKey(String key) {
+        return redisTemplate.delete(key);
+    }
 }
 

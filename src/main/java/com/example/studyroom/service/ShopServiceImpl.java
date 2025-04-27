@@ -180,7 +180,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
         // FCM 토큰 제거
         log.info("FCM 삭제 대상 key: fcm:{}:{}", userType, shopId);
-        Boolean deleted = redisTemplate.delete("fcm:" + userType + ":" + shopId);
+        Boolean deleted = redisService.deleteByKey("fcm:" + userType + ":" + shopId);
 
         log.info("FCM 토큰 삭제됨 여부: {}", deleted);
 
