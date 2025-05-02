@@ -1,9 +1,9 @@
 package com.example.studyroom.repository;
 
-import com.example.studyroom.model.ChatMessageEntity;
+import com.example.studyroom.model.chat.ChatMessageEntity;
 import org.springframework.data.domain.Page;
 
-import com.example.studyroom.model.ChatRoomEntity;
+import com.example.studyroom.model.chat.ChatRoomEntity;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

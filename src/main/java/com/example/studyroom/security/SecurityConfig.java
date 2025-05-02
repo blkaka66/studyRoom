@@ -28,7 +28,7 @@ import java.util.List;
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true)
 @AllArgsConstructor
-public class SecurityConfig  {
+public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final CustomAccessDeniedHandler accessDeniedHandler;
@@ -46,7 +46,8 @@ public class SecurityConfig  {
             "/shop/sign-in/shop-list",
             "/shop/sign-up",
             "/member/sign-up",
-            "/shop/refreshToken"
+            "/shop/refreshToken",
+            "/sms/send"
     };
 
     @Bean
@@ -61,7 +62,7 @@ public class SecurityConfig  {
         //http.cors(Customizer.withDefaults());
         http.cors(cors -> cors.configurationSource(request -> {
             var corsConfig = new org.springframework.web.cors.CorsConfiguration();
-            corsConfig.setAllowedOrigins(List.of("https://studyroom-webfush.web.app", "http://localhost:5173", "http://localhost:5174", "http://localhost:3000","http://127.0.0.1:3000","http://127.0.0.1:5173")); // 여기에 허용할 출처를 명시
+            corsConfig.setAllowedOrigins(List.of("https://studyroom-webfush.web.app", "http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://127.0.0.1:3000", "http://127.0.0.1:5173")); // 여기에 허용할 출처를 명시
             corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
             corsConfig.setAllowedHeaders(List.of("*"));
             corsConfig.setAllowCredentials(true); // 쿠키 및 인증정보 허용
@@ -79,21 +80,22 @@ public class SecurityConfig  {
 
 
         //JwtAuthFilter를 UsernamePasswordAuthenticationFilter 앞에 추가
-        http.addFilterBefore(new JwtAuthFilter(jwtUtil, memberRepository, shopRepository,redisService), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new JwtAuthFilter(jwtUtil, memberRepository, shopRepository, redisService), UsernamePasswordAuthenticationFilter.class);
 
 
         http.exceptionHandling((exceptionHandling) -> exceptionHandling
 //                .authenticationEntryPoint(authenticationEntryPoint)
-                .accessDeniedHandler(accessDeniedHandler)
+                        .accessDeniedHandler(accessDeniedHandler)
         );
 
         // 권한 규칙 작성
         http.authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(AUTH_WHITELIST).permitAll()
-                        .requestMatchers("/ws/**").permitAll()  //WebSocket 엔드포인트 인증 없이 허용
+                .requestMatchers(AUTH_WHITELIST).permitAll()
+                .requestMatchers("/ws/**").permitAll()  //WebSocket 엔드포인트 인증 없이 허용
                 .requestMatchers("/fcm-test").permitAll()
-                        .requestMatchers("/chat/**").authenticated()  // 채팅 API는 인증 필요
-                        .anyRequest().authenticated()
+                .requestMatchers("/sms/**").permitAll()
+                .requestMatchers("/chat/**").authenticated()  // 채팅 API는 인증 필요
+                .anyRequest().authenticated()
         );
 
         return http.build();

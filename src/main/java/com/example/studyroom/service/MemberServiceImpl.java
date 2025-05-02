@@ -110,23 +110,6 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
 
-//    @Override //로그인
-//    public FinalResponseDto<String> login(MemberSignInRequestDto dto, HttpServletResponse response) {
-//        //레포지토리에있는 함수가져오기
-//        System.out.println("로그인때 비밀번호"+passwordEncoder.encode(dto.getPassword()));
-//        MemberEntity Member = repository.findByPhoneAndPassword(dto.getPhoneNumber(), passwordEncoder.encode(dto.getPassword()));
-//
-//        if (Member != null) {
-//            String token = this.jwtUtil.createAccessToken(dto);
-//            JwtCookieUtil.addInfoToCookie(String.valueOf(dto.getShopId()), response, 3600);
-//            return FinalResponseDto.successWithData(token);
-//            //return Member;
-//        } else {
-//            return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);
-//            //throw new RuntimeException("로그인 실패: 사용자명 또는 비밀번호가 올바르지 않습니다.");
-//        }
-//    }
-
     @Override // 로그인
     public FinalResponseDto<String> login(MemberSignInRequestDto dto, HttpServletResponse response) {
         // 레포지토리에서 사용자 조회

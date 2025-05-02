@@ -80,7 +80,7 @@ public class JwtUtil {
      * @return Access Token String
      */
     //ShopSignInRequestDto 또는 MemberSignInRequestDto 객체를 받아 액세스 토큰을 생성
-    public String createAccessToken(ShopSignInRequestDto shop) {
+    public String createAccessToken(ShopEntity shop) {
         return createToken(shop, accessTokenExpTime);
     }
 
@@ -104,26 +104,24 @@ public class JwtUtil {
      * @return JWT String
      */
     //ShopSignInRequestDto 또는 MemberSignInRequestDto에 기반하여 실제 JWT 토큰을 생성
-    private String createToken(ShopSignInRequestDto shop, long expireTime) {
-        ShopEntity existingShop = shopRepository.findByEmailAndPassword(shop.getEmail(), shop.getPassword());
-        if (existingShop != null) {
-            Claims claims = Jwts.claims();
-            claims.put("email", shop.getEmail());
-            claims.put("role", "SHOP");
-            claims.put("shopId", existingShop.getId());
-
-            ZonedDateTime now = ZonedDateTime.now();
-            ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
+    private String createToken(ShopEntity shop, long expireTime) {
 
 
-            return Jwts.builder()
-                    .setClaims(claims)
-                    .setExpiration(Date.from(tokenValidity.toInstant()))
-                    .signWith(key, SignatureAlgorithm.HS256)
-                    .compact();
-        } else {
-            return null;//여기선 굳이 FinalResponseDto할필요 없겠지?
-        }
+        Claims claims = Jwts.claims();
+        claims.put("email", shop.getEmail());
+        claims.put("role", "SHOP");
+        claims.put("shopId", shop.getId());
+
+        ZonedDateTime now = ZonedDateTime.now();
+        ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
+
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setExpiration(Date.from(tokenValidity.toInstant()))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+
 
     }
 
@@ -221,6 +219,7 @@ public class JwtUtil {
 
 
     }
+
 
     public enum TokenStatus { //토큰의 상태
         VALID, EXPIRED, INVALID

@@ -1,8 +1,10 @@
 package com.example.studyroom.kafka.consumer;
 
 import com.example.studyroom.dto.requestDto.ChatMessageRequestDto;
-import com.example.studyroom.model.ChatMessageEntity;
-import com.example.studyroom.model.ChatRoomEntity;
+import com.example.studyroom.dto.requestDto.LeaveChatRoomEventRequestDto;
+import com.example.studyroom.model.chat.ChatMessageEntity;
+import com.example.studyroom.model.chat.ChatRoomEntity;
+import com.example.studyroom.model.chat.MessageType;
 import com.example.studyroom.repository.ChatRepository;
 import com.example.studyroom.repository.ChatRoomRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,16 +48,16 @@ public class KafkaChatConsumer {
                         log.error("채팅방이 존재하지 않음: sender {} → receiver {}", chatMessage.getSenderId(), chatMessage.getReceiverId());
                         return new IllegalStateException("채팅방 없음");
                     });
-
-            ChatMessageEntity entity = new ChatMessageEntity();
-            entity.setRoom(room);
-            entity.setSenderId(chatMessage.getSenderId());
-            entity.setSenderType(chatMessage.getSenderType());
-            entity.setReceiverId(chatMessage.getReceiverId());
-            entity.setReceiverType(chatMessage.getReceiverType());
-            entity.setMessage(chatMessage.getMessage());
-            entity.setTimestamp(LocalDateTime.parse(chatMessage.getTimestamp()));
-
+            ChatMessageEntity entity = ChatMessageEntity.builder()
+                    .room(room)
+                    .senderId(chatMessage.getSenderId())
+                    .senderType(chatMessage.getSenderType())
+                    .receiverId(chatMessage.getReceiverId())
+                    .receiverType(chatMessage.getReceiverType())
+                    .message(chatMessage.getMessage())
+                    .messageType(MessageType.fromString(chatMessage.getMessageType())) // String -> Enum 변환
+                    .timestamp(LocalDateTime.parse(chatMessage.getTimestamp()))
+                    .build();
             chatRepository.save(entity);
             log.info("Kafka 메시지 저장 완료");
 
@@ -63,4 +65,37 @@ public class KafkaChatConsumer {
             log.error("Kafka 메시지 처리 실패: {}", e.getMessage());
         }
     }
+
+    @KafkaListener(topics = "chat-events", groupId = "chat-group")
+    public void consumeChatEvent(String eventJson) {
+        try {
+            LeaveChatRoomEventRequestDto event = objectMapper.readValue(eventJson, LeaveChatRoomEventRequestDto.class);
+
+            if (!"LEAVE".equals(event.getEventType())) {
+                return;
+            }
+
+            ChatRoomEntity room = chatRoomRepository.findById(event.getRoomId())
+                    .orElseThrow(() -> new IllegalStateException("채팅방을 찾을 수 없습니다. roomId: " + event.getRoomId()));
+
+            ChatMessageEntity leaveMessage = ChatMessageEntity.builder()
+                    .room(room)
+                    .senderId(event.getSenderId())
+                    .senderType(event.getSenderType())
+                    .receiverId(event.getReceiverId())
+                    .receiverType(event.getReceiverType())
+                    .message("상대방이 채팅을 종료했습니다.") // 고정 메시지
+                    .messageType(MessageType.LEAVE)
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+            chatRepository.save(leaveMessage);
+            log.info("퇴장 메시지 저장 완료: roomId {}", event.getRoomId());
+
+        } catch (Exception e) {
+            log.error("Kafka chat-events 수신 실패: {}", e.getMessage());
+        }
+    }
+
+
 }

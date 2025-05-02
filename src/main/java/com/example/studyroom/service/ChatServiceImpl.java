@@ -2,16 +2,19 @@ package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
-import com.example.studyroom.model.ChatMessageEntity;
-import com.example.studyroom.model.ChatRoomEntity;
+import com.example.studyroom.model.chat.ChatMessageEntity;
+import com.example.studyroom.model.chat.ChatRoomEntity;
 import com.example.studyroom.kafka.producer.KafkaProducerService;
+import com.example.studyroom.model.chat.MessageType;
 import com.example.studyroom.repository.ChatRepository;
 import com.example.studyroom.repository.ChatRoomRepository;
 import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.type.ApiResult;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.C;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +41,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
     private final ObjectMapper objectMapper;
     private final ChatSubscribeService chatSubscribeService;
     private final FirebaseService firebaseService;
+    private final ChatPushService chatPushService;
 
     public ChatServiceImpl(JpaRepository<ChatMessageEntity, Long> repository,
                            ChatRoomRepository chatRoomRepository,
@@ -46,7 +50,8 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
                            SimpMessagingTemplate messagingTemplate,
                            StringRedisTemplate redisTemplate,
                            ChatSubscribeService chatSubscribeService,
-                           FcmTokenService fcmTokenService, JwtUtil jwtUtil, FirebaseService firebaseService) {
+                           FcmTokenService fcmTokenService, JwtUtil jwtUtil,
+                           FirebaseService firebaseService, ChatPushService chatPushService) {
         super(repository);
         this.chatRoomRepository = chatRoomRepository;
         this.chatRepository = chatRepository;
@@ -56,6 +61,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         this.objectMapper = new ObjectMapper();
         this.chatSubscribeService = chatSubscribeService;
         this.firebaseService = firebaseService;
+        this.chatPushService = chatPushService;
     }
 
     // 채팅방 생성 (이미 존재하면 예외)
@@ -146,6 +152,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
                 dto.getRequesterId(), dto.getRequesterType(), dto.getPartnerId(), dto.getPartnerType());
 
         if (optionalRoom.isEmpty()) {
+            log.info("방이없음!!");
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
 
@@ -162,6 +169,37 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
         chatRoomRepository.save(room);
 
+
+        EnterChatRoomResponseDto response = EnterChatRoomResponseDto.builder()
+                .chatRoomId(room.getId())
+                .build();
+
+        return FinalResponseDto.successWithData(response);
+    }
+
+    @Override
+    public FinalResponseDto<EnterChatRoomResponseDto> validateAndEnterOldChatRoom(EnterChatRoomByIdRequestDto dto) {
+
+        Optional<ChatRoomEntity> optionalRoom = chatRoomRepository.findById(dto.getChatRoomId());
+
+        if (optionalRoom.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+
+        ChatRoomEntity room = optionalRoom.get();
+
+        boolean isSender = room.getSenderId().equals(dto.getRequesterId()) && room.getSenderType().equals(dto.getRequesterType());
+        boolean isPartner = room.getPartnerId().equals(dto.getRequesterId()) && room.getPartnerType().equals(dto.getRequesterType());
+
+        if (!isSender && !isPartner) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+
+        boolean iAmClosed = isSender ? Boolean.TRUE.equals(room.getSenderClosed()) : Boolean.TRUE.equals(room.getPartnerClosed());
+
+        if (iAmClosed) {
+            return FinalResponseDto.failure(ApiResult.ALREADY_CLOSED_ROOM);
+        }
 
         EnterChatRoomResponseDto response = EnterChatRoomResponseDto.builder()
                 .chatRoomId(room.getId())
@@ -195,10 +233,77 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         LeaveChatRoomResponseDto response = LeaveChatRoomResponseDto.builder()
                 .chatRoomId(room.getId())
                 .build();
+        LocalDateTime now = LocalDateTime.now();
+        //퇴장 메시지 전송
+        Long receiverId;
+        String receiverType;
+
+        if (isUser) {
+            receiverId = room.getPartnerId();
+            receiverType = room.getPartnerType();
+        } else {
+            receiverId = room.getSenderId();
+            receiverType = room.getSenderType();
+        }
+        sendLeaveEvent(
+                dto.getRequesterId(),
+                dto.getRequesterType(),
+                receiverId,
+                receiverType,
+                room.getId(),
+                now
+        );
+
 
         return FinalResponseDto.successWithData(response);
     }
 
+    private void sendLeaveEvent(Long senderId, String senderType, Long receiverId, String receiverType, Long roomId, LocalDateTime now) {
+        try {
+            LeaveChatRoomEventRequestDto leaveEvent = new LeaveChatRoomEventRequestDto();
+            leaveEvent.setSenderId(senderId);
+            leaveEvent.setSenderType(senderType);
+            leaveEvent.setReceiverId(receiverId);
+            leaveEvent.setReceiverType(receiverType);
+            leaveEvent.setRoomId(roomId);
+            leaveEvent.setEventType("LEAVE");
+
+            String jsonMessage = objectMapper.writeValueAsString(leaveEvent);
+
+            kafkaProducerService.sendChatMessage("chat-events", jsonMessage);
+
+            ChatMessageResponseDto response = ChatMessageResponseDto.builder()
+                    .roomId(roomId)
+                    .senderId(senderId)
+                    .senderType(senderType)
+                    .receiverId(receiverId)
+                    .receiverType(receiverType)
+                    .message("상대방이 채팅을 종료했습니다.")
+                    .messageType("LEAVE")
+                    .timestamp(String.valueOf(now))
+                    .build();
+            chatPushService.sendChatMessage(response);
+        } catch (JsonProcessingException e) {
+            log.error("LEAVE 이벤트 Kafka 전송 중 JSON 변환 실패", e);
+            throw new RuntimeException("Kafka 전송 실패: JSON 직렬화 오류", e);
+        }
+    }
+
+    @Override
+    public void handleTypingEvent(ChatMessageRequestDto typingMessage) {
+        ChatMessageResponseDto response = ChatMessageResponseDto.builder()
+                .roomId(typingMessage.getRoomId())
+                .senderId(typingMessage.getSenderId())
+                .senderType(typingMessage.getSenderType())
+                .receiverId(typingMessage.getReceiverId())
+                .receiverType(typingMessage.getReceiverType())
+                .message("") // 메시지는 빈값
+                .messageType("TYPING")
+                .timestamp(LocalDateTime.now().toString())
+                .build();
+
+        chatPushService.sendChatMessage(response);
+    }
 
     // 메세지 처리
     @Override
@@ -209,22 +314,34 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
             String messageJson = objectMapper.writeValueAsString(chatMessage);
             kafkaProducerService.sendChatMessage("chat-messages", messageJson);
-            messagingTemplate.convertAndSend("/topic/room/" + room.getId(), chatMessage);
 
-            ChatListUpdateResponseDto payload = ChatListUpdateResponseDto.builder()
-                    .roomId(chatMessage.getRoomId())
+            ChatMessageResponseDto response = ChatMessageResponseDto.builder()
+                    .roomId(room.getId())
+                    .senderId(chatMessage.getSenderId())
+                    .senderType(chatMessage.getSenderType())
+                    .receiverId(chatMessage.getReceiverId())
+                    .receiverType(chatMessage.getReceiverType())
                     .message(chatMessage.getMessage())
+                    .messageType(chatMessage.getMessageType())
                     .timestamp(chatMessage.getTimestamp())
                     .build();
 
-            messagingTemplate.convertAndSend(
-                    "/topic/chat-list/user/" + chatMessage.getReceiverId(),
-                    payload
-            );
+            chatPushService.sendChatMessage(response);
 
+//            ChatListUpdateResponseDto payload = ChatListUpdateResponseDto.builder()
+//                    .roomId(chatMessage.getRoomId())
+//                    .message(chatMessage.getMessage())
+//                    .timestamp(chatMessage.getTimestamp())
+//                    .build();
+
+            chatPushService.sendReadTime(room.getId(), ChatLastReadTimeResponseDto.builder()
+                    .userId(chatMessage.getSenderId())
+                    .userType(chatMessage.getSenderType())
+                    .timestamp(chatMessage.getTimestamp())
+                    .build());
 
             boolean isSubscribed = chatSubscribeService.isSubscribed(
-                    chatMessage.getReceiverType(), chatMessage.getReceiverId(), chatMessage.getRoomId()); // 수정됨
+                    chatMessage.getReceiverType(), chatMessage.getReceiverId(), chatMessage.getRoomId());
 
             if (!isSubscribed) {
                 String fcmToken = redisTemplate.opsForValue().get("fcm:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId());
@@ -374,6 +491,8 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
                 .senderType(room.getSenderType())
                 .partnerId(room.getPartnerId())
                 .partnerType(room.getPartnerType())
+                .partner_closed(room.getPartnerClosed())
+                .sender_closed(room.getSenderClosed())
                 .build());
     }
 
@@ -393,6 +512,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
                         .receiverType(e.getReceiverType())
                         .message(e.getMessage())
                         .timestamp(e.getTimestamp().toString())
+                        .messageType(e.getMessageType().toString())
                         .build())
                 .collect(Collectors.toList());
 

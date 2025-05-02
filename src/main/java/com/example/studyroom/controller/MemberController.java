@@ -69,8 +69,7 @@ public class MemberController {
 
     @PostMapping("/sign-up")
     public ResponseEntity<FinalResponseDto<MemberEntity>> signUp(@RequestBody MemberSignUpRequestDto member) {
-        // signUp 로직을 구현한 후, 성공 메시지와 함께 생성된 ShopEntity를 반환
-        System.out.println("회원가입 요청: " + member);
+
         FinalResponseDto<MemberEntity> createdMember = memberService.signUp(member);
         return ResponseEntity.ok(createdMember);
     }

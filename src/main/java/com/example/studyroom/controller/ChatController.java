@@ -6,6 +6,7 @@ import com.example.studyroom.service.ChatService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -29,8 +30,6 @@ public class ChatController {
     @ResponseBody
     public FinalResponseDto<CreateChatRoomResponseDto> createChatRoom(@RequestBody CreateChatRoomRequestDto dto) {
         return chatService.createChatRoom(dto);
-
-
     }
 
     //  채팅방 입장
@@ -38,8 +37,13 @@ public class ChatController {
     @ResponseBody
     public FinalResponseDto<EnterChatRoomResponseDto> enterChatRoom(@RequestBody EnterChatRoomRequestDto dto, HttpServletRequest request) {
         return chatService.enterChatRoom(dto, request);
+    }
 
-
+    // 오래된 채팅방 입장
+    @PostMapping("/chat/enter-old-room")
+    @ResponseBody
+    public FinalResponseDto<EnterChatRoomResponseDto> enterChatRoom(@RequestBody EnterChatRoomByIdRequestDto dto) {
+        return chatService.validateAndEnterOldChatRoom(dto);
     }
 
     //  채팅방 퇴장
@@ -95,6 +99,12 @@ public class ChatController {
     @MessageMapping("/chat/send/{roomId}")
     public void sendPrivateMessage(@DestinationVariable Long roomId, ChatMessageRequestDto chatMessage) {
         chatService.handleMessage(chatMessage);
+    }
+
+    //  채팅 치고있다는 메시지 전송 (WebSocket)
+    @MessageMapping("/chat/typing/{roomId}")
+    public void handleTyping(@Payload ChatMessageRequestDto typingMessage, @DestinationVariable Long roomId) {
+        chatService.handleTypingEvent(typingMessage);
     }
 
     //  채팅 기록 페이징 조회

@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -54,6 +55,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     private final TicketServiceImpl ticketServiceImpl;
     private final ChatSubscribeService chatSubscribeService;
     private final RedisTemplate<String, String> redisTemplate;
+    private final PasswordEncoder passwordEncoder;
 
     public ShopServiceImpl(ShopRepository repository, MemberService memberService, SeatRepository seatRepository,
                            RoomRepository roomRepository, MemberServiceImpl memberServiceImpl
@@ -69,7 +71,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
                            UserAvrUsageRepository userAvrUsageRepository, TicketHistoryRepository ticketHistoryRepository,
                            TimeTicketHistoryRepository timeTicketHistoryRepository, PeriodTicketHistoryRepository periodTicketHistoryRepository
             , ShopDailyPaymentRepository shopDailyPaymentRepository, CustomerChangeStatsRepository customerChangeStatsRepository, TicketServiceImpl ticketServiceImpl
-            , ChatSubscribeService chatSubscribeService, RedisTemplate<String, String> redisTemplate) {
+            , ChatSubscribeService chatSubscribeService, RedisTemplate<String, String> redisTemplate, PasswordEncoder passwordEncoder) {
         super(repository);
         this.repository = repository;
         this.memberService = memberService;
@@ -97,6 +99,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         this.ticketServiceImpl = ticketServiceImpl;
         this.chatSubscribeService = chatSubscribeService;
         this.redisTemplate = redisTemplate;
+        this.passwordEncoder = passwordEncoder;
     }
 
 
@@ -141,25 +144,25 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
     @Override //로그인
     public FinalResponseDto<String> login(ShopSignInRequestDto dto, HttpServletResponse response) {
-        //레포지토리에있는 함수가져오기
-        //
-        ShopEntity shop = repository.findByEmailAndPassword(dto.getEmail(), dto.getPassword());
 
-        // TODO: Email 기준으로 Shop을 가져온 후
-        //      - Shop이 존재하지 않는다면, 회원 존재하지 않는다는 오류 Response
-        //      - Shop이 존재한다면, 암호화된 Password 를 비교
+        ShopEntity existingShop = repository.findByEmail(dto.getEmail());
 
-        if (shop != null) {
-            String token = this.jwtUtil.createAccessToken(dto);
-            this.jwtUtil.createRefreshToken(shop);
+        if (existingShop == null) {
+            return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED); // 사용자 없음 처리
+        }
+
+        if (passwordEncoder.matches(dto.getPassword(), existingShop.getPassword())) {
+            log.info("Login successful");
+            String token = jwtUtil.createAccessToken(existingShop);
+            this.jwtUtil.createRefreshToken(existingShop);
             JwtCookieUtil.addInfoToCookie(String.valueOf(dto.getShopId()), response, 3600);
-
+            log.info("token: {}", token);
             return FinalResponseDto.successWithData(token);
-
         } else {
             return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);
-
         }
+
+
     }
 
 
@@ -206,17 +209,26 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     }
 
 
-    @Override //회원가입 // TODO - 암호화 필요
+    @Override //회원가입
     public FinalResponseDto<ShopEntity> signUp(ShopSignUpRequestDto dto) {
-        // TODO: of, success 사용
-        // TODO: ApiResult 정의 후 사용
+
         if (repository.existsByEmail(dto.getEmail())) {
             return FinalResponseDto.failure(ApiResult.ALREADY_EXIST_EMAIL);
         }
-        ShopEntity shop = dto.toEntity();
+        if (dto.getIsVerification().equals(false)) {
+            return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);
+        }
+
+        ShopEntity shop = ShopEntity.builder()
+                .email(dto.getEmail())
+                .name(dto.getName())
+                .password(passwordEncoder.encode(dto.getPassword()))
+                .location(dto.getLocation())
+                .build();
+
         repository.save(shop);
         return FinalResponseDto.successWithData(shop);
-        // return repository.save(shop);
+
     }
 
     @Override // 지점정보가져오기

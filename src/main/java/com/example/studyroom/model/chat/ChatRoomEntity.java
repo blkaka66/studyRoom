@@ -1,4 +1,4 @@
-package com.example.studyroom.model;
+package com.example.studyroom.model.chat;
 
 import jakarta.persistence.*;
 import lombok.Getter;
