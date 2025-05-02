@@ -28,6 +28,7 @@ out/
 src/main/resources/firebase/serviceAccountKey.json
 src/main/resources/application.properties
 
+
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
