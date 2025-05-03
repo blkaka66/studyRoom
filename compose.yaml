@@ -20,22 +20,23 @@ services:
       - redis-data:/data
 
   zookeeper:
-    image: bitnami/zookeeper:latest
+    image: confluentinc/cp-zookeeper:latest
     ports:
-      - '2181:2181'
+      - '32181:32181'
     environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
-    volumes:
-      - zookeeper-data:/bitnami/zookeeper
+      ZOOKEEPER_CLIENT_PORT: 32181
+      ZOOKEEPER_TICK_TIME: 2000
 
   kafka:
-    image: confluentinc/cp-kafka:7.5.0
+    image: confluentinc/cp-kafka:7.4.0
     ports:
       - '9092:9092'
+    depends_on:
+        - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://host.docker.internal:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:32181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -47,17 +48,17 @@ services:
       timeout: 3s
       retries: 5
 
-  studyroom-app:
-    image: your-app-image
-    build:
-      context: .
-    ports:
-      - '8080:8080'
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-    depends_on:
-      - postgres
-      - redis
+#  studyroom-app:
+#    image: your-app-image
+#    build:
+#      context: .
+#    ports:
+#      - '8080:8080'
+#    environment:
+#      SPRING_PROFILES_ACTIVE: docker
+#    depends_on:
+#      - postgres
+#      - redis
     # Kafka는 depends_on에서 빼서, 앱 내부에서 재시도하도록 만들어야 함
 
 volumes:
