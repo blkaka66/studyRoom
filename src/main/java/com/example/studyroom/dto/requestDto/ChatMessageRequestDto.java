@@ -1,5 +1,6 @@
 package com.example.studyroom.dto.requestDto;
 
+import com.example.studyroom.model.chat.MessageType;
 import lombok.*;
 
 @Getter
@@ -15,5 +16,7 @@ public class ChatMessageRequestDto {
     private String receiverType;   // 받는 사람 타입 (user or admin)
     private String message;        // 메시지 내용
     private String timestamp;      // 메시지 전송 시간
-    private String messageType;    // 메시지 타입 (CHAT, LEAVE, TYPING)
+    private MessageType messageType;    // 메시지 타입 (CHAT, LEAVE, TYPING)
+
+
 }

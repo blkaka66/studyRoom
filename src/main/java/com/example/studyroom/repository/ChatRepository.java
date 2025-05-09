@@ -1,6 +1,7 @@
 package com.example.studyroom.repository;
 
 import com.example.studyroom.model.chat.ChatMessageEntity;
+import com.example.studyroom.model.chat.MessageType;
 import org.springframework.data.domain.Page;
 
 import com.example.studyroom.model.chat.ChatRoomEntity;
@@ -21,4 +22,5 @@ public interface ChatRepository extends JpaRepository<ChatMessageEntity, Long> {
 
     Page<ChatMessageEntity> findByRoom(ChatRoomEntity room, Pageable pageable);
 
+    boolean existsByRoomIdAndSenderIdAndSenderTypeAndMessageType(long roomId, long senderId, String senderType, MessageType messageType);
 }

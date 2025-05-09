@@ -16,6 +16,6 @@ public class ChatRoomResponseDto {
     private String partnerType;
     private String lastMessage;
     private String lastTimestamp;
-    private boolean partner_closed;
-    private boolean sender_closed;
+    private boolean partnerClosed;
+    private boolean senderClosed;
 }

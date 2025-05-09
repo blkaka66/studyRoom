@@ -9,4 +9,5 @@ public class LeaveChatRoomRequestDto {
     private Long roomId;
     private Long requesterId;
     private String requesterType;
+    private String timeStamp;
 }

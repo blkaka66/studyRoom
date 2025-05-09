@@ -1,4 +1,4 @@
-package com.example.studyroom.email;
+package com.example.studyroom.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -10,7 +10,6 @@ import java.util.Properties;
 
 @Configuration
 public class EmailConfig {
-
     @Value("${spring.mail.host}")
     private String host;
 
@@ -40,9 +39,6 @@ public class EmailConfig {
 
     @Value("${spring.mail.properties.mail.smtp.writetimeout}")
     private int writeTimeout;
-
-    public EmailConfig() {
-    }
 
     @Bean
     public JavaMailSender javaMailSender() {

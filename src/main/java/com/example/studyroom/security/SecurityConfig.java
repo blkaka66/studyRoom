@@ -94,6 +94,7 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**").permitAll()  //WebSocket 엔드포인트 인증 없이 허용
                 .requestMatchers("/fcm-test").permitAll()
                 .requestMatchers("/sms/**").permitAll()
+                .requestMatchers("/email/**").permitAll()
                 .requestMatchers("/chat/**").authenticated()  // 채팅 API는 인증 필요
                 .anyRequest().authenticated()
         );

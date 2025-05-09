@@ -7,4 +7,5 @@ public class EnterChatRoomByIdRequestDto {
     private Long chatRoomId;
     private Long requesterId;
     private String requesterType;
+    private String timeStamp;
 }

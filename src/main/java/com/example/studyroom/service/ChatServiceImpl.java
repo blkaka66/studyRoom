@@ -181,7 +181,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
     public FinalResponseDto<EnterChatRoomResponseDto> validateAndEnterOldChatRoom(EnterChatRoomByIdRequestDto dto) {
 
         Optional<ChatRoomEntity> optionalRoom = chatRoomRepository.findById(dto.getChatRoomId());
-
+        Long receiverId = null;
         if (optionalRoom.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
@@ -194,11 +194,44 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         if (!isSender && !isPartner) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
-
+        if (isSender) {
+            receiverId = room.getPartnerId();
+        } else if (isPartner) {
+            receiverId = room.getSenderId();
+        }
         boolean iAmClosed = isSender ? Boolean.TRUE.equals(room.getSenderClosed()) : Boolean.TRUE.equals(room.getPartnerClosed());
 
         if (iAmClosed) {
             return FinalResponseDto.failure(ApiResult.ALREADY_CLOSED_ROOM);
+        }
+
+        boolean hasEnteredBefore = chatRepository.existsByRoomIdAndSenderIdAndSenderTypeAndMessageType(
+                room.getId(),
+                dto.getRequesterId(),
+                dto.getRequesterType(),
+                MessageType.ENTER
+        );
+
+        if (dto.getRequesterType().equals("shop") && !hasEnteredBefore) {
+            log.info("shop 입장중");
+
+            ChatRoomEventRequestDto enterEvent = new ChatRoomEventRequestDto();
+            enterEvent.setSenderId(dto.getRequesterId());
+            enterEvent.setSenderType(dto.getRequesterType());
+            enterEvent.setReceiverId(receiverId);
+            enterEvent.setReceiverType("user");
+            enterEvent.setRoomId(room.getId());
+            enterEvent.setEventType("ENTER");
+            enterEvent.setTimestamp(dto.getTimeStamp());
+
+            try {
+                String jsonMessage = objectMapper.writeValueAsString(enterEvent);
+                kafkaProducerService.sendChatMessage("chat-events", jsonMessage);
+            } catch (JsonProcessingException e) {
+                log.error("입장 이벤트 JSON 직렬화 실패", e);
+            }
+
+
         }
 
         EnterChatRoomResponseDto response = EnterChatRoomResponseDto.builder()
@@ -233,7 +266,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
         LeaveChatRoomResponseDto response = LeaveChatRoomResponseDto.builder()
                 .chatRoomId(room.getId())
                 .build();
-        LocalDateTime now = LocalDateTime.now();
+
         //퇴장 메시지 전송
         Long receiverId;
         String receiverType;
@@ -250,39 +283,42 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
                 dto.getRequesterType(),
                 receiverId,
                 receiverType,
-                room.getId(),
-                now
+                room.getId()
+
         );
 
 
         return FinalResponseDto.successWithData(response);
     }
 
-    private void sendLeaveEvent(Long senderId, String senderType, Long receiverId, String receiverType, Long roomId, LocalDateTime now) {
+    private void sendLeaveEvent(Long senderId, String senderType, Long receiverId, String receiverType, Long roomId) {
         try {
-            LeaveChatRoomEventRequestDto leaveEvent = new LeaveChatRoomEventRequestDto();
+            ChatRoomEventRequestDto leaveEvent = new ChatRoomEventRequestDto();
             leaveEvent.setSenderId(senderId);
             leaveEvent.setSenderType(senderType);
             leaveEvent.setReceiverId(receiverId);
             leaveEvent.setReceiverType(receiverType);
             leaveEvent.setRoomId(roomId);
+            leaveEvent.setTimestamp(LocalDateTime.now().toString());
             leaveEvent.setEventType("LEAVE");
 
             String jsonMessage = objectMapper.writeValueAsString(leaveEvent);
 
             kafkaProducerService.sendChatMessage("chat-events", jsonMessage);
 
-            ChatMessageResponseDto response = ChatMessageResponseDto.builder()
-                    .roomId(roomId)
-                    .senderId(senderId)
-                    .senderType(senderType)
-                    .receiverId(receiverId)
-                    .receiverType(receiverType)
-                    .message("상대방이 채팅을 종료했습니다.")
-                    .messageType("LEAVE")
-                    .timestamp(String.valueOf(now))
-                    .build();
-            chatPushService.sendChatMessage(response);
+//            ChatMessageResponseDto response = ChatMessageResponseDto.builder()
+//                    .roomId(roomId)
+//                    .senderId(senderId)
+//                    .senderType(senderType)
+//                    .receiverId(receiverId)
+//                    .receiverType(receiverType)
+//                    .message("상대방이 채팅을 종료했습니다.")
+//                    .messageType("LEAVE")
+//                    .timestamp(String.valueOf(now))
+//                    .build();
+//
+//            chatPushService.sendChatMessage(response);
+
         } catch (JsonProcessingException e) {
             log.error("LEAVE 이벤트 Kafka 전송 중 JSON 변환 실패", e);
             throw new RuntimeException("Kafka 전송 실패: JSON 직렬화 오류", e);
@@ -291,18 +327,40 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
     @Override
     public void handleTypingEvent(ChatMessageRequestDto typingMessage) {
-        ChatMessageResponseDto response = ChatMessageResponseDto.builder()
-                .roomId(typingMessage.getRoomId())
-                .senderId(typingMessage.getSenderId())
-                .senderType(typingMessage.getSenderType())
-                .receiverId(typingMessage.getReceiverId())
-                .receiverType(typingMessage.getReceiverType())
-                .message("") // 메시지는 빈값
-                .messageType("TYPING")
-                .timestamp(LocalDateTime.now().toString())
-                .build();
 
-        chatPushService.sendChatMessage(response);
+
+        try {
+
+            ChatRoomEventRequestDto typeEvent = new ChatRoomEventRequestDto();
+            typeEvent.setSenderId(typingMessage.getSenderId());
+            typeEvent.setSenderType(typingMessage.getSenderType());
+            typeEvent.setReceiverId(typingMessage.getReceiverId());
+            typeEvent.setReceiverType(typingMessage.getReceiverType());
+            typeEvent.setRoomId(typingMessage.getRoomId());
+            typeEvent.setTimestamp(LocalDateTime.now().toString());
+            typeEvent.setEventType("TYPING");
+
+            String jsonMessage = objectMapper.writeValueAsString(typeEvent);
+
+            kafkaProducerService.sendChatMessage("chat-events", jsonMessage);
+
+//            ChatMessageResponseDto response = ChatMessageResponseDto.builder()
+//                    .roomId(roomId)
+//                    .senderId(senderId)
+//                    .senderType(senderType)
+//                    .receiverId(receiverId)
+//                    .receiverType(receiverType)
+//                    .message("상대방이 채팅을 종료했습니다.")
+//                    .messageType("LEAVE")
+//                    .timestamp(String.valueOf(now))
+//                    .build();
+//
+//            chatPushService.sendChatMessage(response);
+
+        } catch (JsonProcessingException e) {
+            log.error("TYPE 이벤트 Kafka 전송 중 JSON 변환 실패", e);
+            throw new RuntimeException("Kafka 전송 실패: JSON 직렬화 오류", e);
+        }
     }
 
     // 메세지 처리
@@ -314,57 +372,52 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
             String messageJson = objectMapper.writeValueAsString(chatMessage);
             kafkaProducerService.sendChatMessage("chat-messages", messageJson);
-
-            ChatMessageResponseDto response = ChatMessageResponseDto.builder()
-                    .roomId(room.getId())
-                    .senderId(chatMessage.getSenderId())
-                    .senderType(chatMessage.getSenderType())
-                    .receiverId(chatMessage.getReceiverId())
-                    .receiverType(chatMessage.getReceiverType())
-                    .message(chatMessage.getMessage())
-                    .messageType(chatMessage.getMessageType())
-                    .timestamp(chatMessage.getTimestamp())
-                    .build();
-
-            chatPushService.sendChatMessage(response);
-
-//            ChatListUpdateResponseDto payload = ChatListUpdateResponseDto.builder()
-//                    .roomId(chatMessage.getRoomId())
+//
+//            ChatMessageResponseDto response = ChatMessageResponseDto.builder()
+//                    .roomId(room.getId())
+//                    .senderId(chatMessage.getSenderId())
+//                    .senderType(chatMessage.getSenderType())
+//                    .receiverId(chatMessage.getReceiverId())
+//                    .receiverType(chatMessage.getReceiverType())
 //                    .message(chatMessage.getMessage())
+//                    .messageType(chatMessage.getMessageType())
 //                    .timestamp(chatMessage.getTimestamp())
 //                    .build();
-
-            chatPushService.sendReadTime(room.getId(), ChatLastReadTimeResponseDto.builder()
-                    .userId(chatMessage.getSenderId())
-                    .userType(chatMessage.getSenderType())
-                    .timestamp(chatMessage.getTimestamp())
-                    .build());
-
-            boolean isSubscribed = chatSubscribeService.isSubscribed(
-                    chatMessage.getReceiverType(), chatMessage.getReceiverId(), chatMessage.getRoomId());
-
-            if (!isSubscribed) {
-                String fcmToken = redisTemplate.opsForValue().get("fcm:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId());
-                if (fcmToken != null) {
-                    firebaseService.sendMessageToToken(
-                            fcmToken,
-                            "새 메시지 도착",
-                            chatMessage.getMessage(),
-                            null
-                    );
-                }
-            }
-
-            String unreadKey = "chat:unread:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId()
-                    + ":room:" + room.getId();
-            String readingKey = unreadKey + ":reading";
-            Boolean isReading = redisTemplate.hasKey(readingKey);
-
-            if (Boolean.TRUE.equals(isReading)) {
-                log.info("상대방이 방 안에 있어 unread 증가 생략");
-            } else {
-                redisTemplate.opsForValue().increment(unreadKey);
-            }
+//
+//            chatPushService.sendChatMessage(response);
+//
+//
+//            chatPushService.sendReadTime(room.getId(), ChatLastReadTimeResponseDto.builder()
+//                    .userId(chatMessage.getSenderId())
+//                    .userType(chatMessage.getSenderType())
+//                    .timestamp(chatMessage.getTimestamp())
+//                    .build());
+//
+//            boolean isSubscribed = chatSubscribeService.isSubscribed(
+//                    chatMessage.getReceiverType(), chatMessage.getReceiverId(), chatMessage.getRoomId());
+//
+//            if (!isSubscribed) {
+//                String fcmToken = redisTemplate.opsForValue().get("fcm:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId());
+//                if (fcmToken != null) {
+//                    firebaseService.sendMessageToToken(
+//                            fcmToken,
+//                            "새 메시지 도착",
+//                            chatMessage.getMessage(),
+//                            null
+//                    );
+//                }
+//            }
+//
+//            String unreadKey = "chat:unread:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId()
+//                    + ":room:" + room.getId();
+//            String readingKey = unreadKey + ":reading";
+//            Boolean isReading = redisTemplate.hasKey(readingKey);
+//
+//            if (Boolean.TRUE.equals(isReading)) {
+//                log.info("상대방이 방 안에 있어 unread 증가 생략");
+//            } else {
+//                redisTemplate.opsForValue().increment(unreadKey);
+//            }
 
         } catch (Exception e) {
             log.error("메시지 처리 오류", e);
@@ -491,8 +544,8 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
                 .senderType(room.getSenderType())
                 .partnerId(room.getPartnerId())
                 .partnerType(room.getPartnerType())
-                .partner_closed(room.getPartnerClosed())
-                .sender_closed(room.getSenderClosed())
+                .partnerClosed(room.getPartnerClosed())
+                .senderClosed(room.getSenderClosed())
                 .build());
     }
 
@@ -512,7 +565,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
                         .receiverType(e.getReceiverType())
                         .message(e.getMessage())
                         .timestamp(e.getTimestamp().toString())
-                        .messageType(e.getMessageType().toString())
+                        .messageType(e.getMessageType())
                         .build())
                 .collect(Collectors.toList());
 
