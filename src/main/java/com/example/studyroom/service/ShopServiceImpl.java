@@ -221,7 +221,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         }
         String key = makeKey(dto.getEmail());
         //redis 인증패스 체크
-        if (!redisService.getValues(key).equals("true")) {
+        if (!redisService.isKeyPresent(key) || !redisService.getValues(key).equals("true")) {
             return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);
         }
 
