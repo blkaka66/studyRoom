@@ -6,6 +6,8 @@ import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
+import java.time.OffsetDateTime;
+
 @Getter
 @Setter
 @MappedSuperclass
@@ -19,4 +21,7 @@ public class RemainTicketEntity extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shopId", foreignKey = @ForeignKey(name = "fk_shop_id"))
     private ShopEntity shop;
+
+    @Column(nullable = false)
+    private OffsetDateTime expiresAt;
 }

@@ -4,6 +4,8 @@ import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.kafka.producer.SeatAlertProducer;
 import com.example.studyroom.model.*;
+import com.example.studyroom.model.notice.MemberNoticeEntity;
+import com.example.studyroom.model.notice.NoticeType;
 import com.example.studyroom.repository.*;
 
 import com.example.studyroom.security.JwtCookieUtil;
@@ -64,6 +66,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     private final SeatAlertProducer seatAlertProducer;
     private final SeatExpirationAlertRepository seatExpirationAlertRepository;
+    private final MemberNoticeRepository memberNoticeRepository;
 
     public MemberServiceImpl(MemberRepository repository,
                              EnterHistoryRepository enterHistoryRepository,
@@ -77,7 +80,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                              RemainTimeTicketRepository remainTimeTicketRepository, JwtUtil jwtUtil,
                              PeriodTicketServiceImpl periodTicketServiceImpl
             , PasswordEncoder passwordEncoder, SeatService seatService, ChatSubscribeService chatSubscribeService, RedisTemplate redisTemplate
-            , SeatAlertProducer seatAlertProducer, SeatExpirationAlertRepository seatExpirationAlertRepository) {
+            , SeatAlertProducer seatAlertProducer, SeatExpirationAlertRepository seatExpirationAlertRepository
+            , MemberNoticeRepository memberNoticeRepository) {
         super(repository);
         this.repository = repository;
         this.enterHistoryRepository = enterHistoryRepository;
@@ -101,6 +105,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         this.redisTemplate = redisTemplate;
         this.seatAlertProducer = seatAlertProducer;
         this.seatExpirationAlertRepository = seatExpirationAlertRepository;
+        this.memberNoticeRepository = memberNoticeRepository;
     }
 
 
@@ -333,8 +338,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
 
     private FinalResponseDto<String> handleTicketOccupation(MemberEntity member, SeatEntity seat) {
-        Optional<RemainPeriodTicketEntity> optionalRemainPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberId(member.getShop().getId(), member.getId());
-        Optional<RemainTimeTicketEntity> optionalRemainTimeTicket = remainTimeTicketRepository.findByShopIdAndMemberId(member.getShop().getId(), member.getId());
+        OffsetDateTime now = OffsetDateTime.now();
+        Optional<RemainPeriodTicketEntity> optionalRemainPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberIdAndEndDateAfterAndExpiresAtAfter(member.getShop().getId(), member.getId(), now, now);
+        Optional<RemainTimeTicketEntity> optionalRemainTimeTicket = remainTimeTicketRepository.findByShopIdAndMemberIdAndExpiresAtAfter(member.getShop().getId(), member.getId(), now);
 
         if (optionalRemainPeriodTicket.isPresent()) {
             return handlePeriodTicket(member, seat, optionalRemainPeriodTicket.get());
@@ -619,6 +625,42 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         memberRepository.deleteById(member.get().getId());
         return FinalResponseDto.success();
     }
+
+
+    @Override
+    public void saveMemberNotice(MemberEntity member, String title, String content, NoticeType noticeType, OffsetDateTime createdAt) {
+
+        MemberNoticeEntity memberNotice = MemberNoticeEntity.builder()
+                .member(member)
+                .title(title)
+                .content(content)
+                .noticeType(noticeType)
+                .createdAt(createdAt)
+                .build();
+
+        memberNoticeRepository.save(memberNotice);
+    }
+
+    @Override
+    public FinalResponseDto<List<NotificationResponseDto>> getNotifications(long memberId) {
+        List<MemberNoticeEntity> notices = memberNoticeRepository.findByMemberIdAndIsReadFalseOrderByCreatedAtDesc(memberId);
+        if (notices.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+        List<NotificationResponseDto> result = notices.stream()
+                .map(entity -> NotificationResponseDto.builder()
+                        .id(entity.getId())
+                        .title(entity.getTitle())
+                        .content(entity.getContent())
+                        .noticeType(entity.getNoticeType().name())
+                        .isRead(entity.getIsRead())
+                        .createdAt(entity.getCreatedAt())
+                        .build())
+                .toList();
+
+        return FinalResponseDto.successWithData(result);
+    }
+
 
 }
 

@@ -6,25 +6,18 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import com.example.studyroom.type.ApiResult;
 
-import java.io.FileInputStream;
 import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
-import com.google.auth.oauth2.GoogleCredentials;
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseOptions;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.IOException;
 
 @Service
 public class RedisServiceImpl implements RedisService {
 
     private final StringRedisTemplate redisTemplate;
     private final PeriodTicketService periodTicketService;
+
     // Constructor injection
-    public RedisServiceImpl(StringRedisTemplate redisTemplate , PeriodTicketService periodTicketService) {
+    public RedisServiceImpl(StringRedisTemplate redisTemplate, PeriodTicketService periodTicketService) {
         this.redisTemplate = redisTemplate;
 
         this.periodTicketService = periodTicketService;
@@ -35,6 +28,7 @@ public class RedisServiceImpl implements RedisService {
         redisTemplate.opsForValue().set(key, value, duration);
     }
 
+
     @Override
     public String getValues(String key) {
         return redisTemplate.opsForValue().get(key);
@@ -44,6 +38,7 @@ public class RedisServiceImpl implements RedisService {
     public void setValuesWithTTL(String key, String value, long ttlSeconds) {
         redisTemplate.opsForValue().set(key, value, ttlSeconds, TimeUnit.SECONDS);
     }
+
 
     public Long getTTL(String key) {
         return redisTemplate.getExpire(key);
@@ -76,7 +71,7 @@ public class RedisServiceImpl implements RedisService {
             // 알림 발송
             sendNotification(userId, "티켓 만료시간 10분 남음");
         }
-        if(ttl!= null && ttl <= 0) { //시간 만료되면 티켓삭제
+        if (ttl != null && ttl <= 0) { //시간 만료되면 티켓삭제
             periodTicketService.removeExpiredTickets();
         }
     }

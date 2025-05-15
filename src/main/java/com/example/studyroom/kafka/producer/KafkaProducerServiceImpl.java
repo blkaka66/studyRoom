@@ -15,8 +15,11 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
     }
 
     @Override
-    public void sendChatMessage(String topic, String messageJson) {
-        log.info("🔥 Kafka에 메시지 전송 시도: {}", messageJson);
-        kafkaTemplate.send(topic, messageJson);
+    public void sendChatMessage(String topic, long roomId, String messageJson) {
+
+        log.info("🔥 Kafka 전송 시도 | topic: {} | roomId: {} | messageJson: {}", topic, roomId, messageJson);
+
+        kafkaTemplate.send(topic, String.valueOf(roomId), messageJson); //가운데가 key
+
     }
 }

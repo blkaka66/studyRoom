@@ -201,6 +201,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         if (member.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
+
         if (!Objects.equals(member.get().getShop().getId(), dto.getShopId())) {
             return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);
         }
@@ -208,6 +209,9 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         return FinalResponseDto.success();
     }
 
+    private String makeKey(String email) {
+        return "email:" + email;
+    }
 
     @Override //회원가입
     public FinalResponseDto<ShopEntity> signUp(ShopSignUpRequestDto dto) {
@@ -215,7 +219,9 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         if (repository.existsByEmail(dto.getEmail())) {
             return FinalResponseDto.failure(ApiResult.ALREADY_EXIST_EMAIL);
         }
-        if (dto.getIsVerification().equals(false)) {
+        String key = makeKey(dto.getEmail());
+        //redis 인증패스 체크
+        if (!redisService.getValues(key).equals("true")) {
             return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);
         }
 

@@ -15,4 +15,5 @@ public class RemainTicketInfoResponseDto {
     private String value;     // Redis 값 (시간권용)
     private Long ttl;         // 남은 TTL (초 단위, 시간권용)
     private OffsetDateTime endDate;  // 종료 날짜 (기간권용)
+    private OffsetDateTime expiresAt;
 }

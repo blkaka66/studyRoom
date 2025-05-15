@@ -110,6 +110,7 @@ public class EmailServiceImpl implements EmailService {
         // Redis 에 해당 인증코드 인증 시간 설정
         redisService.setValuesWithTTL(key, authCode, authCodeExpirationMillis / 1000);
 
+
         return FinalResponseDto.success();
     }
 
@@ -123,6 +124,10 @@ public class EmailServiceImpl implements EmailService {
         if (!Objects.equals(redisService.getValues(key), dto.getCode())) {
             return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);
         }
+
+        // Redis 에 인증 패스했다고 설정
+        redisService.setValuesWithTTL(key, String.valueOf(true), authCodeExpirationMillis / 1000);
+
         return FinalResponseDto.success();
     }
 

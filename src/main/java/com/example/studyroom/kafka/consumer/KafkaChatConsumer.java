@@ -13,6 +13,7 @@ import com.example.studyroom.repository.ChatRoomRepository;
 import com.example.studyroom.service.ChatPushService;
 import com.example.studyroom.service.ChatSubscribeService;
 import com.example.studyroom.service.FirebaseService;
+import com.example.studyroom.type.ToastVariant;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,8 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -136,12 +139,15 @@ public class KafkaChatConsumer {
         if (!isSubscribed) {
             String fcmToken = redisTemplate.opsForValue().get("fcm:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId());
             if (fcmToken != null) {
+                Map<String, String> data = new HashMap<>();
+                data.put("variant", ToastVariant.DEFAULT.getValue());
+
                 try {
                     firebaseService.sendMessageToToken(
                             fcmToken,
                             "새 메시지 도착",
                             chatMessage.getMessage(),
-                            null
+                            data
                     );
                 } catch (Exception e) {
                     log.error("FCM 전송 실패", e);
@@ -254,12 +260,14 @@ public class KafkaChatConsumer {
         if (!isSubscribed) {
             String fcmToken = redisTemplate.opsForValue().get("fcm:" + event.getReceiverType() + ":" + event.getReceiverId());
             if (fcmToken != null) {
+                Map<String, String> data = new HashMap<>();
+                data.put("variant", ToastVariant.DEFAULT.getValue());
                 try {
                     firebaseService.sendMessageToToken(
                             fcmToken,
                             "새 메시지 도착",
                             eventMessage,
-                            null
+                            data
                     );
                 } catch (Exception e) {
                     log.error("FCM 전송 실패", e);

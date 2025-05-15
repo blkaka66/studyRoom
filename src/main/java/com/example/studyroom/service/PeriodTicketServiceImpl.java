@@ -7,6 +7,7 @@ import com.example.studyroom.model.*;
 import com.example.studyroom.repository.*;
 import com.example.studyroom.type.ApiResult;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity> implements PeriodTicketService {
     private final PeriodTicketRepository periodTicketRepository;
@@ -25,11 +27,14 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
     private final MemberRepository memberRepository;
     private final RemainPeriodTicketRepository remainPeriodTicketRepository;
     private final CouponRepository couponRepository;
+    private final TicketExpirationAlertRepository ticketExpirationAlertRepository;
 
     public PeriodTicketServiceImpl(JpaRepository<PeriodTicketEntity, Long> repository, PeriodTicketRepository periodTicketRepository,
-                                   PeriodTicketHistoryRepository periodTicketHistoryRepository, ShopRepository shopRepository
+                                   PeriodTicketHistoryRepository periodTicketHistoryRepository,
+                                   ShopRepository shopRepository
             , MemberRepository memberRepository,
-                                   RemainPeriodTicketRepository remainPeriodTicketRepository, CouponRepository couponRepository) {
+                                   RemainPeriodTicketRepository remainPeriodTicketRepository, CouponRepository couponRepository,
+                                   TicketExpirationAlertRepository ticketExpirationAlertRepository) {
         super(repository);
         this.periodTicketRepository = periodTicketRepository;
         this.periodTicketHistoryRepository = periodTicketHistoryRepository;
@@ -37,6 +42,7 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
         this.memberRepository = memberRepository;
         this.remainPeriodTicketRepository = remainPeriodTicketRepository;
         this.couponRepository = couponRepository;
+        this.ticketExpirationAlertRepository = ticketExpirationAlertRepository;
     }
 
     @Transactional
@@ -51,43 +57,55 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
             MemberEntity member = optionalMember.get();
             ShopEntity shop = optionalShop.get();
             recordTicketHistory(shop, ticket, member, product.getCouponId());
-            addEndDate(ticket, shopId, customerId, shop, member);
+            addOrUpdateRemainTicket(ticket, shopId, customerId, shop, member);
 
+            recordTicketExpireDay(shop, ticket, member);
         } else {
             FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
         return FinalResponseDto.success();
     }
 
-    private void addEndDate(PeriodTicketEntity ticket, Long shopId, Long customerId, ShopEntity shop, MemberEntity member) { //기존 시간권이 있는경우 시간을더해줌
-        Optional<RemainPeriodTicketEntity> optionalPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberId(shopId, customerId);
+    private void addOrUpdateRemainTicket(PeriodTicketEntity ticket, Long shopId, Long customerId, ShopEntity shop, MemberEntity member) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        Optional<RemainPeriodTicketEntity> optionalTicket =
+                remainPeriodTicketRepository.findByShopIdAndMemberIdAndEndDateAfterAndExpiresAtAfter(shopId, customerId, now, now);
+
         OffsetDateTime newEndDate = now.plusDays(ticket.getDays());
+        OffsetDateTime newExpiresAt = now.plusDays(ticket.getValidDays());
 
-        if (optionalPeriodTicket.isPresent()) {//기존 기간권이 있다면
-//            RemainPeriodTicketEntity timeTicket = optionalPeriodTicket.get();
-//            timeTicket.setEndDate(timeTicket.getEndDate().plusDays(ticket.getDays()));
-            RemainPeriodTicketEntity timeTicket = optionalPeriodTicket.get();
-            OffsetDateTime existingEndDate = timeTicket.getEndDate();
+        if (optionalTicket.isPresent()) {
+            log.info("optionalTicket 남은거있음");
+            RemainPeriodTicketEntity existing = optionalTicket.get();
 
-            if (existingEndDate.isAfter(now)) {
-                // 아직 남은 시간이 있으면 기존 endDate에 연장
-                timeTicket.setEndDate(existingEndDate.plusDays(ticket.getDays()));
+            OffsetDateTime existingEnd = existing.getEndDate();
+            OffsetDateTime existingExpires = existing.getExpiresAt();
+
+            if (existingEnd.isAfter(now)) {
+                existing.setEndDate(existingEnd.plusDays(ticket.getDays()));
             } else {
-                // 이미 만료되었으면 now 기준으로 새로 시작
-                timeTicket.setEndDate(newEndDate);
+                existing.setEndDate(newEndDate);
             }
-        } else { //기존 기간권이없다면
-            RemainPeriodTicketEntity periodTicket = new RemainPeriodTicketEntity();
-            periodTicket.setMember(member);
-            periodTicket.setShop(shop);
-            Duration period = Duration.ofDays(ticket.getDays());//현재시간 + 기간 ex3일)
-            OffsetDateTime endDate = now.plus(period);
-            periodTicket.setEndDate(endDate);
-            remainPeriodTicketRepository.save(periodTicket);
-        }
 
+            if (existingExpires.isAfter(now)) {
+                existing.setExpiresAt(existingExpires.plusDays(ticket.getValidDays()));
+            } else {
+                existing.setExpiresAt(newExpiresAt);
+            }
+
+            remainPeriodTicketRepository.save(existing);
+
+        } else {
+            log.info("optionalTicket 남은거없음");
+            RemainPeriodTicketEntity newTicket = new RemainPeriodTicketEntity();
+            newTicket.setMember(member);
+            newTicket.setShop(shop);
+            newTicket.setEndDate(newEndDate);
+            newTicket.setExpiresAt(newExpiresAt);
+            remainPeriodTicketRepository.save(newTicket);
+        }
     }
+
 
     private void recordTicketHistory(ShopEntity shop, PeriodTicketEntity ticket, MemberEntity member, Long couponId) {
         PeriodTicketHistoryEntity ticketHistory = new PeriodTicketHistoryEntity();
@@ -128,9 +146,42 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
         remainPeriodTicketRepository.deleteExpiredTickets(now);
     }
 
+    private void recordTicketExpireDay(ShopEntity shop, PeriodTicketEntity ticket, MemberEntity member) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        Optional<TicketExpirationAlertEntity> alreadyExistAlert =
+                ticketExpirationAlertRepository.findFirstByMemberIdAndShopIdAndTicketTypeAndSentFalse(
+                        member.getId(), shop.getId(), "PERIOD"
+                );
+
+        if (alreadyExistAlert.isPresent()) {
+            TicketExpirationAlertEntity existing = alreadyExistAlert.get();
+
+            // 유효기간만큼 sendTime 갱신
+            OffsetDateTime newSendTime = existing.getSendTime().plusDays(ticket.getValidDays() - 1);
+            existing.setSendTime(newSendTime);
+
+            ticketExpirationAlertRepository.save(existing); // 갱신 저장
+
+        } else {
+            // 새 알림 생성
+            TicketExpirationAlertEntity ticketExpirationAlert = new TicketExpirationAlertEntity();
+            ticketExpirationAlert.setMemberId(member.getId());
+            ticketExpirationAlert.setShopId(shop.getId());
+            ticketExpirationAlert.setTicketType("PERIOD");
+
+            OffsetDateTime sendTime = now.plusDays(ticket.getValidDays() - 1);
+            ticketExpirationAlert.setSendTime(sendTime);
+
+            ticketExpirationAlert.setCreatedAt(now);
+            ticketExpirationAlertRepository.save(ticketExpirationAlert);
+
+        }
+    }
+
     @Override
     public RemainTicketInfoResponseDto getEndDate(Long shopId, Long customerId, String ticketCategory) {
-        Optional<RemainPeriodTicketEntity> RemainPeriodTicketEntity = remainPeriodTicketRepository.findByShopIdAndMemberId(shopId, customerId);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        Optional<RemainPeriodTicketEntity> RemainPeriodTicketEntity = remainPeriodTicketRepository.findByShopIdAndMemberIdAndEndDateAfterAndExpiresAtAfter(shopId, customerId, now, now);
         return RemainPeriodTicketEntity.map(remainPeriodTicketEntity -> RemainTicketInfoResponseDto.builder()
                 .seatType(ticketCategory)
                 .endDate(remainPeriodTicketEntity.getEndDate())

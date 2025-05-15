@@ -13,8 +13,18 @@ import java.util.Optional;
 //기간권
 public interface RemainPeriodTicketRepository extends JpaRepository<RemainPeriodTicketEntity, Long> {
 
-    Optional<RemainPeriodTicketEntity> findByShopIdAndMemberId(Long shopId, Long userId);
+    //Optional<RemainPeriodTicketEntity> findByShopIdAndMemberId(Long shopId, Long userId);
+
+
+    Optional<RemainPeriodTicketEntity> findByShopIdAndMemberIdAndEndDateAfterAndExpiresAtAfter(
+            Long shopId,
+            Long memberId,
+            OffsetDateTime endDateBefore,
+            OffsetDateTime expiresAtBefore
+    );
+
     Optional<RemainPeriodTicketEntity> findByMemberId(Long userId);
+
     void deleteByShopIdAndMemberId(Long shopId, Long userId);
 
     @Modifying

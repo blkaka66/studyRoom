@@ -16,4 +16,5 @@ public class TimeTicketDto {
     private int amount;
     private TicketTypeEnum ticketType;
     private int hours;
+    private int validDays;
 }

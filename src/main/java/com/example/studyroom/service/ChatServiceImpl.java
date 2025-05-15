@@ -226,7 +226,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
             try {
                 String jsonMessage = objectMapper.writeValueAsString(enterEvent);
-                kafkaProducerService.sendChatMessage("chat-events", jsonMessage);
+                kafkaProducerService.sendChatMessage("chat-events", dto.getChatRoomId(), jsonMessage);
             } catch (JsonProcessingException e) {
                 log.error("입장 이벤트 JSON 직렬화 실패", e);
             }
@@ -304,7 +304,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
             String jsonMessage = objectMapper.writeValueAsString(leaveEvent);
 
-            kafkaProducerService.sendChatMessage("chat-events", jsonMessage);
+            kafkaProducerService.sendChatMessage("chat-events", roomId, jsonMessage);
 
 //            ChatMessageResponseDto response = ChatMessageResponseDto.builder()
 //                    .roomId(roomId)
@@ -342,7 +342,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
 
             String jsonMessage = objectMapper.writeValueAsString(typeEvent);
 
-            kafkaProducerService.sendChatMessage("chat-events", jsonMessage);
+            kafkaProducerService.sendChatMessage("chat-events", typingMessage.getRoomId(), jsonMessage);
 
 //            ChatMessageResponseDto response = ChatMessageResponseDto.builder()
 //                    .roomId(roomId)
@@ -371,7 +371,7 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
                     .orElseThrow(() -> new IllegalArgumentException("채팅방 없음"));
 
             String messageJson = objectMapper.writeValueAsString(chatMessage);
-            kafkaProducerService.sendChatMessage("chat-messages", messageJson);
+            kafkaProducerService.sendChatMessage("chat-messages", chatMessage.getRoomId(), messageJson);
 //
 //            ChatMessageResponseDto response = ChatMessageResponseDto.builder()
 //                    .roomId(room.getId())

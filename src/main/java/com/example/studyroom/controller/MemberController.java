@@ -3,18 +3,15 @@ package com.example.studyroom.controller;
 import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
 
-import com.example.studyroom.model.EnterHistoryEntity;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.repository.MemberRepository;
 import com.example.studyroom.security.JwtUtil;
-import com.example.studyroom.security.SecurityUtil;
 import com.example.studyroom.service.MailService;
 import com.example.studyroom.service.MemberService;
 
 import com.example.studyroom.service.ShopService;
 import com.example.studyroom.service.TicketService;
-import com.example.studyroom.type.ApiResult;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -184,6 +181,13 @@ public class MemberController {
     public ResponseEntity<FinalResponseDto<MySeatInfoResponseDto>> getSeatId() {
         MemberEntity member = JwtUtil.getMember();
         FinalResponseDto<MySeatInfoResponseDto> response = this.memberService.getSeatId(member.getId());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/get-notifications")
+    public ResponseEntity<FinalResponseDto<List<NotificationResponseDto>>> getNotifications() {
+        MemberEntity member = JwtUtil.getMember();
+        FinalResponseDto<List<NotificationResponseDto>> response = this.memberService.getNotifications(member.getId());
         return ResponseEntity.ok(response);
     }
 }
