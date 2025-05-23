@@ -190,6 +190,20 @@ public class MemberController {
         FinalResponseDto<List<NotificationResponseDto>> response = this.memberService.getNotifications(member.getId());
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/get-notification-detail/{notificationId}")
+    public ResponseEntity<FinalResponseDto<NotificationResponseDto>> getNotificationDetail(@PathVariable long notificationId) {
+        MemberEntity member = JwtUtil.getMember();
+        FinalResponseDto<NotificationResponseDto> response = this.memberService.getNotificationDetail(member.getId(), notificationId);
+        return ResponseEntity.ok(response);
+    }
+
+
+    @DeleteMapping("/delete-notifications")
+    public ResponseEntity<FinalResponseDto<String>> deleteNotifications(DeleteMemberNoticeReqeustDto dto) {
+        FinalResponseDto<String> response = this.memberService.deleteNotifications(dto);
+        return ResponseEntity.ok(response);
+    }
 }
 //TODO: 자리 점유 요청
 //회원 회원가입 , 로그인,회원정보 가져오기 , 회원탈퇴요청,로그아웃

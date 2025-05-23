@@ -2,38 +2,31 @@ package com.example.studyroom.service;
 
 import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
+import com.example.studyroom.kafka.producer.MemberSignUpProducer;
 import com.example.studyroom.kafka.producer.SeatAlertProducer;
 import com.example.studyroom.model.*;
 import com.example.studyroom.model.notice.MemberNoticeEntity;
 import com.example.studyroom.model.notice.NoticeType;
 import com.example.studyroom.repository.*;
 
+import com.example.studyroom.repository.notice.MemberNoticeRepository;
 import com.example.studyroom.security.JwtCookieUtil;
 import com.example.studyroom.security.JwtUtil;
 import com.example.studyroom.type.ApiResult;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.lang.reflect.Member;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -68,6 +61,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     private final SeatExpirationAlertRepository seatExpirationAlertRepository;
     private final MemberNoticeRepository memberNoticeRepository;
 
+    private final MemberSignUpProducer memberSignUpProducer;
+    private final NoticeService noticeService;
+
     public MemberServiceImpl(MemberRepository repository,
                              EnterHistoryRepository enterHistoryRepository,
                              SeatRepository seatRepository,
@@ -81,7 +77,7 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                              PeriodTicketServiceImpl periodTicketServiceImpl
             , PasswordEncoder passwordEncoder, SeatService seatService, ChatSubscribeService chatSubscribeService, RedisTemplate redisTemplate
             , SeatAlertProducer seatAlertProducer, SeatExpirationAlertRepository seatExpirationAlertRepository
-            , MemberNoticeRepository memberNoticeRepository) {
+            , MemberNoticeRepository memberNoticeRepository, MemberSignUpProducer memberSignUpProducer, NoticeService noticeService) {
         super(repository);
         this.repository = repository;
         this.enterHistoryRepository = enterHistoryRepository;
@@ -106,6 +102,9 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         this.seatAlertProducer = seatAlertProducer;
         this.seatExpirationAlertRepository = seatExpirationAlertRepository;
         this.memberNoticeRepository = memberNoticeRepository;
+
+        this.memberSignUpProducer = memberSignUpProducer;
+        this.noticeService = noticeService;
     }
 
 
@@ -183,17 +182,23 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         if (shopOptional.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
         }
+        ShopEntity shop = shopOptional.get();
         System.out.println("회원가입때 비밀번호" + passwordEncoder.encode(member.getPassword()));
         MemberEntity createdMember = MemberEntity.builder()
                 .phone(member.getPhone())
                 .name(member.getName())
                 .password(passwordEncoder.encode(member.getPassword()))
-                .shop(shopOptional.get())
+                .shop(shop)
                 .createdAt(OffsetDateTime.now())
                 .build();
-        //createdMember.setShop(shopOptional.get());
+
         repository.save(createdMember);
 
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        noticeService.saveShopNotice(shop, "신규 회원 알림", "신규 회원이 가입했습니다.", NoticeType.SIGNUP, now);
+        memberSignUpProducer.sendMemberSignUpNotice(member.getShopId(), now);
         return FinalResponseDto.successWithData(createdMember);
     }
 
@@ -638,12 +643,13 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                 .createdAt(createdAt)
                 .build();
 
+
         memberNoticeRepository.save(memberNotice);
     }
 
     @Override
     public FinalResponseDto<List<NotificationResponseDto>> getNotifications(long memberId) {
-        List<MemberNoticeEntity> notices = memberNoticeRepository.findByMemberIdAndIsReadFalseOrderByCreatedAtDesc(memberId);
+        List<MemberNoticeEntity> notices = memberNoticeRepository.findByMemberIdOrderByCreatedAtDesc(memberId);
         if (notices.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
@@ -659,6 +665,47 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
                 .toList();
 
         return FinalResponseDto.successWithData(result);
+    }
+
+    @Override
+    public FinalResponseDto<NotificationResponseDto> getNotificationDetail(long memberId, long notificationId) {
+        Optional<MemberNoticeEntity> notice = memberNoticeRepository.findById(notificationId);
+        if (notice.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+        MemberNoticeEntity noticeEntity = notice.get();
+        if (noticeEntity.getMember().getId() != memberId) {
+            return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED);
+        }
+
+        if (!noticeEntity.getIsRead()) {
+            noticeEntity.setIsRead(true);
+            memberNoticeRepository.save(noticeEntity);
+        }
+
+        NotificationResponseDto result = NotificationResponseDto.builder()
+                .id(noticeEntity.getId())
+                .title(noticeEntity.getTitle())
+                .content(noticeEntity.getContent())
+                .isRead(true)
+                .noticeType(noticeEntity.getNoticeType().name())
+                .createdAt(noticeEntity.getCreatedAt())
+                .build();
+        return FinalResponseDto.successWithData(result);
+
+    }
+
+    @Transactional
+    @Override
+    public FinalResponseDto<String> deleteNotifications(DeleteMemberNoticeReqeustDto dto) {
+
+        MemberNoticeEntity memberNotice = memberNoticeRepository.findByMemberIdAndId(dto.getMemberId(), dto.getId());
+        if (memberNotice == null) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+        memberNoticeRepository.deleteById(memberNotice.getId());
+
+        return FinalResponseDto.success();
     }
 
 

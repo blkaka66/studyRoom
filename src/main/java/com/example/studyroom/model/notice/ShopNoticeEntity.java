@@ -4,6 +4,8 @@ import com.example.studyroom.model.BaseEntity;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,7 +14,9 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @Entity
+@Builder
 @Table(name = "shop_notice")
+@AllArgsConstructor
 public class ShopNoticeEntity extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -32,7 +36,13 @@ public class ShopNoticeEntity extends BaseEntity {
     @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt;  // 생성 날짜
 
+    
     @Column(nullable = false)
     private Boolean isRead = false;
+
+    public ShopNoticeEntity() {
+
+    }
+
 
 }

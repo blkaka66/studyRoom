@@ -5,10 +5,12 @@ import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.EnterHistoryEntity;
 import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
+import com.example.studyroom.model.notice.NoticeType;
 import com.example.studyroom.model.statistics.SeatIdUsageEntity;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 public interface ShopService extends BaseService<ShopEntity> {
@@ -65,7 +67,7 @@ public interface ShopService extends BaseService<ShopEntity> {
 
     void calculateAndSaveCustomerStats();
 
-
+   
     FinalResponseDto<SeatIdUsageResponseDto> getSeatUsageEntitiesByDateRange(SeatIdUsageRequestDto requestDto);
 
     FinalResponseDto<List<ShopDailyPaymentResponseDto>> getShopDailyPaymentsByDateRange(ShopPaymentRequestDto requestDto);

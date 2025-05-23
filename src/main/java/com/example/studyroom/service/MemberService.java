@@ -11,6 +11,7 @@ import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.model.notice.NoticeType;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.ResponseEntity;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -53,4 +54,10 @@ public interface MemberService extends BaseService<MemberEntity> {
     void saveMemberNotice(MemberEntity member, String title, String content, NoticeType noticeType, OffsetDateTime createdAt);
 
     FinalResponseDto<List<NotificationResponseDto>> getNotifications(long memberId);
+
+    FinalResponseDto<NotificationResponseDto> getNotificationDetail(long memberId, long notificationId);
+
+    FinalResponseDto<String> deleteNotifications(DeleteMemberNoticeReqeustDto dto);
+
+
 }

@@ -140,8 +140,8 @@ public class KafkaChatConsumer {
             String fcmToken = redisTemplate.opsForValue().get("fcm:" + chatMessage.getReceiverType() + ":" + chatMessage.getReceiverId());
             if (fcmToken != null) {
                 Map<String, String> data = new HashMap<>();
-                data.put("variant", ToastVariant.DEFAULT.getValue());
-
+                data.put("variant", ToastVariant.CHAT.getValue());
+                data.put("roomId", chatMessage.getRoomId().toString());
                 try {
                     firebaseService.sendMessageToToken(
                             fcmToken,
@@ -261,7 +261,8 @@ public class KafkaChatConsumer {
             String fcmToken = redisTemplate.opsForValue().get("fcm:" + event.getReceiverType() + ":" + event.getReceiverId());
             if (fcmToken != null) {
                 Map<String, String> data = new HashMap<>();
-                data.put("variant", ToastVariant.DEFAULT.getValue());
+                data.put("variant", ToastVariant.CHAT.getValue());
+                data.put("roomId", event.getRoomId().toString());
                 try {
                     firebaseService.sendMessageToToken(
                             fcmToken,

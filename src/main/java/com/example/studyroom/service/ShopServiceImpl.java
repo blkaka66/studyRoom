@@ -3,8 +3,12 @@ package com.example.studyroom.service;
 import com.example.studyroom.dto.requestDto.*;
 import com.example.studyroom.dto.responseDto.*;
 import com.example.studyroom.model.*;
+import com.example.studyroom.model.notice.MemberNoticeEntity;
+import com.example.studyroom.model.notice.NoticeType;
+import com.example.studyroom.model.notice.ShopNoticeEntity;
 import com.example.studyroom.model.statistics.*;
 import com.example.studyroom.repository.*;
+import com.example.studyroom.repository.notice.ShopNoticeRepository;
 import com.example.studyroom.repository.statistics.*;
 import com.example.studyroom.security.JwtCookieUtil;
 import com.example.studyroom.security.JwtUtil;
@@ -56,6 +60,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     private final ChatSubscribeService chatSubscribeService;
     private final RedisTemplate<String, String> redisTemplate;
     private final PasswordEncoder passwordEncoder;
+    private final ShopNoticeRepository shopNoticeRepository;
 
     public ShopServiceImpl(ShopRepository repository, MemberService memberService, SeatRepository seatRepository,
                            RoomRepository roomRepository, MemberServiceImpl memberServiceImpl
@@ -67,7 +72,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
                            CouponRepository couponRepository,
                            ShopUsageHourlyRepository shopUsageHourlyRepository,
                            ShopUsageDailyRepository shopUsageDailyRepository,
-                           SeatIdUsageRepository seatIdUsageRepository,
+                           SeatIdUsageRepository seatIdUsageRepository, ShopNoticeRepository shopNoticeRepository,
                            UserAvrUsageRepository userAvrUsageRepository, TicketHistoryRepository ticketHistoryRepository,
                            TimeTicketHistoryRepository timeTicketHistoryRepository, PeriodTicketHistoryRepository periodTicketHistoryRepository
             , ShopDailyPaymentRepository shopDailyPaymentRepository, CustomerChangeStatsRepository customerChangeStatsRepository, TicketServiceImpl ticketServiceImpl
@@ -100,6 +105,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         this.chatSubscribeService = chatSubscribeService;
         this.redisTemplate = redisTemplate;
         this.passwordEncoder = passwordEncoder;
+        this.shopNoticeRepository = shopNoticeRepository;
     }
 
 
@@ -845,5 +851,6 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
         return FinalResponseDto.successWithData(responseDtos);
     }
+
 
 }

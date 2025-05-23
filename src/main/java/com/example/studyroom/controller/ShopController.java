@@ -9,6 +9,7 @@ import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.model.statistics.SeatIdUsageEntity;
 import com.example.studyroom.security.JwtCookieUtil;
 import com.example.studyroom.security.JwtUtil;
+import com.example.studyroom.service.NoticeService;
 import com.example.studyroom.service.ShopService;
 import com.example.studyroom.service.TokenRefreshService;
 import jakarta.servlet.http.Cookie;
@@ -30,14 +31,14 @@ public class ShopController {
     private final ShopService shopService;
 
     private final TokenRefreshService tokenRefreshService;
+    private final NoticeService noticeService;
 
-    public ShopController(ShopService shopService, TokenRefreshService tokenRefreshService
-
-
+    public ShopController(ShopService shopService, TokenRefreshService tokenRefreshService, NoticeService noticeService
     ) {
         this.shopService = shopService;
 //        this.memberService = memberService;
         this.tokenRefreshService = tokenRefreshService;
+        this.noticeService = noticeService;
     }
 
     @PostMapping("/sign-up")
@@ -208,6 +209,14 @@ public class ShopController {
     @PostMapping("/statistics/userChangeStats")
     public ResponseEntity<FinalResponseDto<List<UserChangeStatsResponseDto>>> getUserChangeStatsByDateRange(@RequestBody UserChangeStatsRequestDto dto) {
         return ResponseEntity.ok(this.shopService.getUserChangeStatsByDateRange(dto));
+    }
+
+
+    @GetMapping("/get-notifications")
+    public ResponseEntity<FinalResponseDto<List<NotificationResponseDto>>> getNotifications() {
+        ShopEntity shop = JwtUtil.getShop();
+        FinalResponseDto<List<NotificationResponseDto>> response = this.noticeService.getNotifications(shop.getId());
+        return ResponseEntity.ok(response);
     }
 
 

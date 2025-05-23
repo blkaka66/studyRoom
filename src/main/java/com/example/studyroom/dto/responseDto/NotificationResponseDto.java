@@ -1,5 +1,6 @@
 package com.example.studyroom.dto.responseDto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -13,6 +14,9 @@ public class NotificationResponseDto {
     private String title;
     private String content;
     private String noticeType;
+
+    @JsonProperty("isRead")
     private boolean isRead;
+
     private OffsetDateTime createdAt;
 }

@@ -5,7 +5,8 @@ public enum ToastVariant {
     DESTRUCTIVE("destructive"),
     SUCCESS("success"),
     WARNING("warning"),
-    INFO("info");
+    INFO("info"),
+    CHAT("chat");
 
     private final String value;
 
