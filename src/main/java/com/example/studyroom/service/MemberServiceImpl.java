@@ -699,7 +699,12 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     @Override
     public FinalResponseDto<String> deleteNotifications(DeleteMemberNoticeReqeustDto dto) {
 
+//        MemberEntity member = memberRepository.findById(dto.getMemberId()).orElse(null);
+//        if (member == null) {
+//            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+//        }
         MemberNoticeEntity memberNotice = memberNoticeRepository.findByMemberIdAndId(dto.getMemberId(), dto.getId());
+//        MemberNoticeEntity memberNotice = memberNoticeRepository.findByMemberAndId(member, dto.getId());
         if (memberNotice == null) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }

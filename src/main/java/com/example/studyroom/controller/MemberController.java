@@ -200,7 +200,7 @@ public class MemberController {
 
 
     @DeleteMapping("/delete-notifications")
-    public ResponseEntity<FinalResponseDto<String>> deleteNotifications(DeleteMemberNoticeReqeustDto dto) {
+    public ResponseEntity<FinalResponseDto<String>> deleteNotifications(@RequestBody DeleteMemberNoticeReqeustDto dto) {
         FinalResponseDto<String> response = this.memberService.deleteNotifications(dto);
         return ResponseEntity.ok(response);
     }
