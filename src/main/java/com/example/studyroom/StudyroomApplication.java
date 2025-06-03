@@ -4,11 +4,11 @@ package com.example.studyroom;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.ConfigurableApplicationContext;
+
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import org.springframework.core.env.Environment;
 
 @EnableBatchProcessing
 @EnableScheduling
@@ -17,6 +17,6 @@ public class StudyroomApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(StudyroomApplication.class, args);
-    }//스프링 부트 애플리케이션을 실행하는 메서드입니다.
+    }
 
 }

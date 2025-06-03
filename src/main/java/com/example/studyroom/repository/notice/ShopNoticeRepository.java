@@ -8,9 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ShopNoticeRepository extends JpaRepository<ShopNoticeEntity, Long> {
-    List<ShopNoticeEntity> findByShopIdOrderByCreatedAtDesc(Long shopId);
+    List<ShopNoticeEntity> findByShopOrderByCreatedAtDesc(ShopEntity shopEntity);
 
-    ShopNoticeEntity findByShopIdAndId(Long shopId, Long id);
+    //ShopNoticeEntity findByShopIdAndId(Long shopId, Long id);
 
     Long shop(ShopEntity shop);
 }

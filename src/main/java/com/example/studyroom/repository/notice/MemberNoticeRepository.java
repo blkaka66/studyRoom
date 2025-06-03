@@ -10,13 +10,13 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface MemberNoticeRepository extends JpaRepository<MemberNoticeEntity, Long> {
-    List<MemberNoticeEntity> findByMemberIdAndIsReadFalse(Long memberId);
+    //List<MemberNoticeEntity> findByMemberIdAndIsReadFalse(Long memberId);
 
     //List<MemberNoticeEntity> findByMemberIdAndIsReadFalseOrderByCreatedAtDesc(Long memberId);
 
-    List<MemberNoticeEntity> findByMemberIdOrderByCreatedAtDesc(Long memberId);
+    List<MemberNoticeEntity> findByMemberOrderByCreatedAtDesc(MemberEntity memberEntity);
 
-    MemberNoticeEntity findByMemberIdAndId(Long memberId, Long id);
+    //MemberNoticeEntity findByMemberIdAndId(Long memberId, Long id);
 
     MemberNoticeEntity findByMemberAndId(MemberEntity memberEntity, Long id);
 

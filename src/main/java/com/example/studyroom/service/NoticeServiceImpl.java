@@ -6,6 +6,7 @@ import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.model.notice.MemberNoticeEntity;
 import com.example.studyroom.model.notice.NoticeType;
 import com.example.studyroom.model.notice.ShopNoticeEntity;
+import com.example.studyroom.repository.ShopRepository;
 import com.example.studyroom.repository.notice.ShopNoticeRepository;
 import com.example.studyroom.type.ApiResult;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +19,11 @@ import java.util.List;
 @Service
 public class NoticeServiceImpl implements NoticeService {
     private final ShopNoticeRepository shopNoticeRepository;
+    private final ShopRepository shopRepository;
 
-    public NoticeServiceImpl(ShopNoticeRepository shopNoticeRepository) {
+    public NoticeServiceImpl(ShopNoticeRepository shopNoticeRepository, ShopRepository shopRepository) {
         this.shopNoticeRepository = shopNoticeRepository;
+        this.shopRepository = shopRepository;
     }
 
     @Override
@@ -41,7 +44,11 @@ public class NoticeServiceImpl implements NoticeService {
 
     @Override
     public FinalResponseDto<List<NotificationResponseDto>> getNotifications(long shopId) {
-        List<ShopNoticeEntity> notices = shopNoticeRepository.findByShopIdOrderByCreatedAtDesc(shopId);
+        ShopEntity shopEntity = shopRepository.findById(shopId);
+        if (shopEntity == null) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+        List<ShopNoticeEntity> notices = shopNoticeRepository.findByShopOrderByCreatedAtDesc(shopEntity);
         if (notices.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }

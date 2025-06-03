@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CouponRepository extends JpaRepository<CouponEntity, Long> {
 
-    CouponEntity findByCouponCodeAndShopId(String code, Long shopId);
+    CouponEntity findByCouponCodeAndShop(String code, ShopEntity shop);
 
     CouponEntity findById(long id);
 }

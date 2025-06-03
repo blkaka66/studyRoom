@@ -67,7 +67,7 @@ public class TimeTicketServiceImpl extends BaseServiceImpl<TimeTicketEntity> imp
     private void addOrUpdateRemainTicket(TimeTicketEntity ticket, Long shopId, Long customerId, ShopEntity shop, MemberEntity member) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         Optional<RemainTimeTicketEntity> optionalTicket =
-                remainTimeTicketRepository.findByShopIdAndMemberIdAndExpiresAtAfter(shopId, customerId, now);
+                remainTimeTicketRepository.findByShopAndMemberAndExpiresAtAfter(shop, member, now);
 
         Duration newRemainTime = Duration.ofHours(ticket.getHours());
         OffsetDateTime newExpiresAt = now.plusDays(ticket.getValidDays());
@@ -189,7 +189,15 @@ public class TimeTicketServiceImpl extends BaseServiceImpl<TimeTicketEntity> imp
 
     @Override
     public List<TimeTicketPaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId, OffsetDateTime startDateTime, OffsetDateTime endDateTime) {
-        List<TimeTicketHistoryEntity> timeTicketHistoryList = timeTicketHistoryRepository.findByShop_IdAndMember_IdAndPaymentDateBetween(shopId, customerId, startDateTime, endDateTime);
+        ShopEntity shop = shopRepository.findById(shopId).orElse(null);
+        if (shop == null) {
+            return null;
+        }
+        MemberEntity member = memberRepository.findById(customerId).orElse(null);
+        if (member == null) {
+            return null;
+        }
+        List<TimeTicketHistoryEntity> timeTicketHistoryList = timeTicketHistoryRepository.findByShopAndMemberAndPaymentDateBetween(shop, member, startDateTime, endDateTime);
         System.out.println("시간권기록" + timeTicketHistoryList.size());
         return timeTicketHistoryList.stream()
                 .map(entity -> TimeTicketPaymentHistoryDto.builder()

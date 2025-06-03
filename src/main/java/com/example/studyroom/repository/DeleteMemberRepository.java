@@ -7,6 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DeleteMemberRepository extends JpaRepository<DeletedMemberEntity, Long> {
 
-    DeleteMemberRepository findByShopId(long shopId);
+    //DeleteMemberRepository findByShopId(long shopId);
 
 }

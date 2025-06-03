@@ -1,7 +1,9 @@
 package com.example.studyroom.repository;
 
+import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.RemainPeriodTicketEntity;
 import com.example.studyroom.model.RemainTimeTicketEntity;
+import com.example.studyroom.model.ShopEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,17 +17,23 @@ public interface RemainTimeTicketRepository extends JpaRepository<RemainTimeTick
 
     //Optional<RemainTimeTicketEntity> findByShopIdAndMemberIdAndExpiresAtBefore(Long shopId, Long userId, OffsetDateTime now);
 
-    Optional<RemainTimeTicketEntity> findByShopIdAndMemberIdAndExpiresAtAfter(
-            Long shopId,
-            Long memberId,
+//    Optional<RemainTimeTicketEntity> findByShopIdAndMemberIdAndExpiresAtAfter(
+//            Long shopId,
+//            Long memberId,
+//            OffsetDateTime expiresAtBefore
+//    );
+
+    Optional<RemainTimeTicketEntity> findByShopAndMemberAndExpiresAtAfter(
+            ShopEntity shop,
+            MemberEntity member,
             OffsetDateTime expiresAtBefore
     );
 
 
     @Transactional
-    void deleteByShopIdAndMemberId(Long shopId, Long userId);
+    void deleteByShopAndMember(ShopEntity shop, MemberEntity member);
 
 
-    Optional<RemainTimeTicketEntity> findByMemberId(Long memberId); // memberId로 시간권을 찾는 메서드
+    Optional<RemainTimeTicketEntity> findByMember(MemberEntity member); // memberId로 시간권을 찾는 메서드
 
 }

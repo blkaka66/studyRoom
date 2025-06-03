@@ -11,13 +11,13 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
 
     List<MemberEntity> findByShop(ShopEntity shop);
 
-    MemberEntity findByNameAndPassword(String name, String password);
+    // MemberEntity findByNameAndPassword(String name, String password);
 
     //MemberEntity findById(long id);
 
-    MemberEntity findByNameAndShopId(String Name, Long shopId);
+    MemberEntity findByNameAndShop(String Name, ShopEntity shop);
 
-    MemberEntity findByPhoneAndPassword(String phone, String password);
+    // MemberEntity findByPhoneAndPassword(String phone, String password);
 
     MemberEntity findByPhone(String phone);
 

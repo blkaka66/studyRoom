@@ -37,7 +37,7 @@ public class SeatExpirationAlertScheduler {
     }
 
     //  @Scheduled(fixedRate = 60000) // 1분마다 실행
-    @Scheduled(fixedRate = 1000) // 1분마다 실행
+    @Scheduled(fixedRate = 60000) // 1분마다 실행
     public void processExpiringSeats() {
         OffsetDateTime now = OffsetDateTime.now();
         List<SeatExpirationAlertEntity> alerts = alertRepository.findBySendTimeBeforeAndSentFalse(now);

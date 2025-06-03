@@ -33,7 +33,7 @@ public class TicketExpirationAlertScheduler {
         this.memberService = memberService;
     }
 
-    @Scheduled(fixedRate = 1000) // 1분마다 실행
+    @Scheduled(fixedRate = 60000) // 1분마다 실행
     public void processTicketExpirationAlerts() {
         OffsetDateTime now = OffsetDateTime.now();
         List<TicketExpirationAlertEntity> alerts = ticketExpirationAlertRepository.findBySendTimeBeforeAndSentFalse(now);

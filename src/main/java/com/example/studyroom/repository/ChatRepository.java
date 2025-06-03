@@ -15,12 +15,12 @@ import java.util.Optional;
 
 public interface ChatRepository extends JpaRepository<ChatMessageEntity, Long> {
 
-    List<ChatMessageEntity> findByRoomOrderByTimestampAsc(ChatRoomEntity room);
+    // List<ChatMessageEntity> findByRoomOrderByTimestampAsc(ChatRoomEntity room);
 
 
     Optional<ChatMessageEntity> findTopByRoomOrderByTimestampDesc(ChatRoomEntity room);
 
     Page<ChatMessageEntity> findByRoom(ChatRoomEntity room, Pageable pageable);
 
-    boolean existsByRoomIdAndSenderIdAndSenderTypeAndMessageType(long roomId, long senderId, String senderType, MessageType messageType);
+    boolean existsByRoomAndSenderIdAndSenderTypeAndMessageType(ChatRoomEntity room, long senderId, String senderType, MessageType messageType);
 }

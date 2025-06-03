@@ -1,5 +1,6 @@
 package com.example.studyroom.repository;
 
+import com.example.studyroom.model.RoomEntity;
 import com.example.studyroom.model.SeatEntity;
 import io.lettuce.core.dynamic.annotation.Param;
 import jakarta.persistence.LockModeType;
@@ -11,12 +12,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SeatRepository extends JpaRepository<SeatEntity, Long> {
-    List<SeatEntity> findByRoomId(Long roomId);
+    // List<SeatEntity> findByRoomId(Long roomId);
 
-    Optional<SeatEntity> findBySeatCodeAndRoom_Id(int seatCode, Long roomId);
+    // Optional<SeatEntity> findBySeatCodeAndRoom_Id(int seatCode, Long roomId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT s FROM SeatEntity s WHERE s.seatCode = :seatCode AND s.room.id = :roomId")
-    Optional<SeatEntity> findBySeatCodeAndRoom_IdWithPessimisticLock(@Param("seatCode") int seatCode, @Param("roomId") Long roomId);
+    @Query("SELECT s FROM SeatEntity s WHERE s.seatCode = :seatCode AND s.room = :room")
+    Optional<SeatEntity> findBySeatCodeAndRoomWithPessimisticLock(@Param("seatCode") int seatCode, @Param("room") RoomEntity room);
 
 }

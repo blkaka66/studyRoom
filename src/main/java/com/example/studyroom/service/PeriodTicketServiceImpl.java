@@ -69,7 +69,7 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
     private void addOrUpdateRemainTicket(PeriodTicketEntity ticket, Long shopId, Long customerId, ShopEntity shop, MemberEntity member) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         Optional<RemainPeriodTicketEntity> optionalTicket =
-                remainPeriodTicketRepository.findByShopIdAndMemberIdAndEndDateAfterAndExpiresAtAfter(shopId, customerId, now, now);
+                remainPeriodTicketRepository.findByShopAndMemberAndEndDateAfterAndExpiresAtAfter(shop, member, now, now);
 
         OffsetDateTime newEndDate = now.plusDays(ticket.getDays());
         OffsetDateTime newExpiresAt = now.plusDays(ticket.getValidDays());
@@ -123,7 +123,17 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
 
     @Override
     public List<PeriodTicketPaymentHistoryDto> getPaymentHistory(Long shopId, Long customerId, OffsetDateTime startDateTime, OffsetDateTime endDateTime) {
-        List<PeriodTicketHistoryEntity> periodTicketHistoryList = periodTicketHistoryRepository.findByShop_IdAndMember_IdAndPaymentDateBetween(shopId, customerId, startDateTime, endDateTime);
+        Optional<ShopEntity> shop = shopRepository.findById(shopId);
+        if (shop.isEmpty()) {
+            return null;
+        }
+        Optional<MemberEntity> member = memberRepository.findById(customerId);
+        if (member.isEmpty()) {
+            return null;
+        }
+        ShopEntity shopEntity = shop.get();
+        MemberEntity memberEntity = member.get();
+        List<PeriodTicketHistoryEntity> periodTicketHistoryList = periodTicketHistoryRepository.findByShopAndMemberAndPaymentDateBetween(shopEntity, memberEntity, startDateTime, endDateTime);
         System.out.println("기간권권기록" + periodTicketHistoryList.size());
         return periodTicketHistoryList.stream()
                 .map(entity -> PeriodTicketPaymentHistoryDto.builder()
@@ -137,6 +147,7 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
                         .couponAmount(entity.getCoupon() != null ? entity.getCoupon().getDiscountAmount() : null) // coupon이 null일 경우 null 할당
                         .build())
                 .toList();
+
 
     }
 
@@ -181,7 +192,17 @@ public class PeriodTicketServiceImpl extends BaseServiceImpl<PeriodTicketEntity>
     @Override
     public RemainTicketInfoResponseDto getEndDate(Long shopId, Long customerId, String ticketCategory) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        Optional<RemainPeriodTicketEntity> RemainPeriodTicketEntity = remainPeriodTicketRepository.findByShopIdAndMemberIdAndEndDateAfterAndExpiresAtAfter(shopId, customerId, now, now);
+        Optional<ShopEntity> shop = shopRepository.findById(shopId);
+        if (shop.isEmpty()) {
+            return null;
+        }
+        Optional<MemberEntity> member = memberRepository.findById(customerId);
+        if (member.isEmpty()) {
+            return null;
+        }
+        ShopEntity shopEntity = shop.get();
+        MemberEntity memberEntity = member.get();
+        Optional<RemainPeriodTicketEntity> RemainPeriodTicketEntity = remainPeriodTicketRepository.findByShopAndMemberAndEndDateAfterAndExpiresAtAfter(shopEntity, memberEntity, now, now);
         return RemainPeriodTicketEntity.map(remainPeriodTicketEntity -> RemainTicketInfoResponseDto.builder()
                 .seatType(ticketCategory)
                 .endDate(remainPeriodTicketEntity.getEndDate())

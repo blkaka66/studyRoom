@@ -137,7 +137,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     @Override
     public FinalResponseDto<String> outAndlogout(MemberEntity member, String accessToken) {
         // 자리 퇴장 처리
-        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(member.getId());
+        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByMember(member);
+
         if (enterHistory != null && enterHistory.getExitTime() == null) {
             FinalResponseDto<String> outResponse = out(member.getId());
             if (outResponse.getMessage().equals(ApiResult.DATA_NOT_FOUND.name())) {
@@ -204,7 +205,11 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     @Override
     public FinalResponseDto<String> out(Long userId) {
-        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
+        MemberEntity member = memberRepository.findById(userId).orElse(null);
+        if (member == null) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByMember(member);
         if (enterHistory == null) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
@@ -281,7 +286,11 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     }
 
     private boolean updateRemainTimeTicket(Long userId, long remainingSeconds) {
-        Optional<RemainTimeTicketEntity> remainTimeTicketOpt = remainTimeTicketRepository.findByMemberId(userId);
+        MemberEntity member = memberRepository.findById(userId).orElse(null);
+        if (member == null) {
+            return false;
+        }
+        Optional<RemainTimeTicketEntity> remainTimeTicketOpt = remainTimeTicketRepository.findByMember(member);
         if (remainTimeTicketOpt.isEmpty()) {
             return false;
         }
@@ -295,7 +304,11 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     @Override
     // TODO: Get Seat ID... 현재 유저가 자리하는 곳 반환
     public FinalResponseDto<MySeatInfoResponseDto> getSeatId(Long userId) {
-        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
+        MemberEntity member = memberRepository.findById(userId).orElse(null);
+        if (member == null) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByMember(member);
         if (enterHistory == null) {
             return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
         }
@@ -310,7 +323,11 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     // 회원 ID를 받아 해당 회원의 좌석 ID를 반환하는 메서드
     // 조건에 맞는 EnterHistoryEntity가 없으면 null을 반환
     public Long getSeatIdByCustomerId(Long customerId) {
-        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(customerId);
+        MemberEntity member = memberRepository.findById(customerId).orElse(null);
+        if (member == null) {
+            return null;
+        }
+        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByMember(member);
         if (enterHistory != null) {
             return enterHistory.getSeatId();  // 좌석 ID를 반환
         }
@@ -327,8 +344,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
         Optional<RoomEntity> roomOpt = roomRepository.findById(requestDto.getRoomId());//룸체크
         if (roomOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.ROOM_NOT_FOUND);
 
-        Long roomId = roomOpt.get().getId();
-        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoom_IdWithPessimisticLock(requestDto.getSeatCode(), roomId);//자리체크
+        RoomEntity room = roomOpt.get();
+        Optional<SeatEntity> seatOpt = seatRepository.findBySeatCodeAndRoomWithPessimisticLock(requestDto.getSeatCode(), room);//자리체크
         if (seatOpt.isEmpty()) return FinalResponseDto.failure(ApiResult.SEAT_NOT_FOUND);
 
         SeatEntity seat = seatOpt.get();
@@ -344,8 +361,8 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     private FinalResponseDto<String> handleTicketOccupation(MemberEntity member, SeatEntity seat) {
         OffsetDateTime now = OffsetDateTime.now();
-        Optional<RemainPeriodTicketEntity> optionalRemainPeriodTicket = remainPeriodTicketRepository.findByShopIdAndMemberIdAndEndDateAfterAndExpiresAtAfter(member.getShop().getId(), member.getId(), now, now);
-        Optional<RemainTimeTicketEntity> optionalRemainTimeTicket = remainTimeTicketRepository.findByShopIdAndMemberIdAndExpiresAtAfter(member.getShop().getId(), member.getId(), now);
+        Optional<RemainPeriodTicketEntity> optionalRemainPeriodTicket = remainPeriodTicketRepository.findByShopAndMemberAndEndDateAfterAndExpiresAtAfter(member.getShop(), member, now, now);
+        Optional<RemainTimeTicketEntity> optionalRemainTimeTicket = remainTimeTicketRepository.findByShopAndMemberAndExpiresAtAfter(member.getShop(), member, now);
 
         if (optionalRemainPeriodTicket.isPresent()) {
             return handlePeriodTicket(member, seat, optionalRemainPeriodTicket.get());
@@ -459,17 +476,20 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     @Override
     @Transactional
     public FinalResponseDto<String> moveAndHandleTicket(MemberEntity member, MemberMoveRequestDto requestDto) {
-        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(member.getId());
+        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByMember(member);
         if (enterHistory == null) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
-
+        RoomEntity room = roomRepository.findById(requestDto.getRoomId()).orElse(null);
+        if (room == null) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
         // 현재 자리와 새 자리 유효성 검사
-        Optional<SeatEntity> currentSeatOpt = seatRepository.findBySeatCodeAndRoom_IdWithPessimisticLock(
-                enterHistory.getSeat().getSeatCode(), enterHistory.getSeat().getRoom().getId()
+        Optional<SeatEntity> currentSeatOpt = seatRepository.findBySeatCodeAndRoomWithPessimisticLock(
+                enterHistory.getSeat().getSeatCode(), enterHistory.getSeat().getRoom()
         );
-        Optional<SeatEntity> newSeatOpt = seatRepository.findBySeatCodeAndRoom_IdWithPessimisticLock(
-                requestDto.getSeatCode(), requestDto.getRoomId()
+        Optional<SeatEntity> newSeatOpt = seatRepository.findBySeatCodeAndRoomWithPessimisticLock(
+                requestDto.getSeatCode(), room
         );
 
         FinalResponseDto<String> validationResponse = validateSeats(currentSeatOpt, newSeatOpt);
@@ -649,7 +669,13 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
 
     @Override
     public FinalResponseDto<List<NotificationResponseDto>> getNotifications(long memberId) {
-        List<MemberNoticeEntity> notices = memberNoticeRepository.findByMemberIdOrderByCreatedAtDesc(memberId);
+
+        MemberEntity member = memberRepository.findById(memberId).orElse(null);
+        if (member == null) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+
+        List<MemberNoticeEntity> notices = memberNoticeRepository.findByMemberOrderByCreatedAtDesc(member);
         if (notices.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
@@ -699,12 +725,12 @@ public class MemberServiceImpl extends BaseServiceImpl<MemberEntity> implements 
     @Override
     public FinalResponseDto<String> deleteNotifications(DeleteMemberNoticeReqeustDto dto) {
 
-//        MemberEntity member = memberRepository.findById(dto.getMemberId()).orElse(null);
-//        if (member == null) {
-//            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
-//        }
-        MemberNoticeEntity memberNotice = memberNoticeRepository.findByMemberIdAndId(dto.getMemberId(), dto.getId());
-//        MemberNoticeEntity memberNotice = memberNoticeRepository.findByMemberAndId(member, dto.getId());
+        MemberEntity member = memberRepository.findById(dto.getMemberId()).orElse(null);
+        if (member == null) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+
+        MemberNoticeEntity memberNotice = memberNoticeRepository.findByMemberAndId(member, dto.getId());
         if (memberNotice == null) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }

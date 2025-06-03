@@ -1,5 +1,6 @@
 package com.example.studyroom.repository;
 
+import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.PeriodTicketHistoryEntity;
 import com.example.studyroom.model.ShopEntity;
 import com.example.studyroom.model.TimeTicketHistoryEntity;
@@ -12,9 +13,10 @@ import java.util.List;
 
 public interface TimeTicketHistoryRepository extends TicketHistoryRepository<TimeTicketHistoryEntity> {
 
-    @Query("SELECT the From TimeTicketHistoryEntity the WHERE the.shop.id=?1 and the.member.id=?2")
-    List<TimeTicketHistoryEntity> findByShopIdAndUserIdAndExpiredFalse(Long shopId, Long userId);
+//    @Query("SELECT the From TimeTicketHistoryEntity the WHERE the.shop.id=?1 and the.member.id=?2")
+//    List<TimeTicketHistoryEntity> findByShopIdAndUserIdAndExpiredFalse(Long shopId, Long userId);
 
     List<TimeTicketHistoryEntity> findByShopAndPaymentDateBetween(ShopEntity shop, OffsetDateTime paymentDate, OffsetDateTime paymentDate2);
-    List<TimeTicketHistoryEntity> findByShop_IdAndMember_IdAndPaymentDateBetween(Long shopId, Long userId , OffsetDateTime startDate , OffsetDateTime endDate);
+
+    List<TimeTicketHistoryEntity> findByShopAndMemberAndPaymentDateBetween(ShopEntity shop, MemberEntity member, OffsetDateTime startDate, OffsetDateTime endDate);
 }

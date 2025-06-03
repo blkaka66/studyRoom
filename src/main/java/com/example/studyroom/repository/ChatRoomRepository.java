@@ -15,12 +15,12 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoomEntity, Long> 
     @Query("SELECT c FROM ChatRoomEntity c WHERE (c.senderId = :id AND c.senderType = :type) OR (c.partnerId = :id AND c.partnerType = :type)")
     List<ChatRoomEntity> findRoomsBySenderOrPartner(@Param("id") Long id, @Param("type") String type);
 
-
-    //두 사용자 조합으로 중복 체크
-    @Query("SELECT r FROM ChatRoomEntity r " +
-            "WHERE (r.senderId = :senderId AND r.senderType = :senderType AND r.partnerId = :partnerId AND r.partnerType = :partnerType) " +
-            "   OR (r.senderId = :partnerId AND r.senderType = :partnerType AND r.partnerId = :senderId AND r.partnerType = :senderType)")
-    Optional<ChatRoomEntity> findChatRoomBidirectional(Long senderId, String senderType, Long partnerId, String partnerType);
+//
+//    //두 사용자 조합으로 중복 체크
+//    @Query("SELECT r FROM ChatRoomEntity r " +
+//            "WHERE (r.senderId = :senderId AND r.senderType = :senderType AND r.partnerId = :partnerId AND r.partnerType = :partnerType) " +
+//            "   OR (r.senderId = :partnerId AND r.senderType = :partnerType AND r.partnerId = :senderId AND r.partnerType = :senderType)")
+//    Optional<ChatRoomEntity> findChatRoomBidirectional(Long senderId, String senderType, Long partnerId, String partnerType);
 
 
     //두 사용자 조합으로 중복체크 + 둘다 나가지않은 방 체크
@@ -33,11 +33,11 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoomEntity, Long> 
             Long partnerId, String partnerType);
 
 
-    @Query("SELECT r FROM ChatRoomEntity r " +
-            "WHERE ((r.senderId = :senderId AND r.senderType = :senderType AND r.partnerId = :partnerId AND r.partnerType = :partnerType) " +
-            "   OR (r.senderId = :partnerId AND r.senderType = :partnerType AND r.partnerId = :senderId AND r.partnerType = :senderType))")
-    Optional<ChatRoomEntity> findRoomBidirectionalWithoutClosedCheck(
-            Long senderId, String senderType,
-            Long partnerId, String partnerType
-    );
+//    @Query("SELECT r FROM ChatRoomEntity r " +
+//            "WHERE ((r.senderId = :senderId AND r.senderType = :senderType AND r.partnerId = :partnerId AND r.partnerType = :partnerType) " +
+//            "   OR (r.senderId = :partnerId AND r.senderType = :partnerType AND r.partnerId = :senderId AND r.partnerType = :senderType))")
+//    Optional<ChatRoomEntity> findRoomBidirectionalWithoutClosedCheck(
+//            Long senderId, String senderType,
+//            Long partnerId, String partnerType
+//    );
 }

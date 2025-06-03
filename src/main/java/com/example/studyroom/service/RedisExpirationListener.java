@@ -1,12 +1,7 @@
 package com.example.studyroom.service;
-import com.example.studyroom.model.EnterHistoryEntity;
-import com.example.studyroom.model.RemainPeriodTicketEntity;
-import com.example.studyroom.model.RemainTimeTicketEntity;
-import com.example.studyroom.model.SeatEntity;
-import com.example.studyroom.repository.EnterHistoryRepository;
-import com.example.studyroom.repository.RemainPeriodTicketRepository;
-import com.example.studyroom.repository.RemainTimeTicketRepository;
-import com.example.studyroom.repository.SeatRepository;
+
+import com.example.studyroom.model.*;
+import com.example.studyroom.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
@@ -23,12 +18,16 @@ public class RedisExpirationListener implements MessageListener {
     private final MemberService memberService;
     private final EnterHistoryRepository enterHistoryRepository;
     private final SeatService seatService;
+    private final MemberRepository memberRepository;
+    private final ShopRepository shopRepository;
+
     @Autowired
     public RedisExpirationListener(RemainPeriodTicketRepository remainPeriodTicketRepository
-    , RemainTimeTicketRepository remainTimeTicketRepository,
-    RemainTimeTicketService remainTimeTicketService,
-    SeatRepository seatRepository , MemberService memberService
-    , EnterHistoryRepository enterHistoryRepository , SeatService seatService) {
+            , RemainTimeTicketRepository remainTimeTicketRepository,
+                                   RemainTimeTicketService remainTimeTicketService,
+                                   SeatRepository seatRepository, MemberService memberService
+            , EnterHistoryRepository enterHistoryRepository, SeatService seatService,
+                                   MemberRepository memberRepository, ShopRepository shopRepository) {
         this.remainPeriodTicketRepository = remainPeriodTicketRepository;
         this.remainTimeTicketRepository = remainTimeTicketRepository;
         this.remainTimeTicketService = remainTimeTicketService;
@@ -36,6 +35,8 @@ public class RedisExpirationListener implements MessageListener {
         this.memberService = memberService;
         this.enterHistoryRepository = enterHistoryRepository;
         this.seatService = seatService;
+        this.memberRepository = memberRepository;
+        this.shopRepository = shopRepository;
     }
 
     @Transactional
@@ -45,29 +46,36 @@ public class RedisExpirationListener implements MessageListener {
 
         String expiredKey = message.toString();
 
-        System.out.println("expiredKey"+expiredKey);
+        System.out.println("expiredKey" + expiredKey);
 
         // Key에서 필요한 정보 추출
         Long seatId = extractSeatIdFromKey(expiredKey);
         Long userId = extractUserIdFromKey(expiredKey);
         Long shopId = extractShopIdFromKey(expiredKey);
-        System.out.println("seatId"+seatId);
-        System.out.println("userId"+userId);
-        System.out.println("shopId"+shopId);
+        System.out.println("seatId" + seatId);
+        System.out.println("userId" + userId);
+        System.out.println("shopId" + shopId);
 //        SeatEntity seat = seatRepository.findById(seatId)
 //                .orElseThrow(() -> new IllegalArgumentException("Seat not found for id: " + seatId));
-
-        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByCustomerId(userId);
-        boolean isUpdateSeatAvailability= seatService.updateSeatAvailability(enterHistory.getSeat().getId());
-        if(!isUpdateSeatAvailability){
+        MemberEntity member = memberRepository.findById(userId).orElse(null);
+        if (member == null) {
+            return;
+        }
+        ShopEntity shop = shopRepository.findById(shopId).orElse(null);
+        if (shop == null) {
+            return;
+        }
+        EnterHistoryEntity enterHistory = enterHistoryRepository.findActiveByMember(member);
+        boolean isUpdateSeatAvailability = seatService.updateSeatAvailability(enterHistory.getSeat().getId());
+        if (!isUpdateSeatAvailability) {
             System.out.println("존재하지 않는 좌석: " + expiredKey);
         }
         if (expiredKey.startsWith("periodSeat:")) {
-            remainPeriodTicketRepository.deleteByShopIdAndMemberId(shopId, userId);
+            remainPeriodTicketRepository.deleteByShopAndMember(shop, member);
             memberService.updateExitTime(enterHistory);
             System.out.println("기간권 만료 처리 완료: userId = " + userId);
         } else if (expiredKey.startsWith("timeSeat:")) {
-            remainTimeTicketRepository.deleteByShopIdAndMemberId(shopId, userId);
+            remainTimeTicketRepository.deleteByShopAndMember(shop, member);
             memberService.updateExitTime(enterHistory);
             System.out.println("시간권 만료 처리 완료: userId = " + userId);
         } else {

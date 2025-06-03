@@ -156,7 +156,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         if (existingShop == null) {
             return FinalResponseDto.failure(ApiResult.AUTHENTICATION_FAILED); // 사용자 없음 처리
         }
-
+        log.info("dto: {}, existingShop.getPassword(): {}", dto.getPassword(), existingShop.getPassword());
         if (passwordEncoder.matches(dto.getPassword(), existingShop.getPassword())) {
             log.info("Login successful");
             String token = jwtUtil.createAccessToken(existingShop);
@@ -280,9 +280,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         if (member.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
         }
-        Long shopId = member.get().getShop().getId();
-        System.out.println("shopId" + shopId);
-        List<RoomEntity> rooms = roomRepository.findByShopId(shopId);
+        List<RoomEntity> rooms = roomRepository.findByShop(member.get().getShop());
 
         // 방 목록을 DTO로 변환
         List<RoomAndSeatInfoResponseDto> roomAndSeatInfoDtos = rooms.stream().map(room -> {
@@ -319,9 +317,13 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
     @Override
     public FinalResponseDto<ProductResponseDto> getProductList(Long shopId) {
-
-        List<PeriodTicketEntity> periodTicketEntities = periodTicketRepository.findByShopId(shopId);
-        List<TimeTicketEntity> timeTicketEntities = timeTicketRepository.findByShopId(shopId);
+        Optional<ShopEntity> shop = shopRepository.findById(shopId);
+        if (shop.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
+        ShopEntity shopEntity = shop.get();
+        List<PeriodTicketEntity> periodTicketEntities = periodTicketRepository.findByShop(shopEntity);
+        List<TimeTicketEntity> timeTicketEntities = timeTicketRepository.findByShop(shopEntity);
         if (!periodTicketEntities.isEmpty()) {
             System.out.println("첫 번째 PeriodTicketEntity: " + periodTicketEntities.get(0).getName());
         } else {
@@ -378,8 +380,8 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         if (shopOptional.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
         }
-
-        List<AnnouncementEntity> announcements = announcementRepository.findByShopIdAndIsActiveTrue(shopId);
+        ShopEntity shop = shopOptional.get();
+        List<AnnouncementEntity> announcements = announcementRepository.findByShopAndIsActiveTrue(shop);
 
         List<AnnouncementResponseDto> responseDtos = announcements.stream()
                 .map(AnnouncementResponseDto::convertToDto)
@@ -405,7 +407,12 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
 
     @Override
     public FinalResponseDto<CouponInfoResponseDto> getCouponInfo(String couponCode, Long shopId) {
-        Optional<CouponEntity> coupon = Optional.ofNullable(couponRepository.findByCouponCodeAndShopId(couponCode, shopId));
+        Optional<ShopEntity> shop = shopRepository.findById(shopId);
+        if (shop.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
+        }
+        ShopEntity shopEntity = shop.get();
+        Optional<CouponEntity> coupon = Optional.ofNullable(couponRepository.findByCouponCodeAndShop(couponCode, shopEntity));
 
         if (coupon.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.COUPON_NOT_FOUND);
@@ -427,7 +434,12 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
     @Override
     public FinalResponseDto<List<SeatUsageStatsResponseDto>> getSeatUsageStats(Long shopId) {
         // shopId로 좌석 이용 통계 데이터 조회
-        List<EnterHistoryEntity> enterHistory = enterHistoryRepository.findByShop_Id(shopId);
+        Optional<ShopEntity> shop = shopRepository.findById(shopId);
+        if (shop.isEmpty()) {
+            return FinalResponseDto.failure(ApiResult.SHOP_NOT_FOUND);
+        }
+        ShopEntity shopEntity = shop.get();
+        List<EnterHistoryEntity> enterHistory = enterHistoryRepository.findByShop(shopEntity);
 
         if (enterHistory.isEmpty()) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
@@ -456,7 +468,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         List<ShopEntity> shops = shopRepository.findAll();
 
         for (ShopEntity shop : shops) {
-            int occupancyCount = enterHistoryRepository.countActiveEntriesByShopId(shop.getId(), now);
+            int occupancyCount = enterHistoryRepository.countActiveEntriesByShop(shop, now);
             ShopUsageHourlyEntity occupancy = ShopUsageHourlyEntity.from(shop, now, occupancyCount);
             shopUsageHourlyRepository.save(occupancy);  // 수정된 부분
         }
@@ -473,7 +485,7 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         List<ShopEntity> shops = shopRepository.findAll();
         for (ShopEntity shop : shops) {
             // 해당 날짜에 해당 상점에서 이용한 사용자 수 카운트
-            int uniqueUsersCount = enterHistoryRepository.countUniqueUsersByShopIdAndDate(shop.getId(), startOfDay, endOfDay);
+            int uniqueUsersCount = enterHistoryRepository.countUniqueUsersByShopAndDate(shop, startOfDay, endOfDay);
 
             // 일일 통계 저장
             ShopUsageDailyEntity dailyOccupancy = ShopUsageDailyEntity.from(shop, yesterday, uniqueUsersCount);
@@ -750,9 +762,12 @@ public class ShopServiceImpl extends BaseServiceImpl<ShopEntity> implements Shop
         LocalDate localEndDate = paymentHistoryDateRequestDto.getEndDate();
         String userName = requestDto.getUserName();
         long shopId = requestDto.getShopId();
-
+        ShopEntity shop = shopRepository.findById(shopId);
+        if (shop == null) {
+            return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);
+        }
         // 사용자 조회
-        MemberEntity member = memberRepository.findByNameAndShopId(userName, shopId);
+        MemberEntity member = memberRepository.findByNameAndShop(userName, shop);
         if (member == null) {
             return FinalResponseDto.failure(ApiResult.DATA_NOT_FOUND);  // 사용자 없음
         }

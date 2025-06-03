@@ -28,7 +28,6 @@ out/
 
 
 src/main/resources/firebase/serviceAccountKey.json
-src/main/resources/application.properties
 .env
 
 

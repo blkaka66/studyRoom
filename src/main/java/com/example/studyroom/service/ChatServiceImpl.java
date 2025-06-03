@@ -205,8 +205,8 @@ public class ChatServiceImpl extends BaseServiceImpl<ChatMessageEntity> implemen
             return FinalResponseDto.failure(ApiResult.ALREADY_CLOSED_ROOM);
         }
 
-        boolean hasEnteredBefore = chatRepository.existsByRoomIdAndSenderIdAndSenderTypeAndMessageType(
-                room.getId(),
+        boolean hasEnteredBefore = chatRepository.existsByRoomAndSenderIdAndSenderTypeAndMessageType(
+                room,
                 dto.getRequesterId(),
                 dto.getRequesterType(),
                 MessageType.ENTER

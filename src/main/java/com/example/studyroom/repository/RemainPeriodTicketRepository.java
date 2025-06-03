@@ -1,7 +1,9 @@
 package com.example.studyroom.repository;
 
 
+import com.example.studyroom.model.MemberEntity;
 import com.example.studyroom.model.RemainPeriodTicketEntity;
+import com.example.studyroom.model.ShopEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,17 +17,25 @@ public interface RemainPeriodTicketRepository extends JpaRepository<RemainPeriod
 
     //Optional<RemainPeriodTicketEntity> findByShopIdAndMemberId(Long shopId, Long userId);
 
+//
+//    Optional<RemainPeriodTicketEntity> findByShopIdAndMemberIdAndEndDateAfterAndExpiresAtAfter(
+//            Long shopId,
+//            Long memberId,
+//            OffsetDateTime endDateBefore,
+//            OffsetDateTime expiresAtBefore
+//    );
 
-    Optional<RemainPeriodTicketEntity> findByShopIdAndMemberIdAndEndDateAfterAndExpiresAtAfter(
-            Long shopId,
-            Long memberId,
+
+    Optional<RemainPeriodTicketEntity> findByShopAndMemberAndEndDateAfterAndExpiresAtAfter(
+            ShopEntity shop,
+            MemberEntity member,
             OffsetDateTime endDateBefore,
             OffsetDateTime expiresAtBefore
     );
 
-    Optional<RemainPeriodTicketEntity> findByMemberId(Long userId);
+    // Optional<RemainPeriodTicketEntity> findByMemberId(Long userId);
 
-    void deleteByShopIdAndMemberId(Long shopId, Long userId);
+    void deleteByShopAndMember(ShopEntity shop, MemberEntity member);
 
     @Modifying
     @Transactional
